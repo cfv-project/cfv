@@ -7,6 +7,9 @@ Name "cfv"
 
 Outfile "cfv-${VER}.exe"
 
+; usa LZMA (7zip) compression, about 20% smaller
+SetCompressor lzma
+
 ; The default installation directory
 InstallDir $PROGRAMFILES\cfv
 
@@ -26,9 +29,10 @@ Section "exe and support files (required)"
 
   SetOutPath $INSTDIR
 
-  File ..\2exe\dist\cfv\cfv.exe
-  File ..\2exe\dist\cfv\*.pyd
-  File ..\2exe\dist\cfv\${PYTHONDLL}
+  File dist\cfv.exe
+  File dist\library.zip
+  File dist\*.pyd
+  File dist\${PYTHONDLL}
 
   ; Write the installation path into the registry
   ;WriteRegStr HKLM SOFTWARE\cfv "Install_Dir" "$INSTDIR"
@@ -44,9 +48,9 @@ SectionEnd
 Section "documentation"
   SetOutPath $INSTDIR
 
-  File ..\cfv\cfv.txt
-  File ..\cfv\Changelog.txt
-  File ..\cfv\COPYING.txt
+  File cfv.txt
+  File Changelog.txt
+  File COPYING.txt
 
 SectionEnd
 
@@ -79,6 +83,7 @@ Section "Uninstall"
 
   ; remove files
   Delete $INSTDIR\cfv.exe
+  Delete $INSTDIR\library.zip
   Delete $INSTDIR\${PYTHONDLL}
   Delete $INSTDIR\*.pyd
   
