@@ -941,7 +941,6 @@ def largefile_test():
 
 
 def manyfiles_test(t):
-	d = mkdtemp()
 	try:
 		max_open = os.sysconf('SC_OPEN_MAX')
 	except (AttributeError, ValueError, OSError):
@@ -951,14 +950,18 @@ def manyfiles_test(t):
 		max_open = 4096
 		print 'clipping to %i.  Use --full to try the real value'%max_open
 	num = max_open + 1
-	for i in range(0,num):
-		n = '%04i'%i
-		f = open(os.path.join(d, n), 'w')
-		f.write(n)
-		f.close()
-	cfn = os.path.join(d,'manyfiles.'+t)
-	test_generic(cfvcmd+" -C -p %s -t %s -f %s"%(d,t,cfn), rcurry(cfv_all_test,ok=num))
-	test_generic(cfvcmd+" -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=num))
+	d = mkdtemp()
+	try:
+		for i in range(0,num):
+			n = '%04i'%i
+			f = open(os.path.join(d, n), 'w')
+			f.write(n)
+			f.close()
+		cfn = os.path.join(d,'manyfiles.'+t)
+		test_generic(cfvcmd+" -C -p %s -t %s -f %s"%(d,t,cfn), rcurry(cfv_all_test,ok=num))
+		test_generic(cfvcmd+" -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=num))
+	finally:
+		shutil.rmtree(d)
 
 
 cfvenv=''
