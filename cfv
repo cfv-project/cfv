@@ -279,9 +279,7 @@ except ImportError:
 			while 1:
 				x=f.read(65536)
 				if not len(x):
-					c=""
-					for z in m.digest():
-						c=c+'%02x'%ord(z)
+					c = "%02x"*16 % tuple(map(ord, m.digest())) #m.hexdigest() isn't available till python2.0, but this isn't too bad. (seen on c.l.p)
 					stats.bytesread=stats.bytesread+s
 					return c,s
 				s=s+len(x)
@@ -289,9 +287,7 @@ except ImportError:
 		else:
 			s = os.path.getsize(file)
 			m = md5.new(dommap(f.fileno(), s))
-			c=""
-			for z in m.digest():
-				c = c+'%02x'%ord(z)
+			c = "%02x"*16 % tuple(map(ord, m.digest()))
 			stats.bytesread = stats.bytesread+s
 			return c,s
 			
