@@ -59,7 +59,7 @@ def pverbose(s,nl='\n'):
 	if config.verbose>0:
 		p(s,nl)
 def pinfo(s,nl='\n'):
-	if config.verbose>=0:
+	if config.verbose>=0 or config.verbose==-3:
 		p(s,nl)
 def perror(s,nl='\n'):
 	if config.verbose>=-1:
@@ -198,7 +198,18 @@ class Config:
 				self.cmdlineglob='n'
 			else:
 				raise CFVValueError, "invalid cmdlineglob option '%s', must be 'no', 'auto', or 'yes'"%v
-		elif o in ("verbose","gzip"):
+		elif o=="verbose":
+			try:
+				self.setintr(o,v,-3,1)
+			except CFVValueError:
+				if   v=='v':  self.verbose=1
+				elif v=='V':  self.verbose=0
+				elif v=='VV': self.verbose=-1
+				elif v=='q':  self.verbose=-2
+				elif v=='Q':  self.verbose=-3
+				else:
+					raise CFVValueError, "invalid verbose option '%s', must be 'v', 'V', 'VV', 'q', 'Q' or -3 - 1"%v
+		elif o in ("gzip",):
 			self.setintr(o,v,-1,1)
 		elif o in ("recursive",):
 			self.setintr(o,v,0,2)
@@ -496,12 +507,12 @@ class ChksumType:
 
 	def test_chksumfile(self,file,filename):
 		try:
-			if config.verbose>=0:
+			if config.verbose>=0 or config.verbose==-3:
 				cf_stats = stats.make_sub_stats()
 			if not file:
 				file=doopen(filename,'r')
 			self.do_test_chksumfile(file)
-			if config.verbose>=0:
+			if config.verbose>=0 or config.verbose==-3:
 				cf_stats.sub_stats_end(stats)
 				pinfo(perhaps_showpath(file.name)+': ','')
 				cf_stats.print_stats()
@@ -1151,6 +1162,7 @@ def printusage(err=0):
 	perror('  -V       not verbose (default)')
 	perror('  -VV      don\'t print status line at end either')
 	perror('  -q       quiet mode.  check exit code for success.')
+	perror('  -Q       mostly quiet mode.  only prints status lines.')
 	perror('  -zz      force making gzipped files, even if not ending in .gz')
 	perror('  -z       make gzipped files in auto create mode')
 	perror('  -Z       don\'t create gzipped files automatically. (default)')
@@ -1178,7 +1190,7 @@ def main(argv):
 	typename='auto'
 
 	try:
-		optlist, args = getopt.getopt(argv, 'rRTCt:f:mMnNp:uUiIvVzZqh?', ['list=', 'list0=', 'fixpaths=', 'strippaths=', 'showpaths=','renameformat=','help','version'])
+		optlist, args = getopt.getopt(argv, 'rRTCt:f:mMnNp:uUiIvVzZqQh?', ['list=', 'list0=', 'fixpaths=', 'strippaths=', 'showpaths=','renameformat=','help','version'])
 	except getopt.error, a:
 		perror("cfv: %s"%a)
 		printusage(1)
@@ -1266,14 +1278,16 @@ def main(argv):
 			elif o=='-R':
 				config.recursive=0
 			elif o=='-v':
-				config.verbose=1
+				config.setx('verbose', 'v')
 			elif o=='-V':
 				if prevopt=='-V':
-					config.verbose=-1
+					config.setx('verbose', 'VV')
 				else:
-					config.verbose=0
+					config.setx('verbose', 'V')
 			elif o=='-q':
-				config.verbose=-2
+				config.setx('verbose', 'q')
+			elif o=='-Q':
+				config.setx('verbose', 'Q')
 			elif o=='-z':
 				if prevopt=='-z':
 					config.gzip=2

@@ -17,6 +17,8 @@ Disable printing of extra messages. (default)
 Like -V, but don't print status line at end either.
 .IP "-q"
 Like -VV, but not even error messages are printed.  Check the exit status.
+.IP "-Q"
+Only status lines are printed, but not individual errors.
 .IP "-r"
 Recursive mode 1.  In create mode, make seperate chksum files for each dir.
 .IP "-rr"
@@ -164,9 +166,9 @@ Empty lines and lines beginning with a # are ignored.
 .SH EXAMPLE CONFIGURATION
 #this is an example .cfvrc that specifies all the default options
 .br
-#don't be verbose (set to 1 for -v, 0 for -V, -1 for -VV)
+#don't be verbose (set to 1 or v for -v, 0 or V for -V, -1 or VV for -VV, -2 or q for -q, -3 or Q for -Q)
 .br
-verbose 0
+verbose V
 .br
 #create sfv files by default
 .br
