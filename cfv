@@ -756,23 +756,24 @@ import struct
 try: #support for 64bit ints in struct module was only added in python 2.2
 	struct.calcsize('< Q') 
 except struct.error:
-	class Struct:
-		_calcsize = struct.calcsize
-		_unpack = struct.unpack
-		def calcsize(self, fmt):
-			return self._calcsize(re.sub('Q', 'II', fmt))
-		def unpack(self, fmt, data):
-			ofmt = re.sub('Q', 'II', fmt)
-			unpacked = list(self._unpack(ofmt, data))
+	class _Struct:
+		_Q_re = re.compile('Q')
+		def calcsize(self, fmt, _calcsize=struct.calcsize):
+			return _calcsize(self._Q_re.sub('II', fmt))
+		def unpack(self, fmt, data, _unpack=struct.unpack):
+			unpacked = _unpack(self._Q_re.sub('II', fmt), data)
+			upos = 0
 			ret = []
 			for f in fmt.split(' '):
 				if f=='Q':
-					ret.append(long(unpacked.pop(0))+long(unpacked.pop(0))*2**32L)
+					ret.append(long(unpacked[upos])+long(unpacked[upos+1])*2**32L)
+					upos += 2
 				elif f=='<':pass
 				else:
-					ret.append(unpacked.pop(0))
+					ret.append(unpacked[upos])
+					upos += 1
 			return tuple(ret)
-	struct = Struct()
+	struct = _Struct()
 
 class PAR(ChksumType, MD5_MixIn):
 	def auto_chksumfile_match(file):
