@@ -103,6 +103,7 @@ class Stats:
 		self.unverified=0
 		self.diffcase=0
 		self.quoted=0
+		self.textmode=0
 		self.starttime=time.time()
 		self.subcount=0
 
@@ -112,7 +113,7 @@ class Stats:
 		return b
 	
 	def sub_stats_end(self, end):
-		for v in 'badcrc', 'badsize', 'bytesread', 'cferror', 'diffcase', 'ferror', 'notfound', 'num', 'ok', 'quoted', 'unverified':
+		for v in 'badcrc', 'badsize', 'bytesread', 'cferror', 'diffcase', 'ferror', 'notfound', 'num', 'ok', 'quoted', 'unverified', 'textmode':
 			setattr(self, v, getattr(end, v) - getattr(self, v))
 		end.subcount = end.subcount + 1
 
@@ -135,6 +136,8 @@ class Stats:
 			pinfo(', %i differing cases' %self.diffcase,'')
 		if self.quoted:
 			pinfo(', %i quoted filenames' %self.quoted,'')
+		if self.textmode:
+			pinfo(', %i tested in textmode' %self.textmode,'')
 
 		elapsed=time.time()-self.starttime
 		pinfo('.  %.3f seconds, '%(elapsed),'')
@@ -663,7 +666,9 @@ class MD5(ChksumType, MD5_MixIn):
 		x=self._md5rem.match(l)
 		if not x: return -1
 		if x.group(2)==' ':
-			perror('warning: file %s tested in textmode' %x.group(3))
+			if stats.textmode==0:
+				perror('warning: file(s) tested in textmode')
+			stats.textmode = stats.textmode + 1
 		self.test_file(x.group(3),x.group(1))
 	
 	def make_std_filename(filename):
