@@ -644,6 +644,19 @@ def finish_test_dir():
 			perror('%s : not verified'%perhaps_showpath(file,curdir))
 			stats.unverified=stats.unverified+1
 
+atrem=re.compile(r'md5|\.(csv|sfv)(\.gz)?$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
+def autotest(args):
+	start_test_dir(args)
+	for a in os.listdir('.'):
+		if config.recursive and os.path.isdir(a):
+			olddir=curdir
+			chdir(a)
+			autotest(args)
+			chdir(olddir)
+		if atrem.search(a):
+			test(a,args)
+	finish_test_dir()
+
 def printusage(err=0):
 	perror('Usage: cfv [opts] [-p dir] [-T|-C] [-t type] [-f file] [files...]')
 	perror('  -r       recursive mode 1 (make seperate chksum files for each dir)')
@@ -789,21 +802,9 @@ def main(argv):
 
 	if not manual:
 		if mode==0:
-			rem=re.compile(r'md5|\.(csv|sfv)(\.gz)?$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
 			if config.ignorecase:
 				args=map(string.lower,args) #lowercase it all now, so we don't have to keep doing it over and over in the testfile
-			def autotest(rem,args):
-				start_test_dir(args)
-				for a in os.listdir('.'):
-					if config.recursive and os.path.isdir(a):
-						olddir=curdir
-						chdir(a)
-						autotest(rem,args)
-						chdir(olddir)
-					if rem.search(a):
-						test(a,args)
-				finish_test_dir()
-			autotest(rem,args)
+			autotest(args)
 		else:
 			if type=='auto':
 				type=config.defaulttype
