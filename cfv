@@ -1698,7 +1698,6 @@ def main(argv=None):
 				typename=a
 			elif o=='-f':
 				manual=1 #filename selected manually, don't try to autodetect
-				filename=a
 				if mode==0:
 					cache.set_testfiles(args)
 					test(a, typename)
@@ -1706,7 +1705,6 @@ def main(argv=None):
 					if typename!='auto':
 						make(cftypes[typename],a,args)
 					else:
-						ok=0
 						testa=''
 						if config.gzip>=0 and a[-3:]=='.gz':
 								testa=a[:-3]
