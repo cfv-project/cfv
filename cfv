@@ -73,6 +73,8 @@ def showfn(s):
 
 def codecs_getreader(e):
 	return codecs.lookup(e)[2] #codecs.getreader is only in python2.2+
+def codecs_getwriter(e):
+	return codecs.lookup(e)[3] #codecs.getwriter is only in python2.2+
 
 def codec_supports_readline(e):
 	"""Figure out whether the given codec's StreamReader supports readline.
@@ -259,20 +261,17 @@ class CodecWriter:
 	This is necessary as some codecs barf on trying to encode ascii strings.
 	"""
 	def __init__(self, encoding, stream, errors='strict'):
-		self.stream = stream
-		self.errors = errors
-		self.encode = codecs.lookup(encoding)[0] #codecs.getencoder(encoding) #codecs.getencoder is only in python2.2+, but lookup(...)[0] is equivalent
+		self.__stream = codecs_getwriter(encoding)(stream, errors)
 	def write(self, object):
 		if is_rawstr(object):
 			object = unicode(object,'ascii')
-		data, consumed = self.encode(object, self.errors)
-		self.stream.write(data)
+		self.__stream.write(object)
 	def writelines(self, list):
 		self.write(''.join(list))
 	def __getattr__(self, name, getattr=getattr):
 		""" Inherit all other methods from the underlying stream.
 		"""
-		return getattr(self.stream, name)
+		return getattr(self.__stream, name)
 
 codec_error_handler = 'backslashreplace'
 try:

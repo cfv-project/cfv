@@ -674,23 +674,20 @@ def C_test(f,extra=None,verify=None,t=None,d='data?'):
 	finally:
 		os.rmdir(dir)
 	
-	d = mkdtemp()
-	try:
-		open(os.path.join(d,'aoeu'),'w').write('a')
-		open(os.path.join(d,'kakexe'),'w').write('ba')
-		test_generic(cfvcmd+" --encoding=cp500 -v -C -p %s -t %s"%(d,t), rcurry(cfv_all_test,ok=2))
-		test_generic(cfvcmd+" --encoding=cp500 -v -T -p %s"%(d,), rcurry(cfv_all_test,ok=2))
-	finally:
-		shutil.rmtree(d)
-
-	d = mkdtemp()
-	try:
-		open(os.path.join(d,'aoeu'),'w').write('a')
-		open(os.path.join(d,'kakexe'),'w').write('ba')
-		test_generic(cfvcmd+" --encoding=utf-16be -v -C -p %s -t %s"%(d,t), rcurry(cfv_all_test,ok=2))
-		test_generic(cfvcmd+" --encoding=utf-16be -v -T -p %s"%(d,), rcurry(cfv_all_test,ok=2))
-	finally:
-		shutil.rmtree(d)
+	def C_test_encoding(enc, t=t):
+		d = mkdtemp()
+		try:
+			open(os.path.join(d,'aoeu'),'w').write('a')
+			open(os.path.join(d,'kakexe'),'w').write('ba')
+			open(os.path.join(d,'foo bar.baz'),'w').write('baz')
+			test_generic(cfvcmd+" --encoding=%s -v -C -p %s -t %s"%(enc,d,t), rcurry(cfv_all_test,ok=3))
+			test_generic(cfvcmd+" --encoding=%s -v -T -p %s"%(enc,d,), rcurry(cfv_all_test,ok=3))
+		finally:
+			shutil.rmtree(d)
+	
+	C_test_encoding('cp500')
+	C_test_encoding('utf-16be')
+	C_test_encoding('utf-16')
 
 
 def create_funkynames(t, d, chr, deep):
