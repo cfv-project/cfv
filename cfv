@@ -274,6 +274,12 @@ class FileInfoCache:
 	def is_verified(self, fn):
 		return self.getfinfo(fn).get('_verified',0)
 	
+	def set_flag(self, fn, flag):
+		self.getfinfo(fn)[flag] = 1
+	
+	def has_flag(self, fn, flag):
+		return self.getfinfo(fn).has_key(flag)
+	
 	def getpathcache(self, path):
 		pathkey = get_path_key(path)
 		pathcache = self.data.get(pathkey)
@@ -291,6 +297,16 @@ class FileInfoCache:
 			if finfo is None:
 				pathdata[ftail] = finfo = {}
 			return finfo
+	
+	def rename(self, oldfn, newfn):
+		ofinfo = self.getfinfo(oldfn)
+		nfinfo = self.getfinfo(newfn)
+		nfinfo.clear()
+		for k,v in ofinfo.items():
+			if k[0]!="_": #don't preserve flags
+				nfinfo[k]=v
+		#nfinfo.update(ofinfo)
+		ofinfo.clear()
 
 		
 def getfilemd5(file):
@@ -305,6 +321,9 @@ def getfilecrc(file):
 		finfo['crc'],finfo['size'] = _getfilecrc(file)
 	return finfo['crc'],finfo['size']
 	
+def rename(oldfn, newfn):
+	os.rename(oldfn, newfn)
+	cache.rename(oldfn, newfn)
 
 class Stats:
 	def __init__(self):
@@ -318,6 +337,7 @@ class Stats:
 		self.bytesread=0L #use long int for size, to avoid possible overflow.
 		self.unverified=0
 		self.diffcase=0
+		self.misnamed=0
 		self.quoted=0
 		self.textmode=0
 		self.starttime=time.time()
@@ -329,7 +349,7 @@ class Stats:
 		return b
 	
 	def sub_stats_end(self, end):
-		for v in 'badcrc', 'badsize', 'bytesread', 'cferror', 'diffcase', 'ferror', 'notfound', 'num', 'ok', 'quoted', 'unverified', 'textmode':
+		for v in 'badcrc', 'badsize', 'bytesread', 'cferror', 'diffcase', 'misnamed', 'ferror', 'notfound', 'num', 'ok', 'quoted', 'unverified', 'textmode':
 			setattr(self, v, getattr(end, v) - getattr(self, v))
 		end.subcount = end.subcount + 1
 
@@ -348,6 +368,8 @@ class Stats:
 			pinfo(', %i unverified' %self.unverified,'')
 		if self.cferror:
 			pinfo(', %i chksum file errors' %self.cferror,'')
+		if self.misnamed:
+			pinfo(', %i misnamed' %self.misnamed,'')
 		if self.diffcase:
 			pinfo(', %i differing cases' %self.diffcase,'')
 		if self.quoted:
@@ -380,6 +402,7 @@ class Config:
 	showpathsabsolute=0
 	gzip=0
 	rename=0
+	search=0
 	renameformat='%(name)s.bad-%(count)i%(ext)s'
 	renameformatnocount=0
 	list=0
@@ -423,7 +446,7 @@ class Config:
 	def setx(self,o,v):
 		if o=="default":
 			self.setdefault(v)
-		elif o in ("dirsort","cmdlinesort","ignorecase","rename","dereference"):
+		elif o in ("dirsort","cmdlinesort","ignorecase","rename","search","dereference"):
 			self.setbool(o,v)
 		elif o in ("cmdlineglob", "progress"):
 			self.setyesnoauto(o,v)
@@ -809,6 +832,42 @@ class ChksumType:
 				perror('%s : unrecognized line %i (CF)'%(perhaps_showpath(file.name),line))
 			line=line+1
 
+	def search_file(self, filename, filecrc, filesize, errfunc, errargs):
+		if (not config.search or
+			(filesize<0 and (not filecrc or not config.docrcchecks))): #don't bother searching if we don't have anything to compare against
+			errfunc(*errargs)
+			return -2
+		alreadyok=None
+		for fn in os.listdir(os.curdir):
+			try:
+				if filesize>=0:
+					fs=os.path.getsize(fn)
+					if fs!=filesize:
+						#continue
+						raise EnvironmentError #can't continue in try: until python 2.1+
+				if config.docrcchecks and filecrc!=None:
+					c = self.do_test_file(fn, filecrc)
+					if c:
+						#continue
+						raise EnvironmentError #can't continue in try: until python 2.1+
+					filecrct=hexlify(filecrc)
+				else:
+					filecrct='exists'
+			except EnvironmentError:
+				continue
+			if cache.has_flag(fn, '_ok'):
+				alreadyok=(fn,filecrct)
+				continue
+			errfunc(foundok=1,*errargs)
+			do_f_found(filename, fn, filesize, filecrct)
+			return 0
+		if alreadyok:
+			errfunc(foundok=1,*errargs)
+			do_f_found(filename,alreadyok[0],filesize,alreadyok[1],alreadyok=1)
+			return 0
+		errfunc(*errargs)
+		return -1
+
 	def test_file(self,filename,filecrc,filesize=-1):
 		filename = mangle_filename(filename)
 		if cache.testfiles:
@@ -821,13 +880,15 @@ class ChksumType:
 			if filesize>=0:
 				fs=os.path.getsize(l_filename)
 				if fs!=filesize:
-					do_f_badsize(l_filename, filesize, fs)
+					self.search_file(filename, filecrc, filesize,
+						do_f_badsize, (l_filename, filesize, fs))
 					return -2
 			if config.docrcchecks and filecrc!=None:
 				c=self.do_test_file(l_filename,filecrc)
 				filecrct = hexlify(filecrc)
 				if c:
-					do_f_badcrc(l_filename, 'crc does not match (%s!=%s)'%(filecrct,hexlify(c)))
+					self.search_file(filename, filecrc, filesize,
+						do_f_badcrc, (l_filename, 'crc does not match (%s!=%s)'%(filecrct,hexlify(c))))
 					return -2
 			else:
 				if not os.path.exists(l_filename):
@@ -836,9 +897,10 @@ class ChksumType:
 					raise EnvironmentError, (errno.ENOENT,"not a file")
 				filecrct="exists" #since we didn't actually test the crc, make verbose mode merely say it exists
 		except (EnvironmentError, UnicodeError), a: #UnicodeError can occur if python can't map the filename to the filesystem's encoding
-			do_f_enverror(l_filename, a)
+			self.search_file(filename, filecrc, filesize,
+				do_f_enverror, (l_filename, a))
 			return -1
-		do_f_ok(filename, filesize, filecrct)
+		do_f_ok(l_filename, filesize, filecrct)
 	
 	def make_chksumfile(self, file):
 		pass#self.wfile = file
@@ -847,27 +909,33 @@ class ChksumType:
 		pass
 
 
-def do_f_enverror(l_filename, ex):
+def do_f_enverror(l_filename, ex, foundok=0):
 	if ex[0]==errno.ENOENT:
+		if foundok:
+			return
 		stats.notfound=stats.notfound+1
 		if config.list&LISTNOTFOUND:
 			plistf(l_filename)
 	else:
+		#if not foundok:
 		stats.ferror=stats.ferror+1
 	perror('%s : %s'%(perhaps_showpath(l_filename),enverrstr(ex)))
 
-def do_f_badsize(l_filename, expected, actual):
-	stats.badsize=stats.badsize+1
-	do_f_verifyerror(l_filename, 'file size does not match (%s!=%i)'%(expected,actual))
+def do_f_badsize(l_filename, expected, actual, foundok=0):
+	if not foundok:
+		stats.badsize=stats.badsize+1
+	do_f_verifyerror(l_filename, 'file size does not match (%s!=%i)'%(expected,actual), foundok=foundok)
 
-def do_f_badcrc(l_filename, msg):
-	stats.badcrc=stats.badcrc+1
-	do_f_verifyerror(l_filename, msg)
+def do_f_badcrc(l_filename, msg, foundok=0):
+	if not foundok:
+		stats.badcrc=stats.badcrc+1
+	do_f_verifyerror(l_filename, msg, foundok=foundok)
 
-def do_f_verifyerror(l_filename, a):
+def do_f_verifyerror(l_filename, a, foundok=0):
 	reninfo=''
-	if config.list&LISTBAD:
-		plistf(l_filename)
+	if not foundok:
+		if config.list&LISTBAD:
+			plistf(l_filename)
 	if config.rename:
 		formatmap=make_rename_formatmap(l_filename)
 		for count in xrange(0,sys.maxint):
@@ -883,19 +951,57 @@ def do_f_verifyerror(l_filename, a):
 					reninfo=' (dupe of %s removed)'%newfilename
 					break
 			else:
-				os.rename(l_filename, newfilename)
+				rename(l_filename, newfilename)
 				reninfo=' (renamed to %s)'%newfilename
 				break
 	perror('%s : %s%s'%(perhaps_showpath(l_filename),a,reninfo))
 
-def do_f_ok(filename, filesize, filecrct):
+def do_f_found(filename, found_fn, filesize, filecrct, alreadyok=0):
+	if config.showunverified:
+		cache.set_verified(found_fn)
+	if config.rename:
+		try:
+			if os.path.exists(filename):
+				verb=None,"fixing name"
+				prep="of"
+				raise EnvironmentError, "File exists"
+			if alreadyok:
+				verb="linked","linking"
+				prep="to"
+				try:
+					os.link(found_fn, filename)
+				except (EnvironmentError, AttributeError), e:
+					if isinstance(e, EnvironmentError) and e[0] not in (errno.EXDEV, errno.EPERM):
+						raise
+					verb="copied","copying"
+					prep="from"
+					import shutil
+					shutil.copyfile(found_fn, filename)
+			else:
+				verb="renamed","renaming"
+				prep="from"
+				rename(found_fn, filename)
+		except EnvironmentError, e:
+			action='but error %r occured %s %s'%(enverrstr(e),verb[1],prep)
+			stats.ferror=stats.ferror+1
+		else:
+			action='%s %s'%(verb[0],prep)
+			if config.showunverified:
+				cache.set_verified(filename)
+	else:
+		action="found"
+	stats.misnamed=stats.misnamed+1
+	do_f_ok(filename, filesize, filecrct, msg="OK(%s %s)"%(action,found_fn))
+
+def do_f_ok(filename, filesize, filecrct, msg="OK"):
+	cache.set_flag(filename, '_ok')
 	stats.ok=stats.ok+1
 	if config.list&LISTOK:
 		plistf(filename)
 	if filesize>=0:
-		pverbose('%s : OK (%i,%s)'%(perhaps_showpath(filename),filesize,filecrct))
+		pverbose('%s : %s (%i,%s)'%(perhaps_showpath(filename),msg,filesize,filecrct))
 	else:
-		pverbose('%s : OK (%s)'%(perhaps_showpath(filename),filecrct))
+		pverbose('%s : %s (%s)'%(perhaps_showpath(filename),msg,filecrct))
 
 	
 #---------- md5 ----------
@@ -1285,14 +1391,14 @@ class Torrent(ChksumType):
 							if not f.done:
 								if fcurpos+fpiecelen==f.size:
 									if stdprogress: progress.cleanup()
-									do_f_ok(f.filename,f.size,'all pieces ok')
+									do_f_ok(f.l_filename,f.size,'all pieces ok')
 									f.done=1
 
 			if stdprogress: progress.cleanup()
 
 		for f in files:
 			if not f.done:
-				do_f_ok(f.filename,f.size,config.docrcchecks and 'all pieces ok' or 'exists')
+				do_f_ok(f.l_filename,f.size,config.docrcchecks and 'all pieces ok' or 'exists')
 			if f.fh:
 				f.fh.close()
 			
@@ -1995,6 +2101,8 @@ def printusage(err=0):
 	perror('  -M       check checksums (default)')
 	perror('  -n       rename bad files')
 	perror('  -N       don\'t rename bad files (default)')
+	perror('  -s       search for correct file')
+	perror('  -S       don\'t search for correct file (default)')
 	perror('  -p <d>   change to directory <d> before doing anything')
 	perror('  -i       ignore case')
 	perror('  -I       don\'t ignore case (default)')
@@ -2037,7 +2145,7 @@ def main(argv=None):
 	typename='auto'
 
 	try:
-		optlist, args = getopt.getopt(argv, 'rRlLTCt:f:mMnNp:uUiIvVzZqQh?', ['list=', 'list0=', 'fixpaths=', 'strippaths=', 'showpaths=','renameformat=','progress=','help','version'])
+		optlist, args = getopt.getopt(argv, 'rRlLTCt:f:mMnNsSp:uUiIvVzZqQh?', ['list=', 'list0=', 'fixpaths=', 'strippaths=', 'showpaths=','renameformat=','progress=','help','version'])
 	except getopt.error, a:
 		perror("cfv: %s"%a)
 		printusage(1)
@@ -2101,6 +2209,10 @@ def main(argv=None):
 				config.rename=1
 			elif o=='-N':
 				config.rename=0
+			elif o=='-s':
+				config.search=1
+			elif o=='-S':
+				config.search=0
 			elif o=='--renameformat':
 				config.setx('renameformat', a)
 			elif o=='-m':

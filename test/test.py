@@ -19,7 +19,7 @@
 
 default_ns = globals().copy()
 
-import re,os,sys,string,operator,shutil,getopt,gzip
+import re,os,sys,string,operator,shutil,getopt,gzip,stat
 try: # tempfile.mkdtemp is only in python 2.3+
 	from tempfile import mkdtemp
 except ImportError:
@@ -28,10 +28,36 @@ except ImportError:
 		d = tempfile.mktemp()
 		os.mkdir(d)
 		return d
+try: #zip only in python2.0+
+	zip
+except NameError:
+	def zip(a,b):
+		return map(None, a, b) #not exactly the same, but good enough for us.
 	
 
 try: import BitTorrent
 except ImportError: BitTorrent = None
+
+
+fmt_info = {
+	#name: (hascrc, hassize)
+	'md5': (1,0),
+	'bsdmd5': (1,0),
+	'sfv': (1,0),
+	'sfvmd5': (1,0),
+	'csv': (1,1),
+	'csv2': (0,1),
+	'csv4': (1,1),
+	'crc': (1,1),
+	'par': (1,1),
+	'par2': (1,1),
+	'torrent': (1,1),
+}
+def fmt_hascrc(f):
+	return fmt_info[f][0]
+def fmt_hassize(f):
+	return fmt_info[f][1]
+
 
 if hasattr(operator,'gt'):
 	op_gt=operator.gt
@@ -214,12 +240,13 @@ def status_test(s,o,expected=0):
 
 rx_Begin=r'^(?:.* )?(\d+) files, (\d+) OK'
 rx_unv=r', (\d+) unverified'
-rx_notfound=r', (\d)+ not found'
-rx_ferror=r', (\d)+ file errors'
+rx_notfound=r', (\d+) not found'
+rx_ferror=r', (\d+) file errors'
 rx_bad=r', (\d+) bad(crc|size)'
 rx_badcrc=r', (\d+) badcrc'
 rx_badsize=r', (\d+) badsize'
 rx_cferror=r', (\d+) chksum file errors'
+rx_misnamed=r', (\d+) misnamed'
 rx_End=r'(, \d+ differing cases)?(, \d+ quoted filenames)?.  [\d.]+ seconds, [\d.]+K(/s)?$'
 rxo_TestingFrom=re.compile(r'^testing from .* \((.+?)\b.*\)$', re.M)
 
@@ -241,14 +268,14 @@ def cfv_test(s,o, op=op_gt, opval=0):
 		return 0
 	return 1
 
-def cfv_all_test(s,o, files=-2, ok=0, unv=0, notfound=0, badcrc=0, badsize=0, cferror=0, ferror=0):
+def cfv_all_test(s,o, files=-2, ok=0, unv=0, notfound=0, badcrc=0, badsize=0, cferror=0, ferror=0, misnamed=0):
 	expected_status = (badcrc and 2) | (badsize and 4) | (notfound and 8) | (ferror and 16) | (unv and 32) | (cferror and 64)
-	x=re.search(rx_Begin+''.join(map(optionalize,[rx_badcrc,rx_badsize,rx_notfound,rx_ferror,rx_unv,rx_cferror]))+rx_End,tail(o))
+	x=re.search(rx_Begin+''.join(map(optionalize,[rx_badcrc,rx_badsize,rx_notfound,rx_ferror,rx_unv,rx_cferror,rx_misnamed]))+rx_End,tail(o))
 	if WEXITSTATUS(s)==expected_status and x:
 		if files==-2:
 			files = reduce(operator.add, [ok,badcrc,badsize,notfound,ferror])
-		expected = [files,ok,badcrc,badsize,notfound,ferror,unv,cferror]
-		actual = map(intize, x.groups()[:8])
+		expected = [files,ok,badcrc,badsize,notfound,ferror,unv,cferror,misnamed]
+		actual = map(intize, x.groups()[:9])
 		if not filter(icomp, map(None,expected,actual)):
 			return 0
 		return 'expected %s got %s'%(expected,actual)
@@ -498,6 +525,92 @@ def ren_test(f,extra=None,verify=None,t=None):
 	finally:
 		shutil.rmtree(dir)
 
+def search_test(t):
+	cfn = os.path.join(os.getcwd(), 'test.'+t)
+
+	d = mkdtemp()
+	try:
+		test_generic(cfvcmd+" -v -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
+		for n,n2 in zip(range(1,5),range(4,0,-1)):
+			shutil.copyfile('data%s'%n, os.path.join(d,'fOoO%s'%n2))
+		test_generic(cfvcmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
+		test_generic(cfvcmd+" -v -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4,misnamed=4))
+		test_generic(cfvcmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
+		test_generic(cfvcmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4,misnamed=4))
+		test_generic(cfvcmd+" -v -u -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4))
+	finally:
+		shutil.rmtree(d)
+
+	#the following tests two things:
+	# 1) that it will copy/link to a file that is already OK rather than just renaming it again
+	# 2) that it doesn't use the old cached value of a file's checksum before it got renamed out of the way.
+	d = mkdtemp()
+	try:
+		misnamed1=misnamed2=4
+		if fmt_hassize(t) and fmt_hascrc(t):
+			experrs={'badcrc':1,'badsize':2}
+		elif fmt_hassize(t):
+			experrs={'badsize':2, 'ok':1}
+			misnamed1=3
+			misnamed2=4 #actually this depends on what order os.listdir finds stuff. (could actually be 3 or 4) Oh well.
+		else:#if fmt_hascrc(t):
+			experrs={'badcrc':3}
+
+		test_generic(cfvcmd+" -v -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
+		for n,n2 in zip([1,3,4],[4,2,1]):
+			shutil.copyfile('data%s'%n, os.path.join(d,'data%s'%n2))
+		test_generic(cfvcmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=1,**experrs))
+		test_generic(cfvcmd+" -v -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4,misnamed=misnamed1))
+		test_generic(cfvcmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=1,**experrs))
+		test_generic(cfvcmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4,misnamed=misnamed2))
+		test_generic(cfvcmd+" -v -u -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4))
+	finally:
+		shutil.rmtree(d)
+	
+	#test whether ferrors during searching are ignored
+	if hasattr(os, 'symlink'):
+		d = mkdtemp()
+		try:
+			for n,n2 in zip([4],[2]):
+				shutil.copyfile('data%s'%n, os.path.join(d,'foo%s'%n2))
+			for n in string.lowercase:
+				os.symlink('noexist', os.path.join(d,n))
+			test_generic(cfvcmd+" -v -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=1,misnamed=1,notfound=3))
+			test_generic(cfvcmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
+			test_generic(cfvcmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=1,misnamed=1,notfound=3))
+			test_generic(cfvcmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=1,notfound=3))
+		finally:
+			shutil.rmtree(d)
+
+	#test if an error while renaming a misnamed file is properly handled
+	d = mkdtemp()
+	try:
+		shutil.copyfile('data4', os.path.join(d,'foo'))
+		os.chmod(d,stat.S_IRUSR|stat.S_IXUSR)
+		test_generic(cfvcmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=1,ferror=1,notfound=3))
+		os.chmod(d,stat.S_IRWXU)
+		open(os.path.join(d,'data4'),'w').close()
+		os.chmod(d,stat.S_IRUSR|stat.S_IXUSR)
+		test_generic(cfvcmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=1,ferror=2,notfound=3))
+	finally:
+		os.chmod(d,stat.S_IRWXU)
+		shutil.rmtree(d)
+
+	#test if misnamed stuff and/or renaming stuff doesn't screw up the unverified file checking
+	d = mkdtemp()
+	try:
+		shutil.copyfile('data4', os.path.join(d,'foo'))
+		test_generic(cfvcmd+" -v -uu -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=1,notfound=3,unv=0))
+		test_generic(cfvcmd+" -v -uu -s -n -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=1,notfound=3,unv=0))
+		
+		open(os.path.join(d,'data1'),'w').close()
+		if fmt_hassize(t): experrs={'badsize':1}
+		else:              experrs={'badcrc':1}
+		test_generic(cfvcmd+" -v -uu -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=0,notfound=2,unv=0,**experrs))
+		test_generic(cfvcmd+" -v -uu -s -n -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=0,notfound=2,unv=1,**experrs))
+	finally:
+		shutil.rmtree(d)
+
 def symlink_test():
 	dir='s.test'
 	dir1='d1'
@@ -689,6 +802,9 @@ def all_tests():
 	ren_test('csv2')
 	ren_test('csv4')
 	ren_test('crc')
+
+	for t in 'md5', 'bsdmd5', 'sfv', 'sfvmd5', 'csv', 'csv2', 'csv4', 'crc', 'par', 'par2':
+		search_test(t)
 
 	T_test(".md5")
 	T_test(".md5.gz")
