@@ -43,6 +43,7 @@ except ImportError: BitTorrent = None
 
 fmt_info = {
 	#name: (hascrc, hassize, cancreate, available)
+	'sha1': (1,0,1,1),
 	'md5': (1,0,1,1),
 	'bsdmd5': (1,0,1,1),
 	'sfv': (1,0,1,1),
@@ -912,7 +913,7 @@ def largefile_test():
 		f.seek(2**32)
 		f.write('baz')
 		f.close()
-		test_generic(cfvcmd+" -v -T -p %s"%('bigfile'), rcurry(cfv_all_test,ok=9))
+		test_generic(cfvcmd+" -v -T -p %s"%('bigfile'), rcurry(cfv_all_test,ok=10))
 	finally:
 		os.unlink(fn)
 
@@ -975,6 +976,7 @@ def all_tests():
 	symlink_test()
 	deep_unverified_test()
 	
+	ren_test('sha1')
 	ren_test('md5')
 	ren_test('md5',extra='-rr')
 	ren_test('bsdmd5')
@@ -987,7 +989,7 @@ def all_tests():
 	if BitTorrent:
 		ren_test('torrent')
 
-	for t in 'md5', 'bsdmd5', 'sfv', 'sfvmd5', 'csv', 'csv2', 'csv4', 'crc', 'par', 'par2':
+	for t in 'sha1', 'md5', 'bsdmd5', 'sfv', 'sfvmd5', 'csv', 'csv2', 'csv4', 'crc', 'par', 'par2':
 		search_test(t)
 		search_test(t,test_nocrc=1)
 	if BitTorrent:
@@ -995,6 +997,7 @@ def all_tests():
 		#search_test('torrent',test_nocrc=1,extra="--strip=1")
 	quoted_search_test()
 
+	T_test(".sha1")
 	T_test(".md5")
 	T_test(".md5.gz")
 	T_test("comments.md5")
@@ -1017,6 +1020,7 @@ def all_tests():
 	T_test("nosize.crc")
 	T_test("nodims.crc")
 	T_test("nosizenodimsnodesc.crc")
+	T_test("crlf.sha1")
 	T_test("crlf.md5")
 	T_test("crlf.bsdmd5")
 	T_test("crlf.csv")
@@ -1025,6 +1029,7 @@ def all_tests():
 	T_test("crlf.sfv")
 	T_test("noheadercrlf.sfv")
 	T_test("crlf.crc")
+	T_test("crcrlf.sha1")
 	T_test("crcrlf.md5")
 	T_test("crcrlf.bsdmd5")
 	T_test("crcrlf.csv")
@@ -1074,6 +1079,11 @@ def all_tests():
 	test_generic(cfvcmd+r" -i --fixpaths \\/ -T -f testfix.csv4",cfv_test)
 
 	C_test("bsdmd5","-t bsdmd5")#,verify=lambda f: test_generic("md5 -c "+f,status_test)) #bsd md5 seems to have no way to check, only create
+	if pathfind('sha1sum'): #don't report pointless errors on systems that don't have sha1sum
+		sha1verify=lambda f: test_external("sha1sum -c "+f,status_test)
+	else:
+		sha1verify=None
+	C_test("sha1",verify=sha1verify)
 	if pathfind('md5sum'): #don't report pointless errors on systems that don't have md5sum
 		md5verify=lambda f: test_external("md5sum -c "+f,status_test)
 	else:
@@ -1098,6 +1108,7 @@ def all_tests():
 	test_generic(cfvcmd+" -m -v -T -t sfv", lambda s,o: cfv_typerestrict_test(s,o,'sfv'))
 	test_generic(cfvcmd+" -m -v -T -t sfvmd5", lambda s,o: cfv_typerestrict_test(s,o,'sfvmd5'))
 	test_generic(cfvcmd+" -m -v -T -t bsdmd5", lambda s,o: cfv_typerestrict_test(s,o,'bsdmd5'))
+	test_generic(cfvcmd+" -m -v -T -t sha1", lambda s,o: cfv_typerestrict_test(s,o,'sha1'))
 	test_generic(cfvcmd+" -m -v -T -t md5", lambda s,o: cfv_typerestrict_test(s,o,'md5'))
 	test_generic(cfvcmd+" -m -v -T -t csv", lambda s,o: cfv_typerestrict_test(s,o,'csv'))
 	test_generic(cfvcmd+" -m -v -T -t par", lambda s,o: cfv_typerestrict_test(s,o,'par'))

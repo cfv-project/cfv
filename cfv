@@ -324,6 +324,12 @@ class FileInfoCache:
 		ofinfo.clear()
 
 		
+def getfilesha1(file):
+	finfo = cache.getfinfo(file)
+	if not finfo.has_key('sha1'):
+		finfo['sha1'],finfo['size'] = _getfilesha1(file)
+	return finfo['sha1'],finfo['size']
+
 def getfilemd5(file):
 	finfo = cache.getfinfo(file)
 	if not finfo.has_key('md5'):
@@ -589,6 +595,62 @@ except ImportError:
 		return ''.join(map(chr, map(lambda a: int(a,16), _splitre.findall(s))))
 
 try:
+	if os.environ.get('CFV_NOMMAP'): raise ImportError
+	import mmap
+	if hasattr(mmap, 'ACCESS_READ'):
+		def dommap(fileno, len):#generic mmap.  python2.2 adds ACCESS_* args that work on both nix and win.
+			if len==0: return '' #mmap doesn't like length=0
+			return mmap.mmap(fileno, len, access=mmap.ACCESS_READ)
+	elif hasattr(mmap, 'PROT_READ'):
+		def dommap(fileno, len):#unix mmap.  python default is PROT_READ|PROT_WRITE, but we open readonly.
+			if len==0: return '' #mmap doesn't like length=0
+			return mmap.mmap(fileno, len, mmap.MAP_SHARED, mmap.PROT_READ)
+	else:
+		def dommap(fileno, len):#windows mmap.
+			if len==0: return ''
+			return mmap.mmap(fileno, len)
+	nommap=0
+except ImportError:
+	nommap=1
+
+def _getfilechecksum(file, hasher):
+	if file=='':
+		f=sys.stdin
+	else:
+		f=open(file,'rb')
+	def finish(m,s,f=f,file=file):
+		if stdprogress: progress.init(file)
+		try:
+			while 1:
+				x=f.read(65536)
+				if not x:
+					stats.bytesread=stats.bytesread+s
+					return m.digest(),s
+				s=s+len(x)
+				m.update(x)
+				if stdprogress: progress.update(s)
+		finally:
+			if stdprogress: progress.cleanup()
+
+	if f==sys.stdin or nommap or stdprogress:
+		return finish(hasher.new(),0L)
+	else:
+		s = os.path.getsize(file)
+		try:
+			m = hasher.new(dommap(f.fileno(), s))
+		except OverflowError:
+			mmapsize = min(s, 2**31-1) #mmap size is limited by C's int type, which even on 64 bit arches is often 32 bits, so we can't use sys.maxint either.  If we get the error, just assume 32 bits. 
+			m = hasher.new(dommap(f.fileno(), mmapsize))
+			f.seek(mmapsize)
+			return finish(m,mmapsize) #unfortunatly, python's mmap module doesn't support the offset parameter, so we just have to do the rest of the file the old fashioned way.
+		stats.bytesread = stats.bytesread+s
+		return m.digest(),s
+
+import sha
+def _getfilesha1(file):
+	return _getfilechecksum(file, sha)
+			
+try:
 	if os.environ.get('CFV_NOFCHKSUM'): raise ImportError
 	import fchksum
 	try:
@@ -620,57 +682,9 @@ except ImportError:
 	except ImportError:
 		import binascii
 		_crc32=binascii.crc32
-	try:
-		if os.environ.get('CFV_NOMMAP'): raise ImportError
-		import mmap
-		if hasattr(mmap, 'ACCESS_READ'):
-			def dommap(fileno, len):#generic mmap.  python2.2 adds ACCESS_* args that work on both nix and win.
-				if len==0: return '' #mmap doesn't like length=0
-				return mmap.mmap(fileno, len, access=mmap.ACCESS_READ)
-		elif hasattr(mmap, 'PROT_READ'):
-			def dommap(fileno, len):#unix mmap.  python default is PROT_READ|PROT_WRITE, but we open readonly.
-				if len==0: return '' #mmap doesn't like length=0
-				return mmap.mmap(fileno, len, mmap.MAP_SHARED, mmap.PROT_READ)
-		else:
-			def dommap(fileno, len):#windows mmap.
-				if len==0: return ''
-				return mmap.mmap(fileno, len)
-		nommap=0
-	except ImportError:
-		nommap=1
 
 	def _getfilemd5(file):
-		if file=='':
-			f=sys.stdin
-		else:
-			f=open(file,'rb')
-		def finish(m,s,f=f,file=file):
-			if stdprogress: progress.init(file)
-			try:
-				while 1:
-					x=f.read(65536)
-					if not x:
-						stats.bytesread=stats.bytesread+s
-						return m.digest(),s
-					s=s+len(x)
-					m.update(x)
-					if stdprogress: progress.update(s)
-			finally:
-				if stdprogress: progress.cleanup()
-
-		if f==sys.stdin or nommap or stdprogress:
-			return finish(md5.new(),0L)
-		else:
-			s = os.path.getsize(file)
-			try:
-				m = md5.new(dommap(f.fileno(), s))
-			except OverflowError:
-				mmapsize = min(s, 2**31-1) #mmap size is limited by C's int type, which even on 64 bit arches is often 32 bits, so we can't use sys.maxint either.  If we get the error, just assume 32 bits. 
-				m = md5.new(dommap(f.fileno(), mmapsize))
-				f.seek(mmapsize)
-				return finish(m,mmapsize) #unfortunatly, python's mmap module doesn't support the offset parameter, so we just have to do the rest of the file the old fashioned way.
-			stats.bytesread = stats.bytesread+s
-			return m.digest(),s
+		return _getfilechecksum(file, md5)
 			
 	def _getfilecrc(file):
 		if file=='':
@@ -1055,6 +1069,50 @@ def do_f_ok(filename, filesize, filecrct, msg="OK", l_filename=None):
 		pverbose('%s : %s (%s)'%(perhaps_showpath(filename),msg,filecrct))
 
 	
+#---------- sha1sum ----------
+
+class SHA1_MixIn:
+	def do_test_file(self, filename, filecrc):
+		c=getfilesha1(filename)[0]
+		if c!=filecrc:
+			return c
+
+class SHA1(ChksumType, SHA1_MixIn):
+	def auto_chksumfile_match(file, _autorem=re.compile(r'[0-9a-fA-F]{40} [ *].')):
+		l = file.peekline(4096)
+		while l:
+			if l[0] not in ';#':
+				return _autorem.match(l) is not None
+			l = file.peeknextline(4096)
+	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
+
+	auto_filename_match = 'sha1'
+
+	def do_test_chksumfile_print_testingline(self, file):
+		ChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(128), ';#'))
+	
+	_sha1rem=re.compile(r'([0-9a-fA-F]{40}) ([ *])([^\r\n]+)[\r\n]*$')
+	def do_test_chksumline(self, l):
+		if l[0] in ';#': return
+		x=self._sha1rem.match(l)
+		if not x: return -1
+		if x.group(2)==' ':
+			if stats.textmode==0:
+				perror('warning: file(s) tested in textmode')
+			stats.textmode = stats.textmode + 1
+		self.test_file(x.group(3),unhexlify(x.group(1)))
+	
+	def make_std_filename(filename):
+		return filename+'.sha1'
+	make_std_filename = staticmethod(make_std_filename)
+	
+	def make_addfile(self, filename):
+		crc=hexlify(getfilesha1(filename)[0])
+		return (crc, -1), '%s *%s\n'%(crc,filename)
+
+register_cftype('sha1', SHA1)
+
+
 #---------- md5 ----------
 
 class MD5_MixIn:
@@ -1300,7 +1358,6 @@ register_cftype('par2', PAR2)
 
 
 #---------- .torrent ----------
-import sha
 _btimporterror = None
 try:
 	from BitTorrent import bencode, btformats
@@ -2221,7 +2278,7 @@ def show_unverified_files(filelist):
 			show_unverified_dir('')
 
 
-atrem=re.compile(r'md5|\.(csv|sfv|par|p[0-9][0-9]|par2|torrent|crc)(\.gz)?$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
+atrem=re.compile(r'md5|sha1|\.(csv|sfv|par|p[0-9][0-9]|par2|torrent|crc)(\.gz)?$',re.IGNORECASE)#md5sum/sha1sum files have no standard extension, so just search for files with md5/sha1 in the name anywhere, and let the test func see if it really is one.
 def autotest(typename):
 	for a in os.listdir(os.curdir):
 		if config.recursive and visit_dir(a):

@@ -1,6 +1,6 @@
-.TH cfv 1 "14 Jul 2004"
+.TH cfv 1 "10 Dec 2004"
 .SH NAME
-cfv \- Verify file consistency with .sfv, .csv, .crc, .md5, md5sum, .torrent, par, or par2 files
+cfv \- Verify file consistency with .sfv, .csv, .crc, .md5, md5sum, sha1sum, .torrent, par, or par2 files
 .SH SYNOPSIS
 .B cfv [\-p dir] [\-v|\-V|\-VV] [\-r|\-rr|\-R] [\-n|\-N] [\-\-renameformat <s>] [\-s|\-S] [\-zz|\-z|\-Z|\-ZZ] [\-T|\-C] [\-m|\-M] [\-i|\-I] [\-u|\-uu|\-U] [\-\-unquote <b>] [\-\-fixpaths <s>] [\-\-showpaths <i>] [\-\-list/\-\-list0 <l>] [\-\-announceurl <u>] [\-\-piece_size_pow2 <n>] [\-t type] [\-f file] [files...]
 .SH DESCRIPTION
@@ -106,7 +106,7 @@ Specify the name of the checksum file to test or create.
 If file is \-, stdin (for \-T) or stdout (for \-C) will be used.
 .IP "\-t type"
 Specify the type of the file.
-Can be sfv, sfvmd5, csv, csv2, csv4, md5, bsdmd5, par, par2, torrent, crc, or auto.  
+Can be sfv, sfvmd5, csv, csv2, csv4, sha1, md5, bsdmd5, par, par2, torrent, crc, or auto.  
 The default is auto, which will detect the file type for you.
 When creating, if type is auto an sfv will be made, unless a different default has been set in the config file.
 .IP "\-\-list listset"
@@ -137,6 +137,9 @@ is a Comma Seperated Value file, with the fields being name,size,
 .br
 .B csv4
 is a Comma Seperated Value file, with the fields being name,size,crc32,path
+.br
+.B sha1
+is a sha1sum format file
 .br
 .B md5
 is a md5sum format file
@@ -339,5 +342,6 @@ Other programs I have written can be found at:
 http://www.dakotacom.net/~donut/programs/
 .SH "SEE ALSO"
 .BR md5sum (1),
+.BR sha1sum (1),
 .BR md5 (1),
 .BR xargs (1)
