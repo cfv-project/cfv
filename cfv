@@ -767,11 +767,11 @@ except struct.error:
 			for f in fmt.split(' '):
 				if f=='Q':
 					ret.append(long(unpacked[upos])+long(unpacked[upos+1])*2**32L)
-					upos += 2
+					upos = upos + 2
 				elif f=='<':pass
 				else:
 					ret.append(unpacked[upos])
-					upos += 1
+					upos = upos + 1
 			return tuple(ret)
 	struct = _Struct()
 
