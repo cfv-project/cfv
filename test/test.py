@@ -89,6 +89,7 @@ rx_notfound=r', (\d)+ not found'
 rx_bad=r', (\d)+ bad(crc|size)'
 rx_cferror=r', (\d)+ chksum file errors'
 rx_End=r'(, \d+ differing cases)?(, \d+ quoted filenames)?.  [\d.]+ seconds, [\d.]+K(/s)?$'
+rxo_TestingFrom=re.compile(r'^testing from .* \((.+?)\b.*\)$', re.M)
 
 def tail(s):
 	return string.split(s,'\n')[-1]
@@ -129,6 +130,15 @@ def cfv_bad_test(s,o,bad=-1):
 			return 1
 		return 0
 	return 1
+
+def cfv_typerestrict_test(s,o,t):
+	matches = rxo_TestingFrom.findall(o)
+	if not matches:
+		return 1
+	for match in matches:
+		if match != t:
+			return 1
+	return 0
 
 def cfv_listdata_test(s,o):
 	if s==0 and re.search('^data1\0data2\0data3\0data4\0$',o,re.I):
@@ -399,6 +409,14 @@ def all_tests():
 	C_test("crc")
 	#test_generic("../cfv -V -T -f test.md5",cfv_test)
 	#test_generic("../cfv -V -tcsv -T -f test.md5",cfv_test)
+
+	test_generic(cfvcmd+" -m -v -T -t sfv", lambda s,o: cfv_typerestrict_test(s,o,'sfv'))
+	test_generic(cfvcmd+" -m -v -T -t sfvmd5", lambda s,o: cfv_typerestrict_test(s,o,'sfvmd5'))
+	test_generic(cfvcmd+" -m -v -T -t bsdmd5", lambda s,o: cfv_typerestrict_test(s,o,'bsdmd5'))
+	test_generic(cfvcmd+" -m -v -T -t md5", lambda s,o: cfv_typerestrict_test(s,o,'md5'))
+	test_generic(cfvcmd+" -m -v -T -t csv", lambda s,o: cfv_typerestrict_test(s,o,'csv'))
+	test_generic(cfvcmd+" -m -v -T -t par", lambda s,o: cfv_typerestrict_test(s,o,'par'))
+	test_generic(cfvcmd+" -m -v -T -t par2", lambda s,o: cfv_typerestrict_test(s,o,'par2'))
 
 	test_generic(cfvcmd+" -u -t md5 -f test.md5 data* test.py test.md5",cfv_unv_test)
 	test_generic(cfvcmd+" -u -f test.md5 data* test.py",cfv_unv_test)
