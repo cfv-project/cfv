@@ -601,7 +601,7 @@ cftypes['md5']=MD5
 
 class BSDMD5(ChksumType, MD5_MixIn):
 	def auto_chksumfile_match(file):
-		return re.match(r'MD5 \(.+\) = [0-9a-fA-F]{32}$', file.peekline(4096)) is not None
+		return re.match(r'MD5 \(.+\) = [0-9a-fA-F]{32}'+'[\r\n]*$', file.peekline(4096)) is not None
 	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
 
 	def auto_filename_match(filename):
@@ -714,7 +714,7 @@ class CRC_MixIn:
 class SFV(ChksumType, CRC_MixIn):
 	def auto_chksumfile_match(file):
 		#(r';.*generated (by|using) (.* on|.*sfv|.*crc32)',re.IGNORECASE),
-		return re.match(r';|.+ [0-9a-fA-F]{8}$', file.peekline(4096)) is not None
+		return re.match(';|.+ [0-9a-fA-F]{8}[\n\r]*$', file.peekline(4096)) is not None
 	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
 
 	def auto_filename_match(filename):
