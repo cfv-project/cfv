@@ -645,7 +645,7 @@ def finish_test_dir():
 			stats.unverified=stats.unverified+1
 
 def printusage(err=0):
-	perror('Usage: cfv [opts] [-T|-C] [-t type] [-f file] [files...]')
+	perror('Usage: cfv [opts] [-p dir] [-T|-C] [-t type] [-f file] [files...]')
 	perror('  -r       recursive mode 1 (make seperate chksum files for each dir)')
 	perror('  -rr      recursive mode 2 (make a single file with deep listing in it)')
 	perror('  -R       not recursive (default)')
@@ -655,6 +655,7 @@ def printusage(err=0):
 	perror('  -f <f>   use <f> as list file')
 	perror('  -m       check only for missing files (don\'t compare checksums)')
 	perror('  -M       check checksums (default)')
+	perror('  -p <d>   change to directory <d> before doing anything')
 	perror('  -i       ignore case')
 	perror('  -I       don\'t ignore case (default)')
 	perror('  -u       show unverified files')
@@ -687,7 +688,7 @@ def main(argv):
 	starttime=time.time()
 
 	try:
-		optlist, args = getopt.getopt(argv, 'rRTCt:f:mMuUiIvVzZqh?', ['fixpaths=','showpaths=','help','version'])
+		optlist, args = getopt.getopt(argv, 'rRTCt:f:mMp:uUiIvVzZqh?', ['fixpaths=','showpaths=','help','version'])
 	except getopt.error, a:
 		perror("cfv: %s"%a)
 		printusage(1)
@@ -747,6 +748,8 @@ def main(argv):
 			config.docrcchecks=0
 		elif o=='-M':
 			config.docrcchecks=1
+		elif o=='-p':
+			chdir(a)
 		elif o=='-r':
 			if prevopt=='-r':
 				config.recursive=2

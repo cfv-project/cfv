@@ -1,6 +1,7 @@
 2001-03-?? - v1.8:
 	* Fixed ignore case for deep (-rr) checksum files.
 	* Added gzipped checksum file support.
+	* Added change to directory first option (-p).
 2001-02-27 - v1.7.2:
 	* Fixed makefile not finding pkgdir if installing to /usr/local and no site-packages in /usr/local is in python's sys.path.
 	* Added -q option.
