@@ -1145,119 +1145,120 @@ def main(argv):
 		args.sort()
 
 	prevopt=''
-	for o,a in optlist:
-		if o=='-T':
-			mode=0
-		elif o=='-C':
-			mode=1
-		elif o=='-t':
-			if not a in ['auto']+cftypes.keys():
-				perror('type %s not recognized'%a)
-				sys.exit(1)
-			typename=a
-		elif o=='-f':
-			manual=1 #filename selected manually, don't try to autodetect
-			filename=a
-			if mode==0:
-				if config.ignorecase:
-					args=map(string.lower,args) #lowercase it all now, so we don't have to keep doing it over and over in the testfile
-				start_test_dir(args)
-				if typename=='auto':
-					test(a,args)
+	try:
+		for o,a in optlist:
+			if o=='-T':
+				mode=0
+			elif o=='-C':
+				mode=1
+			elif o=='-t':
+				if not a in ['auto']+cftypes.keys():
+					raise CFVValueError, 'type %s not recognized'%a
+				typename=a
+			elif o=='-f':
+				manual=1 #filename selected manually, don't try to autodetect
+				filename=a
+				if mode==0:
+					if config.ignorecase:
+						args=map(string.lower,args) #lowercase it all now, so we don't have to keep doing it over and over in the testfile
+					start_test_dir(args)
+					if typename=='auto':
+						test(a,args)
+					else:
+						cf = cftypes[typename](args)
+						cf.test_chksumfile(None,filename)
+					finish_test_dir()
 				else:
-					cf = cftypes[typename](args)
-					cf.test_chksumfile(None,filename)
-				finish_test_dir()
-			else:
-				if typename!='auto':
-					make(cftypes[typename],a,args)
-				else:
-					ok=0
-					testa=''
-					if config.gzip>=0 and a[-3:]=='.gz':
-							testa=a[:-3]
-					for cftype in cftypes.values():
-						if cftype.auto_filename_match(a) or (testa and cftype.auto_filename_match(testa)):
-							make(cftype,a,args)
-							ok=1
-							break;
-					if not ok:
-						perror('specify a filetype with -t, or use standard extension')
-						sys.exit(1)
-		elif o=='-U':
-			config.showunverified=0
-		elif o=='-u':
-			config.showunverified=1
-		elif o=='-I':
-			config.ignorecase=0
-		elif o=='-i':
-			config.ignorecase=1
-		elif o=='-n':
-			config.rename=1
-		elif o=='-N':
-			config.rename=0
-		elif o=='--renameformat':
-			config.setx('renameformat', a)
-		elif o=='-m':
-			config.docrcchecks=0
-		elif o=='-M':
-			config.docrcchecks=1
-		elif o=='-p':
-			chdir(a)
-		elif o=='-r':
-			if prevopt=='-r':
-				config.recursive=2
-			else:
-				config.recursive=1
-		elif o=='-R':
-			config.recursive=0
-		elif o=='-v':
-			config.verbose=1
-		elif o=='-V':
-			if prevopt=='-V':
-				config.verbose=-1
-			else:
-				config.verbose=0
-		elif o=='-q':
-			config.verbose=-2
-		elif o=='-z':
-			if prevopt=='-z':
-				config.gzip=2
-			else:
-				config.gzip=1
-		elif o=='-Z':
-			if prevopt=='-Z':
-				config.gzip=-1
-			else:
-				config.gzip=0
-		elif o=='--list' or o=='--list0':
-			if a not in LISTARGS.keys():
-				perror('list arg must be one of '+`LISTARGS.keys()`)
-				sys.exit(1)
-			config.list=LISTARGS[a]
-			config.listsep = o=='--list0' and '\0' or '\n'
-			if config.list==LISTUNVERIFIED:
+					if typename!='auto':
+						make(cftypes[typename],a,args)
+					else:
+						ok=0
+						testa=''
+						if config.gzip>=0 and a[-3:]=='.gz':
+								testa=a[:-3]
+						for cftype in cftypes.values():
+							if cftype.auto_filename_match(a) or (testa and cftype.auto_filename_match(testa)):
+								make(cftype,a,args)
+								ok=1
+								break;
+						if not ok:
+							raise CFVValueError, 'specify a filetype with -t, or use standard extension'
+			elif o=='-U':
+				config.showunverified=0
+			elif o=='-u':
 				config.showunverified=1
-			global p
-			p=_perr #redirect all messages to stderr so only the list gets on stdout
-		elif o=='--showpaths':
-			config.showpaths=int(a)
-		elif o=='--strippaths':
-			config.setx('strippaths',a)
-		elif o=='--fixpaths':
-			config.fixpaths=a
-		elif o=='-h' or o=='-?' or o=='--help':
-			printhelp()
-		elif o=='--version':
-			print 'cfv %s'%version
-			try:
-				if not nommap: print '+mmap'
-			except NameError: pass
-			try: print 'fchksum %s'%fchksum.version()
-			except NameError: pass
-			print 'python %08x-%s'%(sys.hexversion,sys.platform)
-			sys.exit(0)
-		prevopt=o
+			elif o=='-I':
+				config.ignorecase=0
+			elif o=='-i':
+				config.ignorecase=1
+			elif o=='-n':
+				config.rename=1
+			elif o=='-N':
+				config.rename=0
+			elif o=='--renameformat':
+				config.setx('renameformat', a)
+			elif o=='-m':
+				config.docrcchecks=0
+			elif o=='-M':
+				config.docrcchecks=1
+			elif o=='-p':
+				chdir(a)
+			elif o=='-r':
+				if prevopt=='-r':
+					config.recursive=2
+				else:
+					config.recursive=1
+			elif o=='-R':
+				config.recursive=0
+			elif o=='-v':
+				config.verbose=1
+			elif o=='-V':
+				if prevopt=='-V':
+					config.verbose=-1
+				else:
+					config.verbose=0
+			elif o=='-q':
+				config.verbose=-2
+			elif o=='-z':
+				if prevopt=='-z':
+					config.gzip=2
+				else:
+					config.gzip=1
+			elif o=='-Z':
+				if prevopt=='-Z':
+					config.gzip=-1
+				else:
+					config.gzip=0
+			elif o=='--list' or o=='--list0':
+				if a not in LISTARGS.keys():
+					raise CFVValueError, 'list arg must be one of '+`LISTARGS.keys()`
+				config.list=LISTARGS[a]
+				config.listsep = o=='--list0' and '\0' or '\n'
+				if config.list==LISTUNVERIFIED:
+					config.showunverified=1
+				global p
+				p=_perr #redirect all messages to stderr so only the list gets on stdout
+			elif o=='--showpaths':
+				config.setx('showpaths', a)
+			elif o=='--strippaths':
+				config.setx('strippaths', a)
+			elif o=='--fixpaths':
+				config.fixpaths=a
+			elif o=='-h' or o=='-?' or o=='--help':
+				printhelp()
+			elif o=='--version':
+				print 'cfv %s'%version
+				try:
+					if not nommap: print '+mmap'
+				except NameError: pass
+				try: print 'fchksum %s'%fchksum.version()
+				except NameError: pass
+				print 'python %08x-%s'%(sys.hexversion,sys.platform)
+				sys.exit(0)
+			prevopt=o
+	except CFVValueError, e:
+		perror('cfv: %s'%e)
+		sys.exit(1)
 
 	if not manual:
 		if mode==0:
