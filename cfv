@@ -1243,17 +1243,6 @@ def make(cftype,ifilename,testfiles):
 			dof=cf.make_addfile
 		try:
 			(filecrc,filesize),dat = dof(f)
-			try:
-				file.write(dat)
-			except EnvironmentError, a:
-				stats.cferror=stats.cferror+1
-				perror('%s : %s (CF)'%(perhaps_showpath(filename),a[1]))
-				file=IOError
-				continue
-			if filesize>=0:
-				pverbose('%s : OK (%i,%s)'%(perhaps_showpath(f),filesize,filecrc))
-			else:
-				pverbose('%s : OK (%s)'%(perhaps_showpath(f),filecrc))
 		except EnvironmentError, a:
 			if a[0]==errno.ENOENT:
 				stats.notfound=stats.notfound+1
@@ -1261,6 +1250,17 @@ def make(cftype,ifilename,testfiles):
 				stats.ferror=stats.ferror+1
 			perror('%s : %s'%(f,a[1]))
 			continue
+		try:
+			file.write(dat)
+		except EnvironmentError, a:
+			stats.cferror=stats.cferror+1
+			perror('%s : %s (CF)'%(perhaps_showpath(filename),a[1]))
+			file=IOError
+			continue
+		if filesize>=0:
+			pverbose('%s : OK (%i,%s)'%(perhaps_showpath(f),filesize,filecrc))
+		else:
+			pverbose('%s : OK (%s)'%(perhaps_showpath(f),filecrc))
 		stats.ok=stats.ok+1
 	if file and file!=IOError:
 		try:
