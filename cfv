@@ -969,8 +969,7 @@ def do_f_verifyerror(l_filename, a, foundok=0):
 	perror('%s : %s%s'%(perhaps_showpath(l_filename),a,reninfo))
 
 def do_f_found(filename, found_fn, filesize, filecrct, alreadyok=0):
-	if config.showunverified:
-		cache.set_verified(found_fn)
+	l_filename = found_fn
 	if config.rename:
 		try:
 			if os.path.exists(filename):
@@ -998,15 +997,16 @@ def do_f_found(filename, found_fn, filesize, filecrct, alreadyok=0):
 			stats.ferror=stats.ferror+1
 		else:
 			action='%s %s'%(verb[0],prep)
-			if config.showunverified:
-				cache.set_verified(filename)
+			l_filename = filename
 	else:
 		action="found"
+	if config.showunverified:
+		cache.set_verified(l_filename)
 	stats.misnamed=stats.misnamed+1
-	do_f_ok(filename, filesize, filecrct, msg="OK(%s %s)"%(action,found_fn))
+	do_f_ok(filename, filesize, filecrct, msg="OK(%s %s)"%(action,found_fn), l_filename=l_filename)
 
-def do_f_ok(filename, filesize, filecrct, msg="OK"):
-	cache.set_flag(filename, '_ok')
+def do_f_ok(filename, filesize, filecrct, msg="OK", l_filename=None):
+	cache.set_flag(l_filename or filename, '_ok')
 	stats.ok=stats.ok+1
 	if config.list&LISTOK:
 		plistf(filename)

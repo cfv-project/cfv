@@ -532,11 +532,16 @@ def search_test(t):
 
 	d = mkdtemp()
 	try:
+		def dont_find_same_file_twice_test(s,o):
+			if not (o.count('fOoO3')==1 and o.count('fOoO4')==1):
+				return str((o.count('fOoO3'), o.count('fOoO4')))
+			return cfv_all_test(s,o,ok=4,misnamed=4)
+
 		test_generic(cfvcmd+" -v -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
 		for n,n2 in zip(range(1,5),range(4,0,-1)):
 			shutil.copyfile('data%s'%n, os.path.join(d,'fOoO%s'%n2))
 		test_generic(cfvcmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
-		test_generic(cfvcmd+" -v -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4,misnamed=4))
+		test_generic(cfvcmd+" -v -s -T -p %s -f %s"%(d,cfn), dont_find_same_file_twice_test)
 		test_generic(cfvcmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
 		test_generic(cfvcmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4,misnamed=4))
 		test_generic(cfvcmd+" -v -u -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4))
