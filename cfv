@@ -665,7 +665,7 @@ class PAR(ChksumType, MD5_MixIn):
 		par_entry_fmtsize = struct.calcsize(par_entry_fmt)
 
 		magic, version, client, control_hash, set_hash, vol_number, num_files, file_list_ofs, file_list_size, data_ofs, data_size = struct.unpack(par_header_fmt, file.read(struct.calcsize(par_header_fmt)))
-		if version & 0xFFFFFF00 != 0x00010000: #presumably the lowest byte is for the minor version number, which should indicate that we can keep going?
+		if version not in (0x00000900, 0x00010000): #ver 0.9 and 1.0 are the same, as far as we care.  Future versions (if any) may very likey have incompatible changes, so don't accept them either.
 			raise EnvironmentError, (errno.EINVAL,"can't handle PAR version %s"%ver2str(version))
 
 		pverbose('testing from %s (par v%s, created by %s v%s)'%(file.name,ver2str(version), prog2str(client>>24), ver2str(client&0xFFFFFF)))
