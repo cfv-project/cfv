@@ -2,6 +2,7 @@
 	* Added special hack for multi-file .torrents to automatically strip the first path component off if it doesn't exist. (Allows testing .torrent files within their dirs without having to manually do --strip=1)
 	* Added .torrent creation support.
 	* Fix testing torrents which contain large number of files giving "too many open files" errors.
+	* Fix failure of -n in renaming bad files when testing a torrent file on windows due to windows not allowing renaming a file that is open.
 	* Fix TypeError when using --progress=yes and not running under a tty and COLUMNS env var is set. (Reported by Steven Mueller)
 	* Work around mmap error on large files. (Reported by Sapheriel)
 	* Added sha1sum file support (-t sha1).

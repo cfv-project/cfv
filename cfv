@@ -1513,12 +1513,18 @@ class Torrent(ChksumType):
 					sh.update(d)
 					if stdprogress and f.l_filename: progress.update(fcurpos+fpiecelen)
 				if d is None:
+					if curfh.fh:
+						#close the file in case do_f_badcrc wants to try to rename it
+						curfh.fh.close(); curfh.fh=None
 					for f,fcurpos,fpiecelen in piecefiles:
 						if not f.done:
 							if stdprogress: progress.cleanup()
 							do_f_badcrc(f.l_filename, 'piece %i missing data'%(piece))
 							f.done=1
 				elif sh.digest()!=hashes[piece]:
+					if curfh.fh:
+						#close the file in case do_f_badcrc wants to try to rename it
+						curfh.fh.close(); curfh.fh=None
 					for f,fcurpos,fpiecelen in piecefiles:
 						if not f.done:
 							if stdprogress: progress.cleanup()
