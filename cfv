@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 #    cfv - Command-line File Verify
-#    Copyright (C) 2000-2002  Matthew Mueller <donut@azstarnet.com>
+#    Copyright (C) 2000-2003  Matthew Mueller <donut@azstarnet.com>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -310,7 +310,7 @@ def make_rename_formatmap(l_filename):
 	sp=os.path.splitext(l_filename)
 	return {'name':sp[0], 'ext':sp[1], 'fullname':l_filename}
 
-version='1.13'#-pre'+'$Revision$'[11:-2]
+version='1.13.1-pre'+'$Revision$'[11:-2]
 
 try:
 	if os.environ.get('CFV_NOFCHKSUM'): raise ImportError
@@ -513,6 +513,12 @@ def register_cftype(name, cftype):
 	_cf_matchers.reverse()
 
 
+def parse_commentline(comment, commentchars):
+	if comment[0] in commentchars:
+		return comment[1:].strip()
+	return None
+
+
 class ChksumType:
 	def __init__(self, testfiles):
 		self.testfiles = testfiles
@@ -534,8 +540,14 @@ class ChksumType:
 			stats.cferror=stats.cferror+1
 			perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
 
-	def do_test_chksumfile_print_testingline(self, file):
-		pverbose('testing from %s (%s)'%(file.name, string.lower(self.__class__.__name__)))
+	def do_test_chksumfile_print_testingline(self, file, comment=None):
+		if comment:
+			comment = ', ' + comment
+			if len(comment)>102: #limit the length in case its a really long one.
+				comment = comment[:99]+'...'
+		else:
+			comment = ''
+		pverbose('testing from %s (%s%s)'%(file.name, self.__class__.__name__.lower(), comment))
 
 	def do_test_chksumfile(self, file):
 		self.do_test_chksumfile_print_testingline(file)
@@ -656,13 +668,21 @@ class MD5_MixIn:
 
 class MD5(ChksumType, MD5_MixIn):
 	def auto_chksumfile_match(file):
-		return re.match(r'[0-9a-fA-F]{32} [ *].+', file.peekline(4096)) is not None
+		l = file.peekline(4096)
+		while l:
+			if l[0] not in ';#':
+				return re.match(r'[0-9a-fA-F]{32} [ *].+', l) is not None
+			l = file.peeknextline(4096)
 	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
 
 	auto_filename_match = 'md5'
+
+	def do_test_chksumfile_print_testingline(self, file):
+		ChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(128), ';#'))
 	
 	_md5rem=re.compile(r'([0-9a-fA-F]{32}) ([ *])([^\r\n]+)[\r\n]*$')
 	def do_test_chksumline(self, l):
+		if l[0] in ';#': return
 		x=self._md5rem.match(l)
 		if not x: return -1
 		if x.group(2)==' ':
@@ -807,14 +827,7 @@ class CRC_MixIn:
 class SFV_Base(ChksumType):
 	def do_test_chksumfile_print_testingline(self, file):
 		#override the default testing line to show first SFV comment line, if any
-		comment = file.peekline(128)
-		if comment[0]==';':
-			comment = ', ' + comment[1:].strip()
-			if len(comment)>102: #but limit the length in case its a really long one.
-				comment = comment[:99]+'...'
-		else:
-			comment = ''
-		pverbose('testing from %s (%s%s)'%(file.name, self.__class__.__name__.lower(), comment))
+		ChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(128), ';'))
 
 	_sfvrem=re.compile(r'(.+) ([0-9a-fA-F]+)[\r\n]*$')
 	def do_test_chksumline(self, l):

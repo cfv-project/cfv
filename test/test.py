@@ -320,6 +320,7 @@ def all_tests():
 
 	T_test(".md5")
 	T_test(".md5.gz")
+	T_test("comments.md5")
 	T_test(".bsdmd5")
 	#test par spec 1.0 files:
 	T_test(".par")
