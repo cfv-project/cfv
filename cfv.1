@@ -1,4 +1,4 @@
-.TH cfv 1 "5 Mar 2002"
+.TH cfv 1 "23 Sep 2002"
 .SH NAME
 cfv \- Verify file consistency with .sfv, .csv, md5sum, or par files
 .SH SYNOPSIS
@@ -94,22 +94,28 @@ Print help info.
 Print version of cfv and modules it uses.
 .P
 .B sfv
-is a simple file verify format file
+is a Simple File Verify format file
 .br
 .B csv
-is a comma seperated value file, with the fields being name,size,crc32,
+is a Comma Seperated Value file, with the fields being name,size,crc32,
 .br
 .B csv2
-is a comma seperated value file, with the fields being name,size,
+is a Comma Seperated Value file, with the fields being name,size,
+.br
+.B csv4
+is a Comma Seperated Value file, with the fields being name,size,crc32,path
 .br
 .B md5
-is md5sum format file
+is a md5sum format file
 .br
 .B bsdmd5
-is md5 format file
+is a BSD md5 format file
 .br
 .B par
 is parchive format file (test-only)
+.br
+.B crc
+is a JPEG Sheriff format crc file
 .SH EXIT STATUS
 The exit status of cfv can be examined to determine what kind of errors, if any, occured.
 .P
