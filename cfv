@@ -1033,8 +1033,8 @@ def main(argv):
 				type=config.defaulttype
 			make(types[type],None,args)
 	
-	#only print total stats if more than one checksum file has been checked.
-	if stats.subcount > 1:
+	#only print total stats if more than one checksum file has been checked. (or if none have)
+	if stats.subcount != 1:
 		stats.print_stats()
 
 	sys.exit((stats.badcrc and 2) | (stats.badsize and 4) | (stats.notfound and 8) | (stats.ferror and 16) | (stats.unverified and 32) | (stats.cferror and 64))
