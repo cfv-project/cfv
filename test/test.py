@@ -107,6 +107,12 @@ def pathjoin_and_mkdir(*components):
 		os.makedirs(path)
 	return result
 
+def readfile(fn):
+	f = open(fn,'rb')
+	d = f.read()
+	f.close()
+	return d
+
 def writefile_and_reopen(fn,data):
 	"""Write data to file, close, and then reopen readonly, and return the fd.
 
@@ -304,6 +310,37 @@ def cfv_stdin_test(cmd,file):
 	except cst_err, er:
 		r=er
 	test_log_results('stdin/out of '+cmd+' with file '+file,(s1,s2),o1+'\n'+o2,r, None)
+
+def cfv_stdin_progress_test(t,file):
+	s1=s2=None
+	o1=o2=c1=c2=''
+	r=0
+	dir = mkdtemp()
+	try:
+		try:
+			cf1=os.path.join(dir,'cf1.'+t)
+			cf2=os.path.join(dir,'cf2.'+t)
+			s1,o1=runcfv("%s --progress=yes -C -t %s -f %s %s"%(cfvcmd,t,cf1,file))
+			if s1: raise cst_err, 2
+			s2,o2=runcfv("%s --progress=yes -C -t %s -f %s -"%(cfvcmd,t,cf2),stdin=file)
+			if s2: raise cst_err, 3
+			if t!='csv2':#csv2 has only filesize, hence checksum never happens, so no progress
+				x=re.match(re.escape(file)+r' : (\.{20}[-\b.#\\|/]*)[ \r\n]+'+re.escape(cf1)+': (\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$',o1,re.M|re.DOTALL)
+				if not x: raise cst_err, 4
+			x2=re.match(r' : (\.[-\b.#/|\\]*)[\t ]*[ \r\n]+'+re.escape(cf2)+': (\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$',o2,re.M)
+			if not x2: raise cst_err, 5
+			if t=='crc':
+				c1 = readfile(cf1).replace(file,' '*len(file))
+			else:
+				c1 = readfile(cf1).replace(file,'')
+			c2 = readfile(cf2)
+			if c1!=c2: raise cst_err, 6
+		except cst_err, er:
+			r=er
+		test_log_results('progress=yes stdin/out of '+t+' with file '+file,(s1,s2),o1+'\n'+o2+'\n--\n'+c1+'\n'+c2,r, None)
+	finally:
+		shutil.rmtree(dir)
+
 
 def rx_test(pat,str):
 	if re.search(pat,str): return 0
@@ -561,6 +598,7 @@ def C_test(f,extra=None,verify=None,t=None,d='data?'):
 	if not t:
 		t=f
 	cfv_stdin_test(cmd+" -t"+f+" -C -f-","data4")
+	cfv_stdin_progress_test(f,'data4')
 	f='test.C.'+f
 	fgz=f+'.gz'
 	try:

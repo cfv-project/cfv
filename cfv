@@ -188,8 +188,12 @@ class INF:
 	"""object that is always larger than what it is compared to"""
 	def __cmp__(self, other):
 		return 1
+	def __mul__(self, other):
+		return self
 	def __div__(self, other):
 		return self
+	def __rdiv__(self, other):
+		return 0
 INF=INF()
 
 class ProgressMeter:
