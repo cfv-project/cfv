@@ -96,6 +96,14 @@ def pathfind(p, path=string.split(os.environ.get('PATH',os.defpath),os.pathsep))
 		if os.path.exists(os.path.join(d,p)):
 			return 1
 
+def pathjoin_and_mkdir(*components):
+	"""Join components of a filename together and create directory to contain the file, if needed."""
+	result = os.path.join(*components)
+	path = os.path.split(result)[0]
+	if not os.path.exists(path):
+		os.makedirs(path)
+	return result
+
 
 class stats:
 	ok=0
@@ -727,6 +735,32 @@ def search_test(t,test_nocrc=0,extra=None):
 		finally:
 			shutil.rmtree(d)
 
+def quoted_search_test():
+	d = mkdtemp()
+	try:
+		join = os.path.join
+		f = open(join(d,'foo.sfv'),'w')
+		f.write(r""""data1" B2A9E441
+"/data4" FA323C6D
+"aa1/data1" B2A9E441
+"c:/aa1/data4" FA323C6D
+"aa3/data3" 841ADFA2
+"\aa3\data4" FA323C6D
+"c:\aa4\bb4\data1" B2A9E441
+"aa4/bb4/data4" FA323C6D""")
+		f.close()
+		shutil.copyfile('data1', pathjoin_and_mkdir(d, "foo1"))
+		shutil.copyfile('data4', pathjoin_and_mkdir(d, "foo4"))
+		shutil.copyfile('data1', pathjoin_and_mkdir(d, "aa1", "foo1"))
+		shutil.copyfile('data4', pathjoin_and_mkdir(d, "aa1", "foo4"))
+		shutil.copyfile('data3', pathjoin_and_mkdir(d, "aa3", "foo3"))
+		shutil.copyfile('data4', pathjoin_and_mkdir(d, "aa3", "foo4"))
+		shutil.copyfile('data1', pathjoin_and_mkdir(d, "aa4","bb4", "foo1"))
+		shutil.copyfile('data4', pathjoin_and_mkdir(d, "aa4","bb4", "foo4"))
+		test_generic(cfvcmd+r" -v --unquote=yes --strippaths=0 --fixpaths \\/ -s -T -p "+d,rcurry(cfv_all_test,ok=8,misnamed=8))
+	finally:
+		shutil.rmtree(d)
+
 def symlink_test():
 	dir='s.test'
 	dir1='d1'
@@ -890,7 +924,7 @@ if args:
 	cfvexe=args[0]
 
 #set everything to default in case user has different in config file
-cfvcmd='-ZNVRMUI --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no'
+cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no'
 
 if run_internal:
 	runcfv = runcfv_py
@@ -923,6 +957,7 @@ def all_tests():
 		search_test(t)
 		search_test(t,test_nocrc=1)
 	search_test('torrent',test_nocrc=1,extra="--strip=1")
+	quoted_search_test()
 
 	T_test(".md5")
 	T_test(".md5.gz")
@@ -989,10 +1024,13 @@ def all_tests():
 	test_generic(cfvcmd+" --strippaths=all -T -f teststrip-1.csv4",cfv_test)
 	test_generic(cfvcmd+" --strippaths=none -T -f teststrip-none.csv4",cfv_notfound_test)
 	test_generic(cfvcmd+r" --strippaths=0 --fixpaths \\/ -T -f testdrivestrip.md5",rcurry(cfv_all_test,ok=4))
+	test_generic(cfvcmd+r" --strippaths=0 --unquote=yes --fixpaths \\/ -T -f testdrivestripquoted.md5",rcurry(cfv_all_test,ok=4))
+	test_generic(cfvcmd+r" --strippaths=0 --unquote=yes --fixpaths \\/ -T -f testdrivestripquoted.md5 data1 data3 data4",rcurry(cfv_all_test,ok=3))
 
 	test_generic(cfvcmd+" -i -T -f testcase.csv",cfv_test)
-	test_generic(cfvcmd+" -T -f testquoted.sfv",cfv_test)
-	test_generic(cfvcmd+" -i -T -f testquotedcase.sfv",cfv_test)
+	test_generic(cfvcmd+" -T --unquote=yes -f testquoted.sfv",cfv_test)
+	test_generic(cfvcmd+" -i --unquote=yes -T -f testquotedcase.sfv",cfv_test)
+	test_generic(cfvcmd+" -i --unquote=yes -T -f testquotedcase.sfv a/C/Foo.bar DaTa1",rcurry(cfv_all_test,ok=2))
 	test_generic(cfvcmd+" -i -T -f testquoted.csv4",cfv_test)
 	test_generic(cfvcmd+r" --fixpaths \\/ -T -f testfix.csv",cfv_test)
 	test_generic(cfvcmd+r" --fixpaths \\/ -T -f testfix.csv4",cfv_test)

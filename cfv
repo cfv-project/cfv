@@ -407,6 +407,7 @@ class Config:
 	showunverified=0
 	defaulttype='sfv'
 	ignorecase=0
+	unquote=0
 	fixpaths=None
 	strippaths=0
 	showpaths=2
@@ -457,7 +458,7 @@ class Config:
 	def setx(self,o,v):
 		if o=="default":
 			self.setdefault(v)
-		elif o in ("dirsort","cmdlinesort","ignorecase","rename","search","dereference"):
+		elif o in ("dirsort","cmdlinesort","ignorecase","rename","search","dereference","unquote"):
 			self.setbool(o,v)
 		elif o in ("cmdlineglob", "progress"):
 			self.setyesnoauto(o,v)
@@ -1847,6 +1848,9 @@ def fixpath(filename):
 	return filename
 
 def mangle_filename(filename):
+	if config.unquote and len(filename)>1 and filename[0]=='"' and filename[-1]=='"':
+		filename = filename[1:-1] #work around buggy sfv encoders that quote filenames
+		stats.quoted = stats.quoted + 1
 	if config.fixpaths:
 		filename=fixpath(filename)
 	filename=os.path.normpath(filename)
@@ -1858,17 +1862,7 @@ def find_local_filename(l_filename):
 	if config.ignorecase:
 		#we need to find the correct filename if using showunverified, even if the filename we are given works, since on FAT/etc filesystems the incorrect case will still return true from os.path.exists, but it could be the incorrect case to remove from the unverified files list.
 		if config.showunverified or not os.path.exists(l_filename):
-			try:
-				l_filename=nocase_findfile_updstats(l_filename)
-			except IOError, e:
-				if e[0]==errno.ENOENT and l_filename[0]=='"' and l_filename[-1]=='"':
-					stats.quoted = stats.quoted + 1
-					l_filename=nocase_findfile_updstats(l_filename[1:-1])
-				else:
-					raise
-	elif l_filename[0]=='"' and l_filename[-1]=='"' and not os.path.exists(l_filename):
-		l_filename=l_filename[1:-1] #work around buggy sfv encoders that quote filenames
-		stats.quoted = stats.quoted + 1
+			l_filename=nocase_findfile_updstats(l_filename)
 	if config.showunverified:
 		cache.set_verified(l_filename)
 	return l_filename
@@ -2164,6 +2158,7 @@ def printusage(err=0):
 	perror('  -ZZ      never use gzip, even if file ends in .gz')
 	perror(' --list=<l> raw list files of type <l> (%s)'%', '.join(LISTARGS.keys()))
 	perror(' --list0=<l> same as list, but seperate files with nulls (useful for xargs -0)')
+	perror(' --unquote=VAL  handle checksum files with quoted filenames (yes or no(default))')
 	perror(' --fixpaths=<s>  replace any chars in <s> with %s'%os.sep)
 	perror(' --strippaths=VAL  strip leading components from file names.')
 	perror(' --showpaths=<p> show full paths (none/auto/yes-absolute/relative)')
@@ -2190,7 +2185,7 @@ def main(argv=None):
 	typename='auto'
 
 	try:
-		optlist, args = getopt.getopt(argv, 'rRlLTCt:f:mMnNsSp:uUiIvVzZqQh?', ['list=', 'list0=', 'fixpaths=', 'strippaths=', 'showpaths=','renameformat=','progress=','help','version'])
+		optlist, args = getopt.getopt(argv, 'rRlLTCt:f:mMnNsSp:uUiIvVzZqQh?', ['list=', 'list0=', 'fixpaths=', 'strippaths=', 'showpaths=','renameformat=','progress=','unquote=','help','version'])
 	except getopt.error, a:
 		perror("cfv: %s"%a)
 		printusage(1)
@@ -2314,6 +2309,8 @@ def main(argv=None):
 				config.setx('strippaths', a)
 			elif o=='--fixpaths':
 				config.setx('fixpaths', a)
+			elif o=='--unquote':
+				config.setx('unquote', a)
 			elif o=='-h' or o=='-?' or o=='--help':
 				printhelp()
 			elif o=='--version':

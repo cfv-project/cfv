@@ -6,6 +6,7 @@
 	* Make .torrent support try BitTornado module if BitTorrent isn't found.
 	* Fix --strippaths=0 handling of multiple leading slashes and of dos-style drive letters with forward slashes.
 	* Improve handling of " and , in filenames in CSV files. (CSV parsing still won't be 100% correct, but doing any better would basically require adding a dependancy on some external csv module..)
+	* Replace automagic buggy-quoting workaround with --unquote option, fixes --strippath handling of quoted filenames and avoids potential insanity with -n, -s, and quoted filenames.
 
 2003-11-20 - v1.16:
 	* Optimize progress meter display when checking lots of small files.
