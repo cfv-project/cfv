@@ -1297,7 +1297,7 @@ class Torrent(ChksumType):
 
 		encoding = metainfo.get('encoding')
 
-		def init_file(filenameparts, ftotpos, filesize, encoding=encoding, file=file):
+		def init_file(filenameparts, ftotpos, filesize, encoding=encoding, file=file, self=self):
 			if encoding:
 				try:
 					filenameparts = map(lambda p,encoding=encoding: unicode(p,encoding), filenameparts)
