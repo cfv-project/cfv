@@ -2,116 +2,116 @@
 .SH NAME
 cfv \- Verify file consistency with .sfv, .csv, .crc, .md5, md5sum, .torrent, par, or par2 files
 .SH SYNOPSIS
-.B cfv [-p dir] [-v|-V|-VV] [-r|-rr|-R] [-n|-N] [--renameformat <s>] [-s|-S] [-zz|-z|-Z|-ZZ] [-T|-C] [-m|-M] [-i|-I] [-u|-uu|-U] [--fixpaths <s>] [--showpaths <i>] [--list/--list0 <l>] [-t type] [-f file] [files...]
+.B cfv [\-p dir] [\-v|\-V|\-VV] [\-r|\-rr|\-R] [\-n|\-N] [\-\-renameformat <s>] [\-s|\-S] [\-zz|\-z|\-Z|\-ZZ] [\-T|\-C] [\-m|\-M] [\-i|\-I] [\-u|\-uu|\-U] [\-\-fixpaths <s>] [\-\-showpaths <i>] [\-\-list/\-\-list0 <l>] [\-t type] [\-f file] [files...]
 .SH DESCRIPTION
 .B cfv
 verifies that the files you have are the same as those that the were used to create
 the checksum file.
 .SH OPTIONS
 .PP
-.IP "-v"
+.IP "\-v"
 Enable printing of extra messages.
-.IP "-V"
+.IP "\-V"
 Disable printing of extra messages. (default)
-.IP "-VV"
-Like -V, but don't print status line at end either.
-.IP "-q"
-Like -VV, but not even error messages are printed.  Check the exit status.
-.IP "-Q"
+.IP "\-VV"
+Like \-V, but don't print status line at end either.
+.IP "\-q"
+Like \-VV, but not even error messages are printed.  Check the exit status.
+.IP "\-Q"
 Only status lines are printed, but not individual errors.
-.IP "--progress VAL"
+.IP "\-\-progress VAL"
 Set when cfv should display progress bars.
 If no, progress bars are never displayed.
 If auto, progress bars are displayed when the output is to a tty.(default)
 If yes, progress is always displayed.
-.IP "-r"
+.IP "\-r"
 Recursive mode 1.  In create mode, make seperate chksum files for each dir.
-.IP "-rr"
+.IP "\-rr"
 Recursive mode 2.  In create mode make a single file with deep listing in it.
 Both recursive modes are equivilant for test mode.
-.IP "-R"
+.IP "\-R"
 Disable recursive mode (default)
-.IP "-l"
+.IP "\-l"
 Follow directory symlinks in recursive mode. (default)
-.IP "-L"
+.IP "\-L"
 Don't follow directory symlinks in recursive mode.
-.IP "-T"
+.IP "\-T"
 Set test mode. (default)
-.IP "-C"
+.IP "\-C"
 Set create mode.
-.IP "-m"
+.IP "\-m"
 Check only for missing files (don't compare checksums)
-.IP "-M"
+.IP "\-M"
 Check checksums (default)
-.IP "-n"
+.IP "\-n"
 Rename bad files.
-With -s, also renames misnamed files to the correct name.
-.IP "-N"
+With \-s, also renames misnamed files to the correct name.
+.IP "\-N"
 Don't rename bad files (default)
-.IP "--renameformat string"
-Format string to use with -n option.  Simply, put any of the 4 strings %(fullname)s, %(name)s, %(ext)s, and %(count)i in the format string, along with whatever other text you wish.
+.IP "\-\-renameformat string"
+Format string to use with \-n option.  Simply, put any of the 4 strings %(fullname)s, %(name)s, %(ext)s, and %(count)i in the format string, along with whatever other text you wish.
 .br
-The default is '%(name)s.bad-%(count)i%(ext)s'
+The default is '%(name)s.bad\-%(count)i%(ext)s'
 .br
 In detail, this is a standard python format string with mapping that contains
 {'fullname': original filename, 'name': fullname minus extension, 'ext': extension(including .), 'count': rename attempt}.
-If the format string does not contain count, then cfv will append '-%(count)i' to the filename if the first attempt fails.
-.IP "-s"
+If the format string does not contain count, then cfv will append '\-%(count)i' to the filename if the first attempt fails.
+.IP "\-s"
 Search for misnamed files.  No effect in create mode.
-.IP "-S"
+.IP "\-S"
 Don't search for misnamed files. (default)
-.IP "-i"
+.IP "\-i"
 Ignore case.  Currently has no effect in create mode.
-.IP "-I"
+.IP "\-I"
 Don't ignore case (default)
-.IP "-u"
+.IP "\-u"
 Show unverified files.
 If no files in a directory are verified, shows dir/*.
 If no files in a directory or its subdirs are verified, shows dir/**.
 Has no effect in create mode.
-.IP "-uu"
+.IP "\-uu"
 Show each unverified file individually, no special directory handling.
 Has no effect in create mode.
-.IP "-U"
+.IP "\-U"
 Don't show unverified files (default)
-.IP "-zz"
-Force making/reading checksum files as gzipped files, even if not ending in .gz (mainly useful for "-f -")
-.IP "-z"
+.IP "\-zz"
+Force making/reading checksum files as gzipped files, even if not ending in .gz (mainly useful for "\-f \-")
+.IP "\-z"
 Make gzipped files in create mode.
-.IP "-Z"
+.IP "\-Z"
 Don't create gzipped files automatically. (default)
-.IP "-ZZ"
+.IP "\-ZZ"
 Never use gzip, even if file ends in ".gz".
-.IP "--fixpaths string"
+.IP "\-\-fixpaths string"
 Convert all occurances of any characters in string to the dir seperator for the current platform.  No effect in create mode. Use an empty string to disable.
-.IP "--strippaths VAL"
-Strip NUM leading components from file names in test mode.  Similar to the -p/--strip options of patch. 
+.IP "\-\-strippaths VAL"
+Strip NUM leading components from file names in test mode.  Similar to the \-p/\-\-strip options of patch. 
 VAL may be 'none': leave exactly as is, 'all': strip everything but the filename, 0: strip the leading driveletter/slash (if any), 1+: strip this many path components in addition.  
 The default is 0.
-.IP "--showpaths VAL"
+.IP "\-\-showpaths VAL"
 Show paths in displayed filenames.
-VAL should be one of yes/1/no/0/auto/2 or absolute/relative, or one from first list and one from second joined by a -.
+VAL should be one of yes/1/no/0/auto/2 or absolute/relative, or one from first list and one from second joined by a \-.
 For backwards compatability, 1=yes, 0=none, 2=auto.
-The default is auto-relative.
+The default is auto\-relative.
 Abrieviations are accepted.
-Examples: --showpaths=y-a always shows absolute paths.  --showpaths=n never shows paths.
-.IP "-p dir"
+Examples: \-\-showpaths=y\-a always shows absolute paths.  \-\-showpaths=n never shows paths.
+.IP "\-p dir"
 Change to directory before doing anything.
-.IP "-f file"
+.IP "\-f file"
 Specify the name of the checksum file to test or create.
-If file is -, stdin (for -T) or stdout (for -C) will be used.
-.IP "-t type"
+If file is \-, stdin (for \-T) or stdout (for \-C) will be used.
+.IP "\-t type"
 Specify the type of the file.
 Can be sfv, sfvmd5, csv, csv2, csv4, md5, bsdmd5, par, par2, torrent, crc, or auto.  
 The default is auto, which will detect the file type for you.
 When creating, if type is auto an sfv will be made, unless a different default has been set in the config file.
-.IP "--list listset"
-Prints a raw listing of files in the given set (ok, bad, unverified, notfound).  Usually used with -q, but not strictly needed since specifying --list will redirect all other messages to stderr.
-.IP "--list0 listset"
-Like --list but files are seperated by a null char.  Useful in combination with xargs -0.
-.IP "-h/--help"
+.IP "\-\-list listset"
+Prints a raw listing of files in the given set (ok, bad, unverified, notfound).  Usually used with \-q, but not strictly needed since specifying \-\-list will redirect all other messages to stderr.
+.IP "\-\-list0 listset"
+Like \-\-list but files are seperated by a null char.  Useful in combination with xargs \-0.
+.IP "\-h/\-\-help"
 Print help info.
-.IP "--version"
+.IP "\-\-version"
 Print version of cfv and modules it uses.
 .P
 .B sfv
@@ -161,15 +161,15 @@ notfound (a file that was listed was not found)
 .IP 16
 ferror (some other file error occured when trying to open/read a file)
 .IP 32
-unverified (a file was not verified, only with -u)
+unverified (a file was not verified, only with \-u)
 .IP 64
 cferror (a checksum file was not found or not recognized)
 .SH NOTES
-Since different platforms represent the path seperator differently, using recursive mode 2 (-rr) is not recommended for anything other than personal usage.  Although the addition of the fixpaths option can be used to work around this, it isn't guaranteed that whatever program others user have will have a similar feature.
+Since different platforms represent the path seperator differently, using recursive mode 2 (\-rr) is not recommended for anything other than personal usage.  Although the addition of the fixpaths option can be used to work around this, it isn't guaranteed that whatever program others user have will have a similar feature.
 .P
-The -s option is not currently implemented for .torrent files.
+The \-s option is not currently implemented for .torrent files.
 .SH EXAMPLES
-If no options are specified, the default will be -T -t auto, and it will search the current directory for any supported checksum files.
+If no options are specified, the default will be \-T \-t auto, and it will search the current directory for any supported checksum files.
 .br
 .B
 cfv
@@ -177,7 +177,7 @@ cfv
 Force the file to test:
 .br
 .B
-cfv -f funny.name
+cfv \-f funny.name
 .P
 Test only the files you have, (avoid file not found errors):
 .br
@@ -187,17 +187,17 @@ cfv *
 Create a csv file for all the files in the current dir:
 .br
 .B
-cfv -C -tcsv
+cfv \-C \-tcsv
 .P
 Create a csv file for only the zip files in the current dir, and specify the filename:
 .br
 .B
-cfv -C -fsomezips.csv *.zip
+cfv \-C \-fsomezips.csv *.zip
 .P
 Check if all files in current and subdirs are verified, but don't verify checksums of files that are.  (For example, before writing a directory to a cdr and you want to make sure all the files are verified.):
 .br
 .B
-cfv -r -m -u
+cfv \-r \-m \-u
 .SH CONFIGURATION
 Upon startup, cfv will test for ~/.cfvrc and if it exists, read configuration information from it.
 The file consists of any number of lines, each having a single option name and the value seperated by a space.
@@ -205,7 +205,7 @@ Empty lines and lines beginning with a # are ignored.
 .SH EXAMPLE CONFIGURATION
 #this is an example .cfvrc that specifies all the default options
 .br
-#don't be verbose (set to 1 or v for -v, 0 or V for -V, -1 or VV for -VV, -2 or q for -q, -3 or Q for -Q)
+#don't be verbose (set to 1 or v for \-v, 0 or V for \-V, \-1 or VV for \-VV, \-2 or q for \-q, \-3 or Q for \-Q)
 .br
 verbose V
 .br
@@ -229,7 +229,7 @@ cmdlinesort 1
 .br
 cmdlineglob auto
 .br
-#don't be recursive (set to 0 for -R,  1 for -r,  2 for -rr)
+#don't be recursive (set to 0 for \-R,  1 for \-r,  2 for \-rr)
 .br
 recursive 0
 .br
@@ -237,7 +237,7 @@ recursive 0
 .br
 dereference 1
 .br
-#don't show unverified files (set to 0 for -U, 1 for -u, 2 for -uu)
+#don't show unverified files (set to 0 for \-U, 1 for \-u, 2 for \-uu)
 .br
 showunverified 0
 .br
@@ -261,7 +261,7 @@ strippaths 0
 .br
 showpaths 2
 .br
-#access checksum filenames that end with .gz as gzipped files (-1 for never, 0 for with .gz, and 1 to make -C make .gz files automatically)
+#access checksum filenames that end with .gz as gzipped files (\-1 for never, 0 for with .gz, and 1 to make \-C make .gz files automatically)
 .br
 gzip 0
 .br
@@ -269,19 +269,19 @@ gzip 0
 .br
 rename 0
 .br
-#format to use for renaming bad files with -n
+#format to use for renaming bad files with \-n
 .br
-renameformat %(name)s.bad-%(count)i%(ext)s
+renameformat %(name)s.bad\-%(count)i%(ext)s
 .br
 #don't search for files
 .br
 search 0
 .br
-#filename_type can be used to override what type of file to create when -t isn't specified.
+#filename_type can be used to override what type of file to create when \-t isn't specified.
 .br
 #The format of the argument is <typename>=<regex>.  Can be specified multiple times, the earlier instances having higher priority.
 .br
-#for example, the following line would cause cfv -C -f foo.md5 to create a 'sfvmd5' file rather than a 'md5' file.
+#for example, the following line would cause cfv \-C \-f foo.md5 to create a 'sfvmd5' file rather than a 'md5' file.
 .br
 #filename_type sfvmd5=md5$
 .SH FILES
