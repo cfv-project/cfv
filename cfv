@@ -138,38 +138,49 @@ INF=INF()
 
 class ProgressMeter:
 	spinnerchars=r'\|/-'
-	def __init__(self, name, size=None, steps=20):
+	def __init__(self, steps=20):
+		self.wantsteps=steps
+
+	def init(self, name, size=None):
+		self.steps = self.wantsteps
 		if size is None:
 			if name == '':
 				size = INF
-				steps = 1
+				self.steps = 1
 			else:
 				size = os.path.getsize(name)
-		self.name = lchoplen(perhaps_showpath(name), scrwidth - steps - 4)
-		self.size = size
-		self.steps = steps
-		self.stepsize = size/steps
+		self.name = lchoplen(perhaps_showpath(name), scrwidth - self.steps - 4)
+		if size<=self.steps: self.stepsize = 1
+		else: self.stepsize = size/self.steps
 		self.nextstep = self.stepsize
 		self.spinneridx = 0
-		
-		stdprogress.write('%s : %s'%(self.name,'.'*self.steps)+'\b'*self.steps); stdprogress.flush()
+		self.needrefresh = 1
+		self.update(0)
 	
 	def update(self, cursize):
-		if self.nextstep < cursize:
-			while self.nextstep < cursize:
-				self.nextstep = self.nextstep + self.stepsize
-				stdprogress.write('#'); stdprogress.flush()
+		if self.needrefresh:
+			donesteps = cursize/self.stepsize
+			stepsleft = self.steps - donesteps
+			self.nextstep = self.stepsize*(donesteps+1)
+			stdprogress.write('%s : %s'%(self.name,'#'*donesteps+'.'*stepsleft)+'\b'*stepsleft); stdprogress.flush()
+			self.needrefresh = 0
+		elif self.nextstep < cursize:
+			updsteps = (cursize-self.nextstep)/self.stepsize + 1
+			self.nextstep = self.nextstep + self.stepsize*updsteps
+			stdprogress.write('#'*updsteps); stdprogress.flush()
 		else:
 			stdprogress.write(self.spinnerchars[self.spinneridx]+'\b'); stdprogress.flush()
 			self.spinneridx = (self.spinneridx+1)%len(self.spinnerchars)
 	
 	def cleanup(self):
-		stdprogress.write('\r'+' '*(len(self.name)+3+self.steps+1)+'\r')
+		if not self.needrefresh:
+			stdprogress.write('\r'+' '*(len(self.name)+3+self.steps+1)+'\r')
+			self.needrefresh = 1
 
 class TimedProgressMeter(ProgressMeter):
 	def __init__(self, *args, **kw):
 		ProgressMeter.__init__(self, *args, **kw)
-		self.nexttime = time.time() + 0.06
+		self.nexttime = 0
 	
 	def update(self, cursize):
 		curtime = time.time()
@@ -500,17 +511,17 @@ try:
 		sys.stderr.write("old fchksum version installed, using std python modules. please update.\n") #can't use perror yet since config hasn't been done..
 		raise ImportError
 	def _getfilemd5(file):
-		if stdprogress: progress = ProgressMeter(file)
+		if stdprogress: progress.init(file)
 		try:
-			c,s=fchksum.fmd5(file, stdprogress and progress.update or None, 0.06)
+			c,s=fchksum.fmd5(file, stdprogress and progress.update or None, 0.03)
 			stats.bytesread=stats.bytesread+s
 		finally:
 			if stdprogress: progress.cleanup()
 		return c,s
 	def _getfilecrc(file):
-		if stdprogress: progress = ProgressMeter(file)
+		if stdprogress: progress.init(file)
 		try:
-			c,s=fchksum.fcrc32d(file, stdprogress and progress.update or None, 0.06)
+			c,s=fchksum.fcrc32d(file, stdprogress and progress.update or None, 0.03)
 			stats.bytesread=stats.bytesread+s
 		finally:
 			if stdprogress: progress.cleanup()
@@ -550,7 +561,7 @@ except ImportError:
 		if f==sys.stdin or nommap or stdprogress:
 			m=md5.new()
 			s=0L
-			if stdprogress: progress = TimedProgressMeter(file)
+			if stdprogress: progress.init(file)
 			try:
 				while 1:
 					x=f.read(65536)
@@ -576,7 +587,7 @@ except ImportError:
 		if f==sys.stdin or nommap or stdprogress:
 			c=_crc32('')
 			s=0L
-			if stdprogress: progress = TimedProgressMeter(file)
+			if stdprogress: progress.init(file)
 			try:
 				while 1:
 					x=f.read(65536)
@@ -1786,6 +1797,7 @@ def printhelp():
 stats=Stats()
 config=Config()
 cache=FileInfoCache()
+progress=TimedProgressMeter()
 
 
 def main(argv=None):
