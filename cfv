@@ -1018,8 +1018,6 @@ def main(argv):
 
 	stats.print_stats()
 
-#if stats.badcrc or stats.badsize or stats.notfound or stats.ferror or stats.unverified or stats.cferror:
-#	sys.exit(1)
 	sys.exit((stats.badcrc and 2) | (stats.badsize and 4) | (stats.notfound and 8) | (stats.ferror and 16) | (stats.unverified and 32) | (stats.cferror and 64))
 
 if __name__=='__main__':
