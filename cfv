@@ -234,7 +234,7 @@ class Config:
 	showunverified=0
 	defaulttype='sfv'
 	ignorecase=0
-	fixpaths=''
+	fixpaths=None
 	strippaths=0
 	showpaths=2
 	showpathsabsolute=0
@@ -335,7 +335,7 @@ class Config:
 				except ValueError:
 					raise CFVValueError, "invalid strippaths option '%s', must be 'none', 'all', or int >=0"%v
 		elif o=="fixpaths":
-			self.setstr(o,v)
+			self.fixpaths = v and re.compile('['+re.escape(v)+']') or None
 		elif o=="renameformat":
 			testmap=make_rename_formatmap('1.2')
 			testmapwc=make_rename_formatmap('1.2')
@@ -368,15 +368,14 @@ class Config:
 					break #end of file
 				if s[0]=="#":
 					continue #ignore lines starting with #
-				#s=re.sub('[\n\r]','',s)
 				s=chomp(s)
 				if not len(s):
 					continue #ignore blank lines
-				x=re.search("^(.*) (.*)$",s)
-				if not x:
+				x = s.split(' ',1)
+				if len(x)!=2:
 					raise CFVSyntaxError, "%s:%i: invalid line '%s'"%(filename,l,s)
 				else:
-					o,v=x.groups()
+					o,v = x
 					try:
 						self.setx(o,v)
 					except CFVException, err:
@@ -825,11 +824,10 @@ try: #support for 64bit ints in struct module was only added in python 2.2
 	struct.calcsize('< Q') 
 except struct.error:
 	class _Struct:
-		_Q_re = re.compile('Q')
 		def calcsize(self, fmt, _calcsize=struct.calcsize):
-			return _calcsize(self._Q_re.sub('II', fmt))
+			return _calcsize(fmt.replace('Q','II'))
 		def unpack(self, fmt, data, _unpack=struct.unpack):
-			unpacked = _unpack(self._Q_re.sub('II', fmt), data)
+			unpacked = _unpack(fmt.replace('Q','II'), data)
 			upos = 0
 			ret = []
 			for f in fmt.split(' '):
@@ -1351,13 +1349,13 @@ def nocase_findfile(filename):
 		stats.diffcase = stats.diffcase + 1
 	return cur
 	
-def strippath(filename, num='a'):
+def strippath(filename, num='a', _splitdrivere=re.compile(r"[a-z]:\\",re.I)):
 	if num=='a':#split all the path off
 		return os.path.split(filename)[1]
 	if num=='n':#split none of the path
 		return filename
 
-	if re.match(r"[a-z]:\\",filename[0:3],re.I): #we can't use os.path.splitdrive, since we want to get rid of it even if we are not on a dos system.
+	if _splitdrivere.match(filename,0,3): #we can't use os.path.splitdrive, since we want to get rid of it even if we are not on a dos system.
 		filename=filename[3:]
 	if filename[0]==os.sep:
 		filename=filename[1:]
@@ -1372,7 +1370,7 @@ def strippath(filename, num='a'):
 
 def fixpath(filename):
 	if config.fixpaths:
-		return re.sub('['+re.escape(config.fixpaths)+']', os.sep, filename)
+		return config.fixpaths.sub(os.sep, filename)
 	return filename
 
 
@@ -1793,7 +1791,7 @@ def main(argv=None):
 			elif o=='--strippaths':
 				config.setx('strippaths', a)
 			elif o=='--fixpaths':
-				config.fixpaths=a
+				config.setx('fixpaths', a)
 			elif o=='-h' or o=='-?' or o=='--help':
 				printhelp()
 			elif o=='--version':
