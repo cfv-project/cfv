@@ -58,6 +58,7 @@ In detail, this is a standard python format string with mapping that contains
 If the format string does not contain count, then cfv will append '\-%(count)i' to the filename if the first attempt fails.
 .IP "\-s"
 Search for misnamed files.  No effect in create mode.
+Also, keep in mind that using \-m together with \-s will do nothing if the checksum type doesn't include filesizes, and if it does, can give false positives if some files have the same size.
 .IP "\-S"
 Don't search for misnamed files. (default)
 .IP "\-i"
