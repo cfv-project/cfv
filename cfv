@@ -267,10 +267,10 @@ class CodecWriter:
 	"""
 	def __init__(self, encoding, stream, errors='strict'):
 		self.__stream = codecs_getwriter(encoding)(stream, errors)
-	def write(self, object):
-		if is_rawstr(object):
-			object = unicode(object,'ascii')
-		self.__stream.write(object)
+	def write(self, obj):
+		if is_rawstr(obj):
+			obj = unicode(obj,'ascii')
+		self.__stream.write(obj)
 	def writelines(self, list):
 		self.write(''.join(list))
 	def __getattr__(self, name, getattr=getattr):
@@ -463,22 +463,22 @@ class FileInfoCache:
 		ofinfo.clear()
 
 		
-def getfilesha1(file):
-	finfo = cache.getfinfo(file)
+def getfilesha1(filename):
+	finfo = cache.getfinfo(filename)
 	if not finfo.has_key('sha1'):
-		finfo['sha1'],finfo['size'] = _getfilesha1(file)
+		finfo['sha1'],finfo['size'] = _getfilesha1(filename)
 	return finfo['sha1'],finfo['size']
 
-def getfilemd5(file):
-	finfo = cache.getfinfo(file)
+def getfilemd5(filename):
+	finfo = cache.getfinfo(filename)
 	if not finfo.has_key('md5'):
-		finfo['md5'],finfo['size'] = _getfilemd5(file)
+		finfo['md5'],finfo['size'] = _getfilemd5(filename)
 	return finfo['md5'],finfo['size']
 
-def getfilecrc(file):
-	finfo = cache.getfinfo(file)
+def getfilecrc(filename):
+	finfo = cache.getfinfo(filename)
 	if not finfo.has_key('crc'):
-		finfo['crc'],finfo['size'] = _getfilecrc(file)
+		finfo['crc'],finfo['size'] = _getfilecrc(filename)
 	return finfo['crc'],finfo['size']
 	
 def rename(oldfn, newfn):
@@ -718,11 +718,11 @@ class Config:
 		if not os.path.isfile(filename):
 			filename=os.path.expanduser(os.path.join("~","_cfvrc"))
 		if os.path.isfile(filename):
-			file=open(filename,"r")
+			f=open(filename,"r")
 			l=0
 			while 1:
 				l=l+1
-				s=file.readline()
+				s=f.readline()
 				if not s:
 					break #end of file
 				if s[0]=="#":
@@ -778,13 +778,13 @@ try:
 except ImportError:
 	nommap=1
 
-def _getfilechecksum(file, hasher):
-	if file=='':
+def _getfilechecksum(filename, hasher):
+	if filename=='':
 		f=sys.stdin
 	else:
-		f=open(file,'rb')
-	def finish(m,s,f=f,file=file):
-		if stdprogress: progress.init(file)
+		f=open(filename,'rb')
+	def finish(m,s,f=f,filename=filename):
+		if stdprogress: progress.init(filename)
 		try:
 			while 1:
 				x=f.read(65536)
@@ -800,7 +800,7 @@ def _getfilechecksum(file, hasher):
 	if f==sys.stdin or nommap or stdprogress:
 		return finish(hasher(),0L)
 	else:
-		s = os.path.getsize(file)
+		s = os.path.getsize(filename)
 		try:
 			m = hasher(dommap(f.fileno(), s))
 		except OverflowError:
@@ -812,8 +812,8 @@ def _getfilechecksum(file, hasher):
 		return m.digest(),s
 
 import sha
-def _getfilesha1(file):
-	return _getfilechecksum(file, sha.new)
+def _getfilesha1(filename):
+	return _getfilechecksum(filename, sha.new)
 			
 try:
 	if os.environ.get('CFV_NOFCHKSUM'): raise ImportError
@@ -872,11 +872,11 @@ except ImportError:
 		def digest(self):
 			return struct.pack('>I',self.value)
 
-	def _getfilemd5(file):
-		return _getfilechecksum(file, md5.new)
+	def _getfilemd5(filename):
+		return _getfilechecksum(filename, md5.new)
 			
-	def _getfilecrc(file):
-		return _getfilechecksum(file, CRC32)
+	def _getfilecrc(filename):
+		return _getfilechecksum(filename, CRC32)
 
 def fcmp(f1, f2):
 	import filecmp
@@ -1595,8 +1595,8 @@ class PAR2(ChksumType, MD5_MixIn):
 
 		if expected_file_ids is None:
 			raise EnvironmentError, (errno.EINVAL,"corrupt or unsupported par2 file - no main packet found")
-		for id in expected_file_ids:
-			if not seen_file_ids.has_key(id):
+		for file_id in expected_file_ids:
+			if not seen_file_ids.has_key(file_id):
 				raise EnvironmentError, (errno.EINVAL,"corrupt or unsupported par2 file - expected file description packet not found")
 
 	#we don't support PAR2 in create mode, but add these methods so that we can get error messages that are probaby more user friendly.
@@ -2507,16 +2507,16 @@ def make(cftype,ifilename,testfiles):
 			cdup()
 
 
-def print_unverified(file):
-	perror('%s : not verified'%perhaps_showpath(file))
+def print_unverified(filename):
+	perror('%s : not verified'%perhaps_showpath(filename))
 
-def show_unverified_file(file):
-	unverified_file(file)
-	print_unverified(file)
+def show_unverified_file(filename):
+	unverified_file(filename)
+	print_unverified(filename)
 	
-def unverified_file(file):
+def unverified_file(filename):
 	if config.list&LISTUNVERIFIED:
-		plistf(file)
+		plistf(filename)
 	stats.unverified=stats.unverified+1
 
 def show_unverified_dir(path, unvchild=0):
@@ -2531,22 +2531,22 @@ def show_unverified_dir(path, unvchild=0):
 		if config.encoding=='raw' and is_unicode(fn):
 			try: sfn = fn.encode(fsencoding)
 			except UnicodeError: pass
-		file = path_join(path, fn)
+		filename = path_join(path, fn)
 		try:
-			st = os.stat(file)
-			if S_ISDIR(st[ST_MODE]) and visit_dir(file,st,noisy=0):
+			st = os.stat(filename)
+			if S_ISDIR(st[ST_MODE]) and visit_dir(filename,st,noisy=0):
 				dunvsave = stats.unverified
-				dv = show_unverified_dir(file,not pathcache)
+				dv = show_unverified_dir(filename,not pathcache)
 				vsub = vsub + dv
 				if stats.unverified - dunvsave and not dv: #if this directory (and its subdirs) had unverified files and no verified files
-					unv_sub_dirs.append(file)
+					unv_sub_dirs.append(filename)
 			elif pathcache:
 				if not (pathcache.get(fn,{}).get('_verified') or pathcache.get(sfn,{}).get('_verified')):
 					if S_ISREG(st[ST_MODE]):
-						show_unverified_file(file)
+						show_unverified_file(filename)
 			else:
 				if S_ISREG(st[ST_MODE]):
-					unverified_file(file)
+					unverified_file(filename)
 					unv = unv + 1
 		except OSError:
 			pass
@@ -2554,8 +2554,8 @@ def show_unverified_dir(path, unvchild=0):
 		if vsub: # if sub directories do have verified files
 			if unv: # and this directory does have unverified files
 				print_unverified(path_join(path,u'*'))
-			for file in unv_sub_dirs: # print sub dirs that had unverified files and no verified files
-				print_unverified(path_join(file,u'**'))
+			for unvpath in unv_sub_dirs: # print sub dirs that had unverified files and no verified files
+				print_unverified(path_join(unvpath,u'**'))
 		elif not unvchild: # if this is the root of a tree with no verified files
 			if stats.unverified - unvsave: # and there were unverified files in the tree
 				print_unverified(path_join(path,u'**'))
@@ -2569,14 +2569,14 @@ def show_unverified_dir_verbose(path):
 		if config.encoding=='raw' and is_unicode(fn):
 			try: sfn = fn.encode(fsencoding)
 			except UnicodeError: pass
-		file = path_join(path, fn)
+		filename = path_join(path, fn)
 		try:
-			st = os.stat(file)
-			if S_ISDIR(st[ST_MODE]) and visit_dir(file,st,noisy=0):
-				show_unverified_dir_verbose(file)
+			st = os.stat(filename)
+			if S_ISDIR(st[ST_MODE]) and visit_dir(filename,st,noisy=0):
+				show_unverified_dir_verbose(filename)
 			elif not (pathcache.get(fn,{}).get('_verified') or pathcache.get(sfn,{}).get('_verified')):
 				if S_ISREG(st[ST_MODE]):
-					show_unverified_file(file)
+					show_unverified_file(filename)
 		except OSError,e:
 			pass
 	
@@ -2584,17 +2584,17 @@ def show_unverified_files(filelist):
 	if not config.showunverified:
 		return
 	if filelist:
-		for file in filelist:
+		for filename in filelist:
 			if config.ignorecase:
 				try:
-					file = nocase_findfile(file)
+					filename = nocase_findfile(filename)
 				except IOError:
 					continue
 			else:
-				if not os.path.isfile(file):
+				if not os.path.isfile(filename):
 					continue
-			if not cache.is_verified(file):
-				show_unverified_file(file)
+			if not cache.is_verified(filename):
+				show_unverified_file(filename)
 	else:
 		_visited_dirs.clear()
 		if config.showunverified==2:
