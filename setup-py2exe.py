@@ -7,7 +7,7 @@ import py2exe
 setup(name="cfv",
 	console=["cfv.py"],
 	options={"py2exe": {"packages": ["encodings"]}},
-	version="1.18",
+	version="1.18.1",
 	author="Matthew Mueller",
 	license="GPL",
 	url="http://cfv.sourceforge.net",
