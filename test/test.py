@@ -2,6 +2,14 @@
 
 import commands,re,os,sys,string,operator
 
+if hasattr(operator,'gt'):
+	op_gt=operator.gt
+	op_eq=operator.eq
+else:
+	def op_gt(a,b): return a>b
+	def op_eq(a,b): return a==b
+
+
 class rcurry:
 	def __init__(self, func, *args):
 		self.curry_func = func
@@ -80,7 +88,7 @@ rx_unv=r', (\d)+ unverified'
 rx_bad=r', (\d)+ bad(crc|size)'
 rx_End=r'(, \d+ differing cases)?(, \d+ quoted filenames)?.  [\d.]+ seconds, [\d.]+K(/s)?$'
 
-def cfv_test(s,o, op=operator.gt, opval=0):
+def cfv_test(s,o, op=op_gt, opval=0):
 	x=re.search(rx_Begin+rx_End,o)
 	if s==0 and x and x.group(1) == x.group(2) and op(int(x.group(1)),opval):
 		return 0
@@ -182,7 +190,7 @@ def C_test(f,extra=None,verify=None,t=None,d='data?'):
 	dir='Ce.test'
 	try:
 		os.mkdir(dir)
-		test_generic("%s -p %s -C -f %s"%(cmd,dir,f),rcurry(cfv_test,operator.eq,0))
+		test_generic("%s -p %s -C -f %s"%(cmd,dir,f),rcurry(cfv_test,op_eq,0))
 	finally:
 		os.rmdir(dir)
 
