@@ -633,14 +633,14 @@ def _getfilechecksum(file, hasher):
 			if stdprogress: progress.cleanup()
 
 	if f==sys.stdin or nommap or stdprogress:
-		return finish(hasher.new(),0L)
+		return finish(hasher(),0L)
 	else:
 		s = os.path.getsize(file)
 		try:
-			m = hasher.new(dommap(f.fileno(), s))
+			m = hasher(dommap(f.fileno(), s))
 		except OverflowError:
 			mmapsize = min(s, 2**31-1) #mmap size is limited by C's int type, which even on 64 bit arches is often 32 bits, so we can't use sys.maxint either.  If we get the error, just assume 32 bits. 
-			m = hasher.new(dommap(f.fileno(), mmapsize))
+			m = hasher(dommap(f.fileno(), mmapsize))
 			f.seek(mmapsize)
 			return finish(m,mmapsize) #unfortunatly, python's mmap module doesn't support the offset parameter, so we just have to do the rest of the file the old fashioned way.
 		stats.bytesread = stats.bytesread+s
@@ -648,7 +648,7 @@ def _getfilechecksum(file, hasher):
 
 import sha
 def _getfilesha1(file):
-	return _getfilechecksum(file, sha)
+	return _getfilechecksum(file, sha.new)
 			
 try:
 	if os.environ.get('CFV_NOFCHKSUM'): raise ImportError
@@ -684,7 +684,7 @@ except ImportError:
 		_crc32=binascii.crc32
 
 	def _getfilemd5(file):
-		return _getfilechecksum(file, md5)
+		return _getfilechecksum(file, md5.new)
 			
 	def _getfilecrc(file):
 		if file=='':
