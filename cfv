@@ -42,28 +42,33 @@ def chompnulls(line):
 
 
 _realpath = getattr(os.path, 'realpath', os.path.abspath) #realpath is only in Python>=2.2
+_path_key_cache = {}
 def get_path_key(path):
-	st = os.stat(path)
+	dk = _path_key_cache.get(path)
+	if dk is not None:
+		return dk
+	st = os.stat(path or os.curdir)
 	if st[ST_INO]:
-		return (st[ST_DEV],  st[ST_INO])
+		dk = (st[ST_DEV],  st[ST_INO])
 	else:
-		return _realpath(os.path.join(curdir, path))
+		dk = _realpath(os.path.join(curdir, path))
+	_path_key_cache[path] = dk
+	return dk
 	
 curdir=os.getcwd()
-curdir_key=get_path_key(os.curdir)
 reldir=['']
 prevdir=[]
 def chdir(d):
-	global curdir,curdir_key
+	global curdir,_path_key_cache
 	os.chdir(d)
-	prevdir.append((curdir,curdir_key))
+	prevdir.append((curdir,_path_key_cache))
 	reldir.append(os.path.join(reldir[-1], d))
 	curdir=os.getcwd()
-	curdir_key=get_path_key(os.curdir)
+	_path_key_cache = {}
 def cdup():
-	global curdir,curdir_key
+	global curdir,_path_key_cache
 	reldir.pop()
-	curdir,curdir_key=prevdir.pop()
+	curdir,_path_key_cache=prevdir.pop()
 	os.chdir(curdir)
 
 
@@ -132,10 +137,7 @@ class FileInfoCache:
 		return self.getfinfo(fn).get('_verified',0)
 	
 	def getpathcache(self, path):
-		if not path: # 99% of the time won't be using deep checksum files, so optimize for getting the current dir's key
-			pathkey = curdir_key
-		else:
-			pathkey = get_path_key(path)
+		pathkey = get_path_key(path)
 		pathcache = self.data.get(pathkey)
 		if pathcache is None:
 			self.data[pathkey] = pathcache = {}
