@@ -66,8 +66,13 @@ Convert all occurances of any characters in string to the dir seperator for the 
 Strip NUM leading components from file names in test mode.  Similar to the -p/--strip options of patch. 
 VAL may be 'none': leave exactly as is, 'all': strip everything but the filename, 0: strip the leading driveletter/slash (if any), 1+: strip this many path components in addition.  
 The default is 0.
-.IP "--showpaths int"
-Show full paths 0:never, 1:always, 2:only in recursive mode(default)
+.IP "--showpaths VAL"
+Show paths in displayed filenames.
+VAL should be one of yes/1/no/0/auto/2 or absolute/relative, or one from first list and one from second joined by a -.
+For backwards compatability, 1=yes, 0=none, 2=auto.
+The default is auto-relative.
+Abrieviations are accepted.
+Examples: --showpaths=y-a always shows absolute paths.  --showpaths=n never shows paths.
 .IP "-p dir"
 Change to directory before doing anything.
 .IP "-f file"

@@ -125,6 +125,12 @@ def cfv_listdata_test(s,o):
 	if s==0 and re.search('^data1\0data2\0data3\0data4\0$',o,re.I):
 		return 0
 	return 1
+def joincurpath(f):
+	return os.path.join(os.getcwd(), f)
+def cfv_listdata_abs_test(s,o):
+	if s==0 and re.search('^'+'\0'.join(map(joincurpath, ['data1','data2','data3','data4']))+'\0$',o,re.I):
+		return 0
+	return 1
 def cfv_listdata_unv_test(s,o):
 	if os.WEXITSTATUS(s)==32 and re.search('^test.py\0testfix.csv\0$',o,re.I):
 		return 0
@@ -156,6 +162,13 @@ def T_test(f):
 	test_generic(cfvcmd+" -m -T -f test"+f,cfv_test) #all tests should work with -m
 	
 	test_generic(cfvcmd+" -T --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_test)
+	test_generic(cfvcmd+" -T --showpaths=n-r --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_test)
+	test_generic(cfvcmd+" -T --showpaths=n-a --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_test)
+	test_generic(cfvcmd+" -T --showpaths=a-a --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_test)
+	test_generic(cfvcmd+" -T --showpaths=2-a --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_test)
+	test_generic(cfvcmd+" -T --showpaths=y-r --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_test)
+	test_generic(cfvcmd+" -T --showpaths=y-a --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_abs_test)
+	test_generic(cfvcmd+" -T --showpaths=1-a --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_abs_test)
 	#ensure all verbose stuff goes to stderr:
 	test_generic(cfvcmd+" -v -T --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_test)
 	test_generic(cfvcmd+" -v -T --list0=unverified -f test"+f+" test.py testfix.csv data1 2> /dev/null",cfv_listdata_unv_test)
@@ -279,7 +292,7 @@ if len(sys.argv)>1:
 	cfvcmd=sys.argv[1]
 
 #set everything to default in case user has different in config file
-cfvcmd=cfvcmd+' -ZNVRMUI --fixpaths="" --strippaths=0'
+cfvcmd=cfvcmd+' -ZNVRMUI --fixpaths="" --strippaths=0 --showpaths=auto-relative'
 
 
 logfile=open("test.log","w")

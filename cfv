@@ -34,10 +34,19 @@ def chomp(line):
 
 
 curdir=os.getcwd()
+reldir=['']
+prevdir=[]
 def chdir(d):
 	global curdir
+	prevdir.append(curdir)
+	reldir.append(os.path.join(reldir[-1], d))
 	os.chdir(d)
 	curdir=os.getcwd()
+def cdup():
+	global curdir
+	reldir.pop()
+	curdir=prevdir.pop()
+	os.chdir(curdir)
 
 
 def _pstd(s,nl='\n',write=sys.stdout.write):
@@ -143,6 +152,7 @@ class Config:
 	fixpaths=''
 	strippaths=0
 	showpaths=2
+	showpathsabsolute=0
 	gzip=0
 	rename=0
 	renameformat='%(name)s.bad-%(count)i%(ext)s'
@@ -180,8 +190,30 @@ class Config:
 			self.setbool(o,v)
 		elif o in ("verbose","gzip"):
 			self.setintr(o,v,-1,1)
-		elif o in ("recursive","showpaths"):
+		elif o in ("recursive",):
 			self.setintr(o,v,0,2)
+		elif o=="showpaths":
+			p=0
+			a=0
+			for v in v.split('-'):
+				if not p:
+					if 'none'.startswith(v.lower()) or v=='0':
+						self.showpaths=0
+						p=1; continue
+					elif 'auto'.startswith(v.lower()) or v=='2':
+						self.showpaths=2
+						p=1; continue
+					elif 'yes'.startswith(v.lower()) or v=='1':
+						self.showpaths=1
+						p=1; continue
+				if not a:
+					if 'absolute'.startswith(v.lower()):
+						self.showpathsabsolute=1
+						a=1; continue
+					elif 'relative'.startswith(v.lower()):
+						self.showpathsabsolute=0
+						a=1; continue
+				raise CFVValueError, "invalid showpaths option '%s', must be 'none', 'auto', 'yes', 'absolute', or 'relative'"%v
 		elif o=="strippaths":
 			if 'none'.startswith(v.lower()):
 				self.strippaths='n'
@@ -860,10 +892,12 @@ cftypes['csv2']=CSV2
 
 #---------- generic ----------
 
-def perhaps_showpath(file,dir=None):
+def perhaps_showpath(file):
 	if config.showpaths==1 or (config.showpaths==2 and config.recursive):
-		if dir==None:
+		if config.showpathsabsolute:
 			dir=curdir
+		else:
+			dir=reldir[-1]
 		return os.path.join(dir,file)
 	return file
 
@@ -1037,7 +1071,6 @@ def make(cftype,ifilename,testfiles):
 		file.close() #### should this call cf.close or something instead?
 	
 	for f in testdirs:
-		olddir=curdir
 		try:
 			chdir(f)
 		except EnvironmentError, a:
@@ -1045,7 +1078,7 @@ def make(cftype,ifilename,testfiles):
 			stats.ferror=stats.ferror+1
 		else:
 			make(cftype,ifilename,None)
-			chdir(olddir)
+			cdup()
 
 def start_test_dir(args):
 	if not config.showunverified:
@@ -1066,7 +1099,7 @@ def finish_test_dir():
 		if os.path.isfile(file):
 			if config.list&LISTUNVERIFIED:
 				plistf(file)
-			perror('%s : not verified'%perhaps_showpath(file,curdir))
+			perror('%s : not verified'%perhaps_showpath(file))
 			stats.unverified=stats.unverified+1
 
 atrem=re.compile(r'md5|\.(csv|sfv|par)(\.gz)?$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
@@ -1074,7 +1107,6 @@ def autotest(args):
 	start_test_dir(args)
 	for a in os.listdir('.'):
 		if config.recursive and os.path.isdir(a):
-			olddir=curdir
 			try:
 				chdir(a)
 			except EnvironmentError, e:
@@ -1082,7 +1114,7 @@ def autotest(args):
 				stats.ferror=stats.ferror+1
 			else:
 				autotest(args)
-				chdir(olddir)
+				cdup()
 		if atrem.search(a):
 			test(a,args)
 	finish_test_dir()
@@ -1117,7 +1149,7 @@ def printusage(err=0):
 	perror(' --list0=<l> same as list, but seperate files with nulls (useful for xargs -0)')
 	perror(' --fixpaths=<s>  replace any chars in <s> with %s'%os.sep)
 	perror(' --strippaths=VAL  strip leading components from file names.')
-	perror(' --showpaths=<p> show full paths 0:never, 1:always, 2:in recursive mode(default)')
+	perror(' --showpaths=<p> show full paths (none/auto/yes-absolute/relative)')
 	perror(' --renameformat=<f> format string to use with -n option')
 	perror(' --help/-h show help')
 	perror(' --version show cfv and module versions')
