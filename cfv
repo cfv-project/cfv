@@ -20,6 +20,8 @@
 import getopt, re, os, string, sys, errno, time, copy
 
 cftypes={}
+_cf_fn_exts, _cf_fn_matches, _cf_fn_searches = [], [], []
+_cf_matchers = []
 
 LISTOK=512
 LISTBAD=1024
@@ -473,14 +475,39 @@ def doopen_write(filename):
 		return open(filename, mode)
 
 
+def auto_filename_match(*names):
+	for searchfunc, cftype in _cf_fn_matches + _cf_fn_exts + _cf_fn_searches:
+		for name in names:
+			if searchfunc(name):
+				return cftype
+	return None
+
+def auto_chksumfile_match(file):
+	for p, matchfunc, cftype in _cf_matchers:
+		if matchfunc(file):
+			return cftype
+	return None
+
+def register_cftype(name, cftype):
+	cftypes[name] = cftype
+
+	if hasattr(cftype, 'auto_filename_match'):
+		if cftype.auto_filename_match[-1]=='$' and cftype.auto_filename_match[0]=='^':
+			_cf_fn_matches.append((re.compile(cftype.auto_filename_match, re.I).search, cftype))
+		elif cftype.auto_filename_match[-1]=='$':
+			_cf_fn_exts.append((re.compile(cftype.auto_filename_match, re.I).search, cftype))
+		else:
+			_cf_fn_searches.append((re.compile(cftype.auto_filename_match, re.I).search, cftype))
+
+	_cf_matchers.append((getattr(cftype,"auto_chksumfile_order", 0), cftype.auto_chksumfile_match, cftype))
+	_cf_matchers.sort()
+	_cf_matchers.reverse()
+
+
 class ChksumType:
 	def __init__(self, testfiles):
 		self.testfiles = testfiles
 	
-	def auto_filename_match(filename):
-		return 0
-	auto_filename_match = staticmethod(auto_filename_match)
-
 	def test_chksumfile(self,file,filename):
 		if config.showunverified and filename in stats.unverifiedfiles[-1]:#we can't expect the checksum file itself to be checksummed
 			stats.unverifiedfiles[-1].remove(filename)
@@ -623,9 +650,7 @@ class MD5(ChksumType, MD5_MixIn):
 		return re.match(r'[0-9a-fA-F]{32} [ *].+', file.peekline(4096)) is not None
 	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
 
-	def auto_filename_match(filename):
-		return string.find(filename,'md5')>=0
-	auto_filename_match = staticmethod(auto_filename_match)
+	auto_filename_match = 'md5'
 	
 	_md5rem=re.compile(r'([0-9a-fA-F]{32}) ([ *])([^\r\n]+)[\r\n]*$')
 	def do_test_chksumline(self, l):
@@ -643,7 +668,7 @@ class MD5(ChksumType, MD5_MixIn):
 		crc=getfilemd5(filename)[0]
 		return (crc, -1), '%s *%s\n'%(crc,filename)
 
-cftypes['md5']=MD5
+register_cftype('md5', MD5)
 
 
 #---------- bsdmd5 ----------
@@ -651,11 +676,9 @@ cftypes['md5']=MD5
 class BSDMD5(ChksumType, MD5_MixIn):
 	def auto_chksumfile_match(file):
 		return re.match(r'MD5 \(.+\) = [0-9a-fA-F]{32}'+'[\r\n]*$', file.peekline(4096)) is not None
-	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
+	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
-	def auto_filename_match(filename):
-		return string.lower(filename)=='md5' #####hm, make this have priority over md5sum type??
-	auto_filename_match = staticmethod(auto_filename_match)
+	auto_filename_match = '^md5$'
 	
 	_bsdmd5rem=re.compile(r'MD5 \((.+)\) = ([0-9a-fA-F]{32})[\r\n]*$')
 	def do_test_chksumline(self, l):
@@ -671,7 +694,7 @@ class BSDMD5(ChksumType, MD5_MixIn):
 		crc=getfilemd5(filename)[0]
 		return (crc, -1), 'MD5 (%s) = %s\n'%(filename, crc)
 
-cftypes['bsdmd5']=BSDMD5
+register_cftype('bsdmd5', BSDMD5)
 
 
 #---------- par ----------
@@ -708,7 +731,7 @@ except struct.error:
 class PAR(ChksumType, MD5_MixIn):
 	def auto_chksumfile_match(file):
 		return file.peek(8)=='PAR\0\0\0\0\0'
-	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
+	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	def do_test_chksumfile(self, file):
 		def prog2str(v):
@@ -753,15 +776,13 @@ class PAR(ChksumType, MD5_MixIn):
 				control_md5.update(d)
 
 	#we don't support PAR in create mode, but add these methods so that we can get error messages that are probaby more user friendly.
-	def auto_filename_match(filename):
-		return filename[-3:]=='par'
-	auto_filename_match = staticmethod(auto_filename_match)
+	auto_filename_match = 'par$'
 
 	def make_std_filename(filename):
 		return filename+'.par'
 	make_std_filename = staticmethod(make_std_filename)
 
-cftypes['par']=PAR
+register_cftype('par', PAR)
 
 
 #---------- sfv ----------
@@ -803,11 +824,9 @@ class SFV(SFV_Base, CRC_MixIn):
 			if l[0]!=';':
 				return re.match('.+ [0-9a-fA-F]{8}[\n\r]*$', l) is not None
 			l = file.peeknextline(4096)
-	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
+	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
-	def auto_filename_match(filename):
-		return filename[-3:]=='sfv'
-	auto_filename_match = staticmethod(auto_filename_match)
+	auto_filename_match = 'sfv$'
 	
 	def make_std_filename(filename):
 		return filename+'.sfv'
@@ -817,7 +836,7 @@ class SFV(SFV_Base, CRC_MixIn):
 		crc=getfilecrc(filename)[0]
 		return (crc, -1), '%s %s\n'%(filename,crc)
 
-cftypes['sfv']=SFV
+register_cftype('sfv', SFV)
 
 
 class SFVMD5(SFV_Base, MD5_MixIn):
@@ -827,11 +846,10 @@ class SFVMD5(SFV_Base, MD5_MixIn):
 			if l[0]!=';':
 				return re.match('.+ [0-9a-fA-F]{32}[\n\r]*$', l) is not None
 			l = file.peeknextline(4096)
-	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
+	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
+	auto_chksumfile_order = -1 # do -1 prio since we can mistakenly match a bsdmd5 file
 
-	def auto_filename_match(filename):
-		return 0 #filename[-3:]=='md5' #hm. People are probably used to .md5 making a md5sum format file, so we can't just do this.
-	auto_filename_match = staticmethod(auto_filename_match)
+	#auto_filename_match = 'md5$' #hm. People are probably used to .md5 making a md5sum format file, so we can't just do this.
 	
 	def make_std_filename(filename):
 		return filename+'.md5'
@@ -841,7 +859,7 @@ class SFVMD5(SFV_Base, MD5_MixIn):
 		crc=getfilemd5(filename)[0]
 		return (crc, -1), '%s %s\n'%(filename,crc)
 	
-cftypes['sfvmd5']=SFVMD5
+register_cftype('sfvmd5', SFVMD5)
 
 
 #---------- csv ----------
@@ -849,11 +867,9 @@ cftypes['sfvmd5']=SFVMD5
 class CSV(ChksumType, CRC_MixIn):
 	def auto_chksumfile_match(file):
 		return re.match('[^,]+,[0-9]+,[0-9a-fA-F]+,[\n\r]*$', file.peekline(4096)) is not None
-	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
+	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
-	def auto_filename_match(filename):
-		return filename[-3:]=='csv'
-	auto_filename_match = staticmethod(auto_filename_match)
+	auto_filename_match = 'csv$'
 	
 	_csvrem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]+),')
 	def do_test_chksumline(self, l):
@@ -869,7 +885,7 @@ class CSV(ChksumType, CRC_MixIn):
 		c,s=getfilecrc(filename)
 		return (c,s), '%s,%i,%s,\n'%(filename,s,c)
 
-cftypes['csv']=CSV
+register_cftype('csv', CSV)
 
 
 #---------- csv with 4 fields ----------
@@ -877,7 +893,7 @@ cftypes['csv']=CSV
 class CSV4(ChksumType, CRC_MixIn):
 	def auto_chksumfile_match(file):
 		return re.match(r'[^,]+,[0-9]+,[0-9a-fA-F]+,[^,]*,', file.peekline(4096)) is not None
-	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
+	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	_csv4rem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]+),([^,]*),')
 	def do_test_chksumline(self, l):
@@ -906,7 +922,7 @@ class CSV4(ChksumType, CRC_MixIn):
 		p=os.path.split(filename)
 		return (c,s), '%s,%i,%s,%s,\n'%(p[1],s,c,p[0])
 
-cftypes['csv4']=CSV4
+register_cftype('csv4', CSV4)
 
 
 #---------- csv with only 2 fields ----------
@@ -914,7 +930,7 @@ cftypes['csv4']=CSV4
 class CSV2(ChksumType):
 	def auto_chksumfile_match(file):
 		return re.match('[^,]+,[0-9]+,[\n\r]*$', file.peekline(4096)) is not None
-	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
+	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	_csv2rem=re.compile(r'([^,]+),([0-9]+),')
 	def do_test_chksumline(self, l):
@@ -933,7 +949,7 @@ class CSV2(ChksumType):
 			s=os.path.getsize(filename)
 		return (None, s), '%s,%i,\n'%(filename,s)
 
-cftypes['csv2']=CSV2
+register_cftype('csv2', CSV2)
 
 
 #---------- jpegsheriff .crc ----------
@@ -961,11 +977,9 @@ class JPEGSheriff_CRC(ChksumType, CRC_MixIn):
 	def auto_chksumfile_match(file):
 		#return re.match('Generated by: The JPEG Sheriff', file.peekline(128)) is not None
 		return re.search(r'^Filename\s+(Filesize\s+)?.*?CRC-?32.*^-+(\s+-+){1,4}\s*$', file.peek(1024), re.DOTALL|re.IGNORECASE|re.MULTILINE) is not None
-	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
+	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
-	def auto_filename_match(filename):
-		return filename[-3:]=='crc'
-	auto_filename_match = staticmethod(auto_filename_match)
+	auto_filename_match = 'crc$'
 	
 	def do_test_chksumfile_print_testingline(self, file):
 		x=re.search(r'^Filename\s+(Filesize\s+)?(.+?)??CRC-?32.*^-+(\s+-+){1,4}\s*$', file.peek(1024), re.DOTALL|re.IGNORECASE|re.MULTILINE)
@@ -1064,7 +1078,7 @@ class JPEGSheriff_CRC(ChksumType, CRC_MixIn):
 		return (crc, size), ''
 
 
-cftypes['crc']=JPEGSheriff_CRC
+register_cftype('crc', JPEGSheriff_CRC)
 
 
 #---------- generic ----------
@@ -1169,11 +1183,11 @@ def test(filename, typename, testfiles):
 
 	try:
 		file=doopen_read(filename)
-		for typename,cftype in cftypes.items():
-			if cftype.auto_chksumfile_match(file):
-				cf = cftype(testfiles)
-				cf.test_chksumfile(file, filename)
-				return
+		cftype = auto_chksumfile_match(file)
+		if cftype:
+			cf = cftype(testfiles)
+			cf.test_chksumfile(file, filename)
+			return
 	except EnvironmentError, a:
 		stats.cferror=stats.cferror+1
 		perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
@@ -1428,13 +1442,10 @@ def main(argv):
 						testa=''
 						if config.gzip>=0 and a[-3:]=='.gz':
 								testa=a[:-3]
-						for cftype in cftypes.values():
-							if cftype.auto_filename_match(a) or (testa and cftype.auto_filename_match(testa)):
-								make(cftype,a,args)
-								ok=1
-								break;
-						if not ok:
+						cftype = auto_filename_match(a, testa)
+						if not cftype:
 							raise CFVValueError, 'specify a filetype with -t, or use standard extension'
+						make(cftype,a,args)
 			elif o=='-U':
 				config.showunverified=0
 			elif o=='-u':
