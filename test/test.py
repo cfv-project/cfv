@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 #    test.py - tests for cfv (Command-line File Verify)
-#    Copyright (C) 2000-2004  Matthew Mueller <donut AT dakotacom DOT net>
+#    Copyright (C) 2000-2005  Matthew Mueller <donut AT dakotacom DOT net>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by

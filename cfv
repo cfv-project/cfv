@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 #    cfv - Command-line File Verify
-#    Copyright (C) 2000-2004  Matthew Mueller <donut AT dakotacom DOT net>
+#    Copyright (C) 2000-2005  Matthew Mueller <donut AT dakotacom DOT net>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -2343,7 +2343,7 @@ def printusage(err=0):
 	perror(' --piece_size_pow2=N  power of two to set the piece size to (default 18)')
 	sys.exit(err)
 def printhelp():
-	perror('cfv v%s - Copyright (C) 2000-2004 Matthew Mueller - GPL license'%version)
+	perror('cfv v%s - Copyright (C) 2000-2005 Matthew Mueller - GPL license'%version)
 	printusage()
 
 stats=Stats()
