@@ -1,4 +1,4 @@
-2003-xx-xx - v1.xx:
+2003-11-20 - v1.16:
 	* Optimize progress meter display when checking lots of small files.
 	* Add .torrent file support (requires BitTorrent.)
 
