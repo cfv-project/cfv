@@ -1085,6 +1085,9 @@ class FooSum_Base(ChksumType):
 
 
 class SHA1(FooSum_Base, SHA1_MixIn):
+	description = 'GNU sha1sum'
+	descinfo = 'SHA1,name'
+	
 	def auto_chksumfile_match(file, _autorem=re.compile(r'[0-9a-fA-F]{40} [ *].')):
 		l = file.peekline(4096)
 		while l:
@@ -1117,6 +1120,9 @@ class MD5_MixIn:
 			return c
 
 class MD5(FooSum_Base, MD5_MixIn):
+	description = 'GNU md5sum'
+	descinfo = 'MD5,name'
+
 	def auto_chksumfile_match(file, _autorem=re.compile(r'[0-9a-fA-F]{32} [ *].')):
 		l = file.peekline(4096)
 		while l:
@@ -1143,6 +1149,9 @@ register_cftype('md5', MD5)
 #---------- bsdmd5 ----------
 
 class BSDMD5(ChksumType, MD5_MixIn):
+	description = 'BSD md5'
+	descinfo = 'name,MD5'
+
 	def auto_chksumfile_match(file, _autorem=re.compile(r'MD5 \(.+\) = [0-9a-fA-F]{32}'+'[\r\n]*$')):
 		return _autorem.match(file.peekline(4096)) is not None
 	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
@@ -1198,6 +1207,9 @@ except struct.error:
 	struct = _Struct()
 
 class PAR(ChksumType, MD5_MixIn):
+	description = 'Parchive v1 (test-only)'
+	descinfo = 'name,size,MD5'
+
 	def auto_chksumfile_match(file):
 		return file.peek(8)=='PAR\0\0\0\0\0'
 	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
@@ -1254,6 +1266,9 @@ register_cftype('par', PAR)
 
 
 class PAR2(ChksumType, MD5_MixIn):
+	description = 'Parchive v2 (test-only)'
+	descinfo = 'name,size,MD5'
+
 	def auto_chksumfile_match(file):
 		return file.peek(8)=='PAR2\0PKT'
 	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
@@ -1351,6 +1366,9 @@ except ImportError, e1:
 		_btimporterror = '%s and %s'%(e1,e2)
 
 class Torrent(ChksumType):
+	description = 'BitTorrent metainfo'
+	descinfo = 'name,size,SHA1(piecewise)'
+
 	def auto_chksumfile_match(file):
 		return file.peek(1)=='d' and file.peek(4096).find('8:announce')>=0
 	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
@@ -1621,6 +1639,8 @@ class CRC_MixIn:
 			return c
 		
 class SFV_Base(ChksumType):
+	description = 'Simple File Verify'
+
 	def do_test_chksumfile_print_testingline(self, file):
 		#override the default testing line to show first SFV comment line, if any
 		ChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(128), ';'))
@@ -1638,6 +1658,8 @@ class SFV_Base(ChksumType):
 
 
 class SFV(SFV_Base, CRC_MixIn):
+	descinfo = 'name,CRC32'
+
 	def auto_chksumfile_match(file, _autorem=re.compile('.+ [0-9a-fA-F]{8}[\n\r]*$')):
 		l = file.peekline(4096)
 		while l:
@@ -1662,6 +1684,8 @@ register_cftype('sfv', SFV)
 
 
 class SFVMD5(SFV_Base, MD5_MixIn):
+	descinfo = 'name,MD5'
+
 	def auto_chksumfile_match(file, _autorem=re.compile('.+ [0-9a-fA-F]{32}[\n\r]*$')):
 		l = file.peekline(4096)
 		while l:
@@ -1701,6 +1725,9 @@ def csvunquote(g1,g2):
 	return g2
 
 class CSV(ChksumType, CRC_MixIn):
+	description = 'Comma Separated Values'
+	descinfo = 'name,size,CRC32'
+
 	def auto_chksumfile_match(file, _autorem=re.compile(_csvfnautore+'[0-9]+,[0-9a-fA-F]{8},[\n\r]*$')):
 		return _autorem.match(file.peekline(4096)) is not None
 	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
@@ -1728,6 +1755,8 @@ register_cftype('csv', CSV)
 #---------- csv with 4 fields ----------
 
 class CSV4(ChksumType, CRC_MixIn):
+	description = 'Comma Separated Values'
+	descinfo = 'name,size,CRC32,path'
 	
 	def auto_chksumfile_match(file, _autorem=re.compile(r'%s[0-9]+,[0-9a-fA-F]{8},%s[\n\r]*$'%(_csvfnautore,_csvstrautore))):
 		return _autorem.match(file.peekline(4096)) is not None
@@ -1757,6 +1786,9 @@ register_cftype('csv4', CSV4)
 #---------- csv with only 2 fields ----------
 
 class CSV2(ChksumType):
+	description = 'Comma Separated Values'
+	descinfo = 'name,size'
+
 	def auto_chksumfile_match(file, _autorem=re.compile(_csvfnautore+'[0-9]+,[\n\r]*$')):
 		return _autorem.match(file.peekline(4096)) is not None
 	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
@@ -1803,6 +1835,9 @@ def commaize(n):
 	return s
 
 class JPEGSheriff_CRC(ChksumType, CRC_MixIn):
+	description = 'JPEGSheriff'
+	descinfo = 'name,size,dimensions,CRC32'
+
 	def auto_chksumfile_match(file, _autorem=re.compile(r'^Filename\s+(Filesize\s+)?.*?CRC-?32.*^-+(\s+-+){1,4}\s*$', re.DOTALL|re.IGNORECASE|re.MULTILINE)):
 		return _autorem.search(file.peek(1024)) is not None
 	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
@@ -2336,6 +2371,15 @@ def printusage(err=0):
 def printhelp():
 	perror('cfv v%s - Copyright (C) 2000-2005 Matthew Mueller - GPL license'%version)
 	printusage()
+def printcftypehelp(err):
+	perror('Valid types:')
+	def printtypeinfo(typename, info, desc):
+		perror(' %-8s %-26s %s'%(typename,desc,info))
+	printtypeinfo('TYPE', 'FILE INFO STORED', 'DESCRIPTION')
+	printtypeinfo('auto', '', 'autodetect type (default)')
+	for typename in sorted(cftypes.keys()):
+		printtypeinfo(typename, cftypes[typename].descinfo, cftypes[typename].description)
+	sys.exit(err)
 
 stats=Stats()
 config=Config()
@@ -2383,8 +2427,11 @@ def main(argv=None):
 			elif o=='-C':
 				mode=1
 			elif o=='-t':
+				if a=='help':
+					printcftypehelp(err=0)
 				if not a in ['auto']+cftypes.keys():
-					raise CFVValueError, 'type %s not recognized'%a
+					perror('cfv: type %s not recognized'%a)
+					printcftypehelp(err=1)
 				typename=a
 			elif o=='-f':
 				setup_output()

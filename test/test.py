@@ -501,6 +501,14 @@ def cfv_version_test(s,o):
 		return 0
 	return 1
 
+def cfv_cftypehelp_test(s,o,expected):
+	if s!=expected:
+		return 1
+	for tname in allfmts()+['auto']:
+		if o.count(tname)<1:
+			return 'type %s not found in output'%tname
+	return 0
+
 def T_test(f, extra=None):
 	cmd=cfvcmd
 	if extra:
@@ -1384,6 +1392,9 @@ def all_tests():
 
 	if run_long_tests:
 		largefile_test()
+	
+	test_generic(cfvcmd+" -t aoeu",rcurry(cfv_cftypehelp_test,1))
+	test_generic(cfvcmd+" -t help",rcurry(cfv_cftypehelp_test,0))
 
 	test_generic(cfvcmd+" -h",cfv_version_test)
 

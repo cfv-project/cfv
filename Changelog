@@ -2,6 +2,7 @@
 	* Fix TypeError when using progress meter and checksumming stdin.
 	* Fix progress meter spew when checksumming special files(devices, named pipes, etc.)
 	* Sort list of checksum types in --help output.
+	* Make -t help (or -t with unknown type) print list of types, with descriptions.
 
 2005-01-11 - v1.18:
 	* Added special hack for multi-file .torrents to automatically strip the first path component off if it doesn't exist. (Allows testing .torrent files within their dirs without having to manually do --strip=1)
