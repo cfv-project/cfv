@@ -288,8 +288,12 @@ def all_tests():
 	T_test(".md5")
 	T_test(".md5.gz")
 	T_test(".bsdmd5")
+	#test par spec 1.0 files:
 	T_test(".par")
 	T_test(".p01")
+	#test par spec 0.9 files:
+	T_test("v09.par")
+	T_test("v09.p01")
 	T_test(".csv")
 	T_test(".sfv")
 	T_test(".csv2")
