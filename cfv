@@ -63,6 +63,9 @@ class FilenameError(ValueError): pass
 def cfdecode(s, preferred=None):
 	if config.encoding!='raw':
 		s = unicode(s, config.getencoding(preferred))
+	return s
+def cffndecode(s, preferred=None):
+	s = cfdecode(s, preferred)
 	if not _fs_nullsok and '\0' in s:
 		raise FilenameError, "filename contains null characters"
 	return s
@@ -1580,7 +1583,7 @@ class PAR(ChksumType, MD5_MixIn):
 				control_md5.update(d)
 				stats.bytesread=stats.bytesread+size
 			try:
-				filename = cfdecode(d, 'utf-16-le')
+				filename = cffndecode(d, 'utf-16-le')
 			except (UnicodeError, FilenameError), e:
 				stats.cferror=stats.cferror+1
 				perror('%s : file %i: %s (CF)'%(perhaps_showpath(file.name), i, e))
@@ -1668,7 +1671,7 @@ class PAR2(ChksumType, MD5_MixIn):
 					seen_file_ids[file_id] = 1
 					filename = chompnulls(d[file_pkt_size:])
 					try:
-						filename = cfdecode(filename)
+						filename = cffndecode(filename)
 					except (UnicodeDecodeError, FilenameError), e:
 						stats.cferror=stats.cferror+1
 						perror('%s : file %s: %s (CF)'%(perhaps_showpath(file.name), hexlify(file_id), e))
@@ -1730,6 +1733,8 @@ class Torrent(ChksumType):
 		except ValueError, e:
 			raise EnvironmentError, str(e) or 'invalid or corrupt torrent'
 
+		encoding = metainfo.get('encoding')
+
 		comments = []
 		if metainfo.has_key('creation date'):
 			try:
@@ -1737,15 +1742,16 @@ class Torrent(ChksumType):
 			except TypeError:
 				comments.append('created '+repr(metainfo['creation date']))
 		if metainfo.has_key('comment'):
-			comments.append(metainfo['comment'])
+			try:
+				comments.append(cfdecode(metainfo['comment'],encoding))
+			except UnicodeError:
+				pass
 		self.do_test_chksumfile_print_testingline(file, ', '.join(comments))
-
-		encoding = metainfo.get('encoding')
 
 		def init_file(filenameparts, ftotpos, filesize, encoding=encoding, file=file, self=self):
 			done = 0
 			try:
-				filenameparts = map(lambda p,encoding=encoding: cfdecode(p,encoding), filenameparts)
+				filenameparts = map(lambda p,encoding=encoding: cffndecode(p,encoding), filenameparts)
 			except LookupError, e: #lookup error is raised when specified encoding isn't found.
 				raise EnvironmentError, str(e)
 			except (UnicodeError, FilenameError), e:
@@ -1791,7 +1797,7 @@ class Torrent(ChksumType):
 			if config.strippaths==0:
 				dirname = info['name']
 				try:
-					dirname = cfdecode(dirname, encoding)
+					dirname = cffndecode(dirname, encoding)
 				except (LookupError, UnicodeError, FilenameError), e: #lookup error is raised when specified encoding isn't found.
 					stats.cferror=stats.cferror+1
 					raise EnvironmentError, e

@@ -1421,6 +1421,13 @@ def all_tests():
 			T_test(".torrent",extra='--strip=%s'%strip)
 			T_test("smallpiece.torrent",extra='--strip=%s'%strip)
 			T_test("encoding.torrent",extra='--strip=%s'%strip)
+		def cfv_torrentcommentencoding_test(s,o):
+			r = cfv_all_test(s,o,ok=1)
+			if r: return r
+			tcount = o.count('Test_Comment-Text.')
+			if tcount!=1: return 'encoded text count: %s'%tcount
+			return 0
+		test_generic(cfvcmd+" -T -v -f testencodingcomment.torrent", cfv_torrentcommentencoding_test)
 		test_encoding2()
 	test_encoding_detection()
 
