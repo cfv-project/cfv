@@ -34,11 +34,6 @@ else:
 	fsencoding = preferredencoding
 
 try:
-	UnicodeDecodeError
-except NameError:
-	UnicodeDecodeError=UnicodeError
-
-try:
 	os.stat(os.curdir+u'\0foobarbaz')
 	_fs_nullsok=0 #if os.stat succeeded, it means the filename was cut off at the null (or the user has funny files ;)
 except EnvironmentError:
@@ -262,14 +257,14 @@ if hasattr(os,'getcwdu'):
 	def os_getcwdu():
 		try:
 			return os.getcwdu()
-		except UnicodeDecodeError:
+		except UnicodeError:
 			return os.getcwd()
 else:
 	def os_getcwdu():
 		d = os.getcwd()
 		try:
 			return unicode(d,fsencoding)
-		except UnicodeDecodeError:
+		except UnicodeError:
 			return d
 
 os_curdiru=unicode(os.curdir)
@@ -1039,20 +1034,20 @@ class PeekFile:
 		self._reset_decodeobj()
 		try:
 			return self.decodeobj.read(*args)
-		except UnicodeDecodeError:
+		except UnicodeError:
 			self._decode_errs = 1
 			return u''
 	def peekline(self, *args):
 		self._reset_decodeobj()
 		try:
 			return self._readline(*args)
-		except UnicodeDecodeError:
+		except UnicodeError:
 			self._decode_errs = 1
 			return u''
 	def peeknextline(self, *args):
 		try:
 			return self._readline(*args)
-		except UnicodeDecodeError:
+		except UnicodeError:
 			self._decode_errs = 1
 			return u''
 	def _done_peeking(self,raw):
@@ -1295,7 +1290,7 @@ class TextChksumType(ChksumType):
 			line=line+1
 			try:
 				l=file.readline()
-			except UnicodeDecodeError,e:
+			except UnicodeError,e:
 				stats.cferror=stats.cferror+1
 				perror('%s : line %i: %s (CF)'%(perhaps_showpath(file.name),line,e))
 				continue
@@ -1677,7 +1672,7 @@ class PAR2(ChksumType, MD5_MixIn):
 					filename = chompnulls(d[file_pkt_size:])
 					try:
 						filename = cffndecode(filename)
-					except (UnicodeDecodeError, FilenameError), e:
+					except (UnicodeError, FilenameError), e:
 						stats.cferror=stats.cferror+1
 						perror('%s : file %s: %s (CF)'%(perhaps_showpath(file.name), hexlify(file_id), e))
 						continue
