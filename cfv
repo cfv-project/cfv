@@ -201,37 +201,67 @@ try:
 		return c,s
 except ImportError:
 	import md5,zlib
+	try:
+		import mmap
+		if hasattr(mmap, 'PROT_READ'):
+			def dommap(fileno, len):#unix mmap.  python default is PROT_READ|PROT_WRITE, but we open readonly.
+				if len==0: return '' #mmap doesn't like length=0
+				return mmap.mmap(fileno, len, mmap.MAP_SHARED, mmap.PROT_READ)
+		else:
+			def dommap(fileno, len):#windows mmap.
+				if len==0: return ''
+				return mmap.mmap(fileno, len)
+		nommap=0
+	except ImportError:
+		nommap=1
+
 	def getfilemd5(file):
-		m=md5.new()
 		if file=='':
 			f=sys.stdin
 		else:
 			f=open(file,'rb')
-		s=0L
-		while 1:
-			x=f.read(65536)
-			if not len(x):
-				c=""
-				for z in m.digest():
-					c=c+'%02x'%ord(z)
-				stats.bytesread=stats.bytesread+s
-				return c,s
-			s=s+len(x)
-			m.update(x)
+		if f==sys.stdin or nommap:
+			m=md5.new()
+			s=0L
+			while 1:
+				x=f.read(65536)
+				if not len(x):
+					c=""
+					for z in m.digest():
+						c=c+'%02x'%ord(z)
+					stats.bytesread=stats.bytesread+s
+					return c,s
+				s=s+len(x)
+				m.update(x)
+		else:
+			s = os.path.getsize(file)
+			m = md5.new(dommap(f.fileno(), s))
+			c=""
+			for z in m.digest():
+				c = c+'%02x'%ord(z)
+			stats.bytesread = stats.bytesread+s
+			return c,s
+			
 	def getfilecrc(file):
 		if file=='':
 			f=sys.stdin
 		else:
 			f=open(file,'rb')
-		c=zlib.crc32('')
-		s=0L
-		while 1:
-			x=f.read(65536)
-			if not len(x):
-				stats.bytesread=stats.bytesread+s
-				return "%08X"%c,s
-			s=s+len(x)
-			c=zlib.crc32(x,c)
+		if f==sys.stdin or nommap:
+			c=zlib.crc32('')
+			s=0L
+			while 1:
+				x=f.read(65536)
+				if not len(x):
+					stats.bytesread=stats.bytesread+s
+					return "%08X"%c,s
+				s=s+len(x)
+				c=zlib.crc32(x,c)
+		else:
+			s = os.path.getsize(file)
+			c = zlib.crc32(dommap(f.fileno(), s))
+			stats.bytesread = stats.bytesread+s
+			return "%08X"%c,s
 
 try:
 	import filecmp
