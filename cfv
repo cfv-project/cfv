@@ -56,6 +56,10 @@ def perror(s,nl='\n'):
 	if config.verbose>=-1:
 		_perr(s,nl)
 
+def plistf(filename):
+	sys.stdout.write(perhaps_showpath(filename)+config.listsep)
+
+
 class CFVException(Exception):
 	pass
 
@@ -83,7 +87,6 @@ class Stats:
 		self.bytesread=0L #use long int for size, to avoid possible overflow.
 		self.unverifiedfiles=[]
 		self.unverified=0
-		self.listfiles=[]
 		self.diffcase=0
 		self.quoted=0
 		self.starttime=time.time()
@@ -666,7 +669,7 @@ def testfile(testfiles,crctestfunc,filename,filecrc,filesize=-1):
 		if a[0]==errno.ENOENT:
 			stats.notfound=stats.notfound+1
 			if config.list&LISTNOTFOUND:
-				stats.listfiles.append(perhaps_showpath(l_filename))
+				plistf(l_filename)
 		else:
 			stats.ferror=stats.ferror+1
 		perror('%s : %s'%(perhaps_showpath(l_filename),a[1]))
@@ -674,7 +677,7 @@ def testfile(testfiles,crctestfunc,filename,filecrc,filesize=-1):
 	except CFVVerifyError, a:
 		reninfo=''
 		if config.list&LISTBAD:
-			stats.listfiles.append(perhaps_showpath(l_filename))
+			plistf(l_filename)
 		if config.rename:
 			formatmap=make_rename_formatmap(l_filename) 
 			for count in xrange(0,sys.maxint):
@@ -697,7 +700,7 @@ def testfile(testfiles,crctestfunc,filename,filecrc,filesize=-1):
 		return -2
 	stats.ok=stats.ok+1
 	if config.list&LISTOK:
-		stats.listfiles.append(perhaps_showpath(filename))
+		plistf(filename)
 	if filesize>=0:
 		pverbose('%s : OK (%i,%s)'%(perhaps_showpath(filename),fs,filecrc))
 	else:
@@ -812,7 +815,7 @@ def finish_test_dir():
 	for file in unverified:
 		if os.path.isfile(file):
 			if config.list&LISTUNVERIFIED:
-				stats.listfiles.append(perhaps_showpath(file))
+				plistf(file)
 			perror('%s : not verified'%perhaps_showpath(file,curdir))
 			stats.unverified=stats.unverified+1
 
@@ -1014,9 +1017,6 @@ def main(argv):
 			make(types[type],None,args)
 
 	stats.print_stats()
-
-	for f in stats.listfiles:
-		sys.stdout.write(f+config.listsep)
 
 #if stats.badcrc or stats.badsize or stats.notfound or stats.ferror or stats.unverified or stats.cferror:
 #	sys.exit(1)
