@@ -9,8 +9,6 @@ pkgdir=`$(PYTHON) -c 'import sys,re; x=filter(lambda x: re.match("$(prefix).*sit
 bindir=${exec_prefix}/bin
 mandir=${prefix}/man
 install=/usr/bin/install -c
-user=root
-group=root
 
 foo:
 	@echo 'to install cfv, type make install or install-wrapper.'
@@ -39,18 +37,18 @@ cfv.wrapper:
 	$(PYTHON) -c 'import string,os; py=filter(lambda x: os.path.isfile(x),map(lambda x: os.path.join(x,"$(PYTHON)"),string.split(os.environ["PATH"],":"))); py.append(" /usr/bin/env $(PYTHON)"); open("cfv.wrapper","w").write("#!%s\nimport sys,cfv\ncfv.main(sys.argv[1:])\n"%py[0])'
 
 install-wrapper-only: cfv.wrapper install_man
-	$(install) -o $(user) -g $(group) -m 0644 cfv $(DESTDIR)$(pkgdir)/cfv.py
-	$(install) -o $(user) -g $(group) -m 0755 cfv.wrapper $(DESTDIR)$(bindir)/cfv
+	$(install) -m 0644 cfv $(DESTDIR)$(pkgdir)/cfv.py
+	$(install) -m 0755 cfv.wrapper $(DESTDIR)$(bindir)/cfv
 
 install-wrapper: install-wrapper-only
 	$(PYTHON) -c "import py_compile; py_compile.compile('$(DESTDIR)$(pkgdir)/cfv.py')" 
 	$(PYTHON) -O -c "import py_compile; py_compile.compile('$(DESTDIR)$(pkgdir)/cfv.py')" 
 
 install: install_man
-	$(install) -o $(user) -g $(group) -m 0755 cfv $(DESTDIR)$(bindir)
+	$(install) -m 0755 cfv $(DESTDIR)$(bindir)
 
 install_man:
-	$(install) -o $(user) -g $(group) -m 0644 cfv.1 $(DESTDIR)$(mandir)/man1
+	$(install) -m 0644 cfv.1 $(DESTDIR)$(mandir)/man1
 
 clean:
 	-rm *.py[co] cfv.wrapper
