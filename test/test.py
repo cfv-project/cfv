@@ -698,6 +698,7 @@ def all_tests():
 	if BitTorrent:
 		T_test(".torrent",extra='--strip=1')
 		T_test("smallpiece.torrent",extra='--strip=1')
+		T_test("encoding.torrent",extra='--strip=1')
 
 	#test handling of directory args in recursive testmode. (Disabled since this isn't implemented, and I'm not sure if it should be.  It would change the meaning of cfv *)
 	#test_generic(cfvcmd+" -r a",cfv_test)

@@ -1129,8 +1129,21 @@ class Torrent(ChksumType):
 		if metainfo.has_key('comment'):
 			comments.append(metainfo['comment'])
 		self.do_test_chksumfile_print_testingline(file, ', '.join(comments))
-		
-		def init_file(filename, ftotpos, filesize):
+
+		encoding = metainfo.get('encoding')
+
+		def init_file(filenameparts, ftotpos, filesize, encoding=encoding, file=file):
+			if encoding:
+				try:
+					filenameparts = map(lambda p,encoding=encoding: unicode(p,encoding), filenameparts)
+				except LookupError, e: #lookup error is raised when specified encoding isn't found.
+					raise EnvironmentError, str(e)
+				except UnicodeError, e:
+					stats.cferror=stats.cferror+1
+					perror('%s : error decoding filename %r : %s (CF)'%(perhaps_showpath(file.name),filenameparts,str(e)))
+					#here we fall through and just let it use the undecoded filename.. is that really ok?
+					
+			filename = os.path.join(*filenameparts)
 			filename = mangle_filename(filename)
 			done = cache.testfiles and not cache.should_test(filename) #if we don't want to test this file, just pretending its done already has the desired effect.
 			if not done:
@@ -1161,13 +1174,13 @@ class Torrent(ChksumType):
 		hashes = re.compile('.'*20, re.DOTALL).findall(info['pieces'])
 		if info.has_key('length'):
 			total_len = info['length']
-			files = [init_file(info['name'], 0, total_len)]
+			files = [init_file([info['name']], 0, total_len)]
 		else:
 			files = []
 			total_len = 0
 			for finfo in info['files']:
 				flength = finfo['length']
-				files.append(init_file(os.path.join(info['name'], *finfo['path']), total_len, flength))
+				files.append(init_file([info['name']]+finfo['path'], total_len, flength))
 				total_len = total_len + flength
 
 		def readfpiece(f, pos, size):
