@@ -677,7 +677,7 @@ class MD5(ChksumType, MD5_MixIn):
 	
 	def make_addfile(self, filename):
 		crc=getfilemd5(filename)[0]
-		return (crc, None), '%s *%s\n'%(crc,filename)
+		return (crc, -1), '%s *%s\n'%(crc,filename)
 
 cftypes['md5']=MD5
 
@@ -705,7 +705,7 @@ class BSDMD5(ChksumType, MD5_MixIn):
 	
 	def make_addfile(self, filename):
 		crc=getfilemd5(filename)[0]
-		return (crc, None), 'MD5 (%s) = %s\n'%(filename, crc)
+		return (crc, -1), 'MD5 (%s) = %s\n'%(filename, crc)
 
 cftypes['bsdmd5']=BSDMD5
 
@@ -846,7 +846,7 @@ class SFV(ChksumType, CRC_MixIn):
 		
 	def make_addfile(self, filename):
 		crc=getfilecrc(filename)[0]
-		return (crc, None), '%s %s\n'%(filename,crc)
+		return (crc, -1), '%s %s\n'%(filename,crc)
 
 cftypes['sfv']=SFV
 
@@ -997,7 +997,7 @@ class JPEGSheriff_CRC(ChksumType, CRC_MixIn):
 		if self.has_size:
 			size = int(self._nstrip.sub('',x.group('size')))
 		else:
-			size = None
+			size = -1
 		self.test_file(x.group('name'), x.group('crc'), size)
 	
 	def make_std_filename(filename):
