@@ -1306,6 +1306,25 @@ def specialfile_test(cfpath):
 		shutil.rmtree(d)
 	
 
+def unrecognized_cf_test():
+	def cfv_unrectype(s,o):
+		r = cfv_all_test(s,o,cferror=1)
+		if r: return r
+		if not o.count('type'): return "'type' not found in output"
+		if o.count('encoding'): return "'encoding' found in output"
+		return 0
+	def cfv_unrecenc(s,o):
+		r = cfv_all_test(s,o,cferror=1)
+		if r: return r
+		if not o.count('type'): return "'type' not found in output"
+		if not o.count('encoding'): return "'encoding' not found in output"
+		return 0
+	# data1 is not a valid checksum file, but it is valid latin1, so it should only generate an unrecognized type error
+	test_generic(cfvcmd+" -T --encoding=latin1 -f data1", cfv_unrectype)
+	# data1 is not a valid checksum file, nor is it valid utf-16 (no bom, odd number of bytes), so it should generate an unrecognized type or encoding error
+	test_generic(cfvcmd+" -T --encoding=utf-16 -f data1", cfv_unrecenc)
+
+
 def all_unittest_tests():
 	if not run_internal:
 		return
@@ -1448,6 +1467,7 @@ def all_tests():
 		test_generic(cfvcmd+" -T -v -f testencodingcomment.torrent", cfv_torrentcommentencoding_test)
 		test_encoding2()
 	test_encoding_detection()
+	unrecognized_cf_test()
 
 	#test handling of directory args in recursive testmode. (Disabled since this isn't implemented, and I'm not sure if it should be.  It would change the meaning of cfv *)
 	#test_generic(cfvcmd+" -r a",cfv_test)
