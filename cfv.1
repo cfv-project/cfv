@@ -1,4 +1,4 @@
-.TH cfv 1 "05 Aug 2003"
+.TH cfv 1 "22 Aug 2003"
 .SH NAME
 cfv \- Verify file consistency with .sfv, .csv, .crc, .md5, md5sum, par, or par2 files
 .SH SYNOPSIS
@@ -19,6 +19,11 @@ Like -V, but don't print status line at end either.
 Like -VV, but not even error messages are printed.  Check the exit status.
 .IP "-Q"
 Only status lines are printed, but not individual errors.
+.IP "--progress VAL"
+Set when cfv should display progress bars.
+If no, progress bars are never displayed.
+If auto, progress bars are displayed when the output is to a tty.(default)
+If yes, progress is always displayed.
 .IP "-r"
 Recursive mode 1.  In create mode, make seperate chksum files for each dir.
 .IP "-rr"
@@ -193,6 +198,10 @@ Empty lines and lines beginning with a # are ignored.
 #don't be verbose (set to 1 or v for -v, 0 or V for -V, -1 or VV for -VV, -2 or q for -q, -3 or Q for -Q)
 .br
 verbose V
+.br
+#use progress meter when output is to a terminal (yes for always, no for never, auto for when output isatty)
+.br
+progress auto
 .br
 #create sfv files by default
 .br

@@ -294,6 +294,22 @@ def T_test(f):
 	#ensure all verbose stuff goes to stderr:
 	test_generic(cfvcmd+" -v -T --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
 	test_generic(cfvcmd+" -v -T --list0=unverified -f test"+f+" test.py testfix.csv data1", cfv_listdata_unv_test, stderr="/dev/null")
+	#test progress stuff.
+	def progress_test(s,o):
+		if cfv_test(s,o): return 1
+		if o.find('.'*10)<0: return 2
+		return 0
+	def noprogress_test(s,o):
+		if cfv_test(s,o): return 1
+		if o.find('.'*10)>=0: return 2
+		return 0
+	if f.endswith('.csv2'): #csv2 has only filesize, hence checksum never happens, so no progress
+		test_generic(cfvcmd+" -T --progress=yes -f test"+f, noprogress_test)
+	else:
+		test_generic(cfvcmd+" -T --progress=yes -f test"+f, progress_test)
+	test_generic(cfvcmd+" -T --progress=auto -f test"+f, noprogress_test)
+	test_generic(cfvcmd+" -T --progress=no -f test"+f, noprogress_test)
+
 
 def gzC_test(f,extra=None,verify=None,t=None,d=None):
 	cmd=cfvcmd
@@ -560,7 +576,7 @@ if args:
 	cfvexe=args[0]
 
 #set everything to default in case user has different in config file
-cfvcmd='-ZNVRMUI --fixpaths="" --strippaths=0 --showpaths=auto-relative'
+cfvcmd='-ZNVRMUI --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no'
 
 if run_internal:
 	runcfv = runcfv_py

@@ -10,6 +10,8 @@
 	* Fix handling of the [files...] arguments in recursive test mode.
 	* Add .p[0-9][0-9] (par1 recovery files) to the list of checksum file extensions to test automatically.
 	* Fix FutureWarning "%X of negative int ..." on Python 2.3.
+	* Add progress meter for file checksumming. (Can be toggled with the progress option.)
+	* Only the new version 1.7 of fchksum module is supported.
 
 2003-05-23 - v1.14:
 	* Support md5sum files with comments in them.

@@ -17,7 +17,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import getopt, re, os, sys, errno, time, copy
+import getopt, re, os, sys, errno, time, copy, struct
 from stat import *
 
 cftypes={}
@@ -39,6 +39,11 @@ def chompnulls(line):
 	p = line.find('\0')
 	if p < 0: return line
 	else:     return line[:p]
+
+def lchoplen(line, max):
+	if len(line)>max:
+		return '...'+line[-(max-3):]
+	return line
 
 
 _realpath = getattr(os.path, 'realpath', os.path.abspath) #realpath is only in Python>=2.2
@@ -72,24 +77,105 @@ def cdup():
 	os.chdir(curdir)
 
 
-def _pstd(s,nl='\n',write=sys.stdout.write):
-	write(s + nl)
-def _perr(s,nl='\n',write=sys.stderr.write):
-	write(s + nl)
+def getscrwidth():
+	w = -1
+	try:
+		from fcntl import ioctl
+		try:
+			from termios import TIOCGWINSZ
+		except ImportError:
+			from TERMIOS import TIOCGWINSZ
+		tty = sys.stdin.isatty() and sys.stdin or sys.stdout.isatty() and sys.stdout or sys.stderr.isatty() and sys.stderr or None
+		if tty:
+			h,w = struct.unpack('h h', ioctl(tty.fileno(), TIOCGWINSZ, '\0'*struct.calcsize('h h')))
+	except ImportError:
+		pass
+	if w>0:
+		return w
+	return os.environ.get('COLUMNS',80)
+scrwidth = getscrwidth()
 
-_p=_pstd
+stdinfo = sys.stdout
+stdprogress = None
+def set_stdout_special():
+	"""If stdout is being used for special purposes, redirect informational messages to stderr."""
+	global stdinfo
+	stdinfo = sys.stderr
+
+def setup_output():
+	global stdprogress
+	# if one of stdinfo (usually stdout) or stderr is a tty, use it.  Otherwise use stdinfo.
+	stdprogress = stdinfo.isatty() and stdinfo or sys.stderr.isatty() and sys.stderr or stdinfo
+	doprogress = not config.verbose==-2 and (
+			config.progress=='y' or (
+				config.progress=='a' and stdprogress.isatty()
+			)
+		)
+	if not doprogress:
+		stdprogress = None
+
 def pverbose(s,nl='\n'):
 	if config.verbose>0:
-		_p(s,nl)
+		stdinfo.write(s+nl)
 def pinfo(s,nl='\n'):
 	if config.verbose>=0 or config.verbose==-3:
-		_p(s,nl)
+		stdinfo.write(s+nl)
 def perror(s,nl='\n'):
 	if config.verbose>=-1:
-		_perr(s,nl)
+		sys.stdout.flush() # avoid inconsistent screen state if stdout has unflushed data
+		sys.stderr.write(s+nl)
 
 def plistf(filename):
 	sys.stdout.write(perhaps_showpath(filename)+config.listsep)
+
+class INF:
+	"""object that is always larger than what it is compared to"""
+	def __cmp__(self, other):
+		return 1
+	def __div__(self, other):
+		return self
+INF=INF()
+
+class ProgressMeter:
+	spinnerchars=r'\|/-'
+	def __init__(self, name, size=None, steps=20):
+		if size is None:
+			if name == '':
+				size = INF
+				steps = 1
+			else:
+				size = os.path.getsize(name)
+		self.name = lchoplen(perhaps_showpath(name), scrwidth - steps - 4)
+		self.size = size
+		self.steps = steps
+		self.stepsize = size/steps
+		self.nextstep = self.stepsize
+		self.spinneridx = 0
+		
+		stdprogress.write('%s : %s'%(self.name,'.'*self.steps)+'\b'*self.steps); stdprogress.flush()
+	
+	def update(self, cursize):
+		if self.nextstep < cursize:
+			while self.nextstep < cursize:
+				self.nextstep = self.nextstep + self.stepsize
+				stdprogress.write('#'); stdprogress.flush()
+		else:
+			stdprogress.write(self.spinnerchars[self.spinneridx]+'\b'); stdprogress.flush()
+			self.spinneridx = (self.spinneridx+1)%len(self.spinnerchars)
+	
+	def cleanup(self):
+		stdprogress.write('\r'+' '*(len(self.name)+3+self.steps+1)+'\r')
+
+class TimedProgressMeter(ProgressMeter):
+	def __init__(self, *args, **kw):
+		ProgressMeter.__init__(self, *args, **kw)
+		self.nexttime = time.time() + 0.06
+	
+	def update(self, cursize):
+		curtime = time.time()
+		if curtime > self.nexttime:
+			self.nexttime = curtime + 0.06
+			ProgressMeter.update(self, cursize)
 
 
 def enverrstr(e):
@@ -248,6 +334,7 @@ class Config:
 	listsep='\n'
 	user_cf_fn_regexs=[]
 	dereference=1
+	progress='a'
 	def setdefault(self,cftype):
 		if cftype in cftypes.keys():
 			self.defaulttype=cftype
@@ -270,6 +357,15 @@ class Config:
 		else:
 			raise CFVValueError, "invalid bool type '%s' for %s"%(v,o)
 		self.__dict__[o]=x
+	def setyesnoauto(self,o,v):
+		if 'yes'.startswith(v.lower()):
+			self.__dict__[o]='y'
+		elif 'auto'.startswith(v.lower()):
+			self.__dict__[o]='a'
+		elif 'no'.startswith(v.lower()):
+			self.__dict__[o]='n'
+		else:
+			raise CFVValueError, "invalid %s option '%s', must be 'no', 'auto', or 'yes'"%(o,v)
 	def setstr(self,o,v):
 		self.__dict__[o]=v
 	def setx(self,o,v):
@@ -277,15 +373,8 @@ class Config:
 			self.setdefault(v)
 		elif o in ("dirsort","cmdlinesort","ignorecase","rename","dereference"):
 			self.setbool(o,v)
-		elif o=="cmdlineglob":
-			if 'yes'.startswith(v.lower()):
-				self.cmdlineglob='y'
-			elif 'auto'.startswith(v.lower()):
-				self.cmdlineglob='a'
-			elif 'no'.startswith(v.lower()):
-				self.cmdlineglob='n'
-			else:
-				raise CFVValueError, "invalid cmdlineglob option '%s', must be 'no', 'auto', or 'yes'"%v
+		elif o in ("cmdlineglob", "progress"):
+			self.setyesnoauto(o,v)
 		elif o=="verbose":
 			try:
 				self.setintr(o,v,-3,1)
@@ -406,18 +495,26 @@ try:
 	if os.environ.get('CFV_NOFCHKSUM'): raise ImportError
 	import fchksum
 	try:
-		if fchksum.version()<2:raise ImportError
+		if fchksum.version()<4:raise ImportError
 	except:
-		_perr("old fchksum version installed, using std python modules. please update.") #can't use perror yet since config hasn't been done..
+		sys.stderr.write("old fchksum version installed, using std python modules. please update.\n") #can't use perror yet since config hasn't been done..
 		raise ImportError
 	def _getfilemd5(file):
-		c,s=fchksum.fmd5(file)
-		stats.bytesread=stats.bytesread+s
+		if stdprogress: progress = ProgressMeter(file)
+		try:
+			c,s=fchksum.fmd5(file, stdprogress and progress.update or None, 0.06)
+			stats.bytesread=stats.bytesread+s
+		finally:
+			if stdprogress: progress.cleanup()
 		return c,s
 	def _getfilecrc(file):
-		c,s=fchksum.fcrc32(file)
-		stats.bytesread=stats.bytesread+s
-		return struct.pack('>I',c),s
+		if stdprogress: progress = ProgressMeter(file)
+		try:
+			c,s=fchksum.fcrc32d(file, stdprogress and progress.update or None, 0.06)
+			stats.bytesread=stats.bytesread+s
+		finally:
+			if stdprogress: progress.cleanup()
+		return c,s
 except ImportError:
 	import md5
 	try:
@@ -450,16 +547,21 @@ except ImportError:
 			f=sys.stdin
 		else:
 			f=open(file,'rb')
-		if f==sys.stdin or nommap:
+		if f==sys.stdin or nommap or stdprogress:
 			m=md5.new()
 			s=0L
-			while 1:
-				x=f.read(65536)
-				if not x:
-					stats.bytesread=stats.bytesread+s
-					return m.digest(),s
-				s=s+len(x)
-				m.update(x)
+			if stdprogress: progress = TimedProgressMeter(file)
+			try:
+				while 1:
+					x=f.read(65536)
+					if not x:
+						stats.bytesread=stats.bytesread+s
+						return m.digest(),s
+					s=s+len(x)
+					m.update(x)
+					if stdprogress: progress.update(s)
+			finally:
+				if stdprogress: progress.cleanup()
 		else:
 			s = os.path.getsize(file)
 			m = md5.new(dommap(f.fileno(), s))
@@ -471,16 +573,21 @@ except ImportError:
 			f=sys.stdin
 		else:
 			f=open(file,'rb')
-		if f==sys.stdin or nommap:
+		if f==sys.stdin or nommap or stdprogress:
 			c=_crc32('')
 			s=0L
-			while 1:
-				x=f.read(65536)
-				if not x:
-					stats.bytesread=stats.bytesread+s
-					return struct.pack('>I',c),s
-				s=s+len(x)
-				c=_crc32(x,c)
+			if stdprogress: progress = TimedProgressMeter(file)
+			try:
+				while 1:
+					x=f.read(65536)
+					if not x:
+						stats.bytesread=stats.bytesread+s
+						return struct.pack('>I',c),s
+					s=s+len(x)
+					c=_crc32(x,c)
+					if stdprogress: progress.update(s)
+			finally:
+				if stdprogress: progress.cleanup()
 		else:
 			s = os.path.getsize(file)
 			c = _crc32(dommap(f.fileno(), s))
@@ -821,7 +928,6 @@ def ver2str(v):
 		v = v >> 8
 	return '.'.join(vers)
 
-import struct
 try: #support for 64bit ints in struct module was only added in python 2.2
 	struct.calcsize('< Q') 
 except struct.error:
@@ -1688,7 +1794,7 @@ def main(argv=None):
 	typename='auto'
 
 	try:
-		optlist, args = getopt.getopt(argv, 'rRlLTCt:f:mMnNp:uUiIvVzZqQh?', ['list=', 'list0=', 'fixpaths=', 'strippaths=', 'showpaths=','renameformat=','help','version'])
+		optlist, args = getopt.getopt(argv, 'rRlLTCt:f:mMnNp:uUiIvVzZqQh?', ['list=', 'list0=', 'fixpaths=', 'strippaths=', 'showpaths=','renameformat=','progress=','help','version'])
 	except getopt.error, a:
 		perror("cfv: %s"%a)
 		printusage(1)
@@ -1721,6 +1827,7 @@ def main(argv=None):
 					raise CFVValueError, 'type %s not recognized'%a
 				typename=a
 			elif o=='-f':
+				setup_output()
 				manual=1 #filename selected manually, don't try to autodetect
 				if mode==0:
 					cache.set_testfiles(args)
@@ -1781,6 +1888,8 @@ def main(argv=None):
 				config.setx('verbose', 'q')
 			elif o=='-Q':
 				config.setx('verbose', 'Q')
+			elif o=='--progress':
+				config.setx('progress', a)
 			elif o=='-z':
 				if prevopt=='-z':
 					config.gzip=2
@@ -1798,8 +1907,7 @@ def main(argv=None):
 				config.listsep = o=='--list0' and '\0' or '\n'
 				if config.list==LISTUNVERIFIED:
 					config.showunverified=1
-				global _p
-				_p=_perr #redirect all messages to stderr so only the list gets on stdout
+				set_stdout_special() #redirect all messages to stderr so only the list gets on stdout
 			elif o=='--showpaths':
 				config.setx('showpaths', a)
 			elif o=='--strippaths':
@@ -1821,7 +1929,9 @@ def main(argv=None):
 	except CFVValueError, e:
 		perror('cfv: %s'%e)
 		sys.exit(1)
-
+	
+	setup_output()
+	
 	if not manual:
 		if mode==0:
 			cache.set_testfiles(args)
