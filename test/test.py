@@ -101,7 +101,9 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
 	if stdin is not None and ver_fchksum:
 		fileno =  os.open(stdin, os.O_RDONLY | getattr(os,'O_BINARY', 0))
 		assert fileno >= 0
-		os.dup2(fileno, 0)
+		saved_stdin_fileno = os.dup(sys.stdin.fileno())
+		os.dup2(fileno, sys.stdin.fileno())
+		os.close(fileno)
 	try:
 		from cStringIO import StringIO
 		StringIO().write(u'foo') # cStringIO with unicode doesn't work in python 1.6
@@ -147,6 +149,9 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
 			s = 1
 	finally:
 		sys.stdin,sys.stdout,sys.stderr,sys.argv = saved
+		if locals().has_key('saved_stdin_fileno'):
+			os.dup2(saved_stdin_fileno, sys.stdin.fileno())
+			os.close(saved_stdin_fileno)
 		os.chdir(cwd)
 	o = obuf.getvalue()
 	if o:
