@@ -908,7 +908,7 @@ def test_encoding2():
 		import traceback
 		test_log_results('test_encoding2','foobar',''.join(traceback.format_exception(*sys.exc_info())),'foobar',{}) #yuck.  I really should switch this crap all to unittest ...
 	#finally:
-	shutil.rmtree(d)
+	shutil.rmtree(unicode(d))
 	
 
 def largefile_test():
