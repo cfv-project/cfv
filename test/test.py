@@ -19,7 +19,8 @@
 
 default_ns = globals().copy()
 
-import re,os,sys,string,operator,shutil,getopt,gzip,zlib,stat,traceback
+import re,os,sys,string,operator,shutil,getopt,gzip,zlib,stat,traceback,time
+from glob import glob
 try: # tempfile.mkdtemp is only in python 2.3+
 	from tempfile import mkdtemp
 except ImportError:
@@ -166,7 +167,6 @@ def test_log_results(cmd,s,o,r,kw):
 	
 
 def expand_cmdline(cmd):
-	from glob import glob
 	argv = []
 	for arg in cmd.split(' '): #bad.  shlex.split would be perfect, but its only in python >=2.3
 		arg = arg.replace('"','') # hack so --foo="bar" works.
@@ -1106,6 +1106,48 @@ def manyfiles_test(t):
 	finally:
 		shutil.rmtree(d)
 
+def specialfile_test(cfpath):
+	if run_internal and ver_fchksum: #current versions of fchksum don't release the GIL, so this deadlocks if doing internal testing and using fchksum.
+		return
+	try:
+		import threading
+	except ImportError:
+		return
+	d = mkdtemp()
+	cfn = os.path.split(cfpath)[1]
+	try:
+		fpath = os.path.join(d,'foo.bar')
+		try:
+			os.mkfifo(fpath)
+		except (AttributeError, EnvironmentError):
+			return
+		shutil.copyfile(cfpath, os.path.join(d, cfn))
+		def pusher(fpath):
+			f=open(fpath,'wb')
+			f.write('a'*0x4000)
+			f.flush()
+			time.sleep(0.1)
+			f.write('b'*0x4000)
+			f.flush()
+			time.sleep(0.1)
+			f.write('c'*0x4000)
+			f.close()
+		t=threading.Thread(target=pusher,args=(fpath,))
+		t.start()
+		s,o=runcfv("%s --progress=yes -T -p %s -f %s"%(cfvcmd,d,cfn))
+		t.join()
+		r=0
+		if s:
+			r=1
+		elif o.count('#')>1:
+			r='count(#) = %s'%(o.count('#'))
+		elif o.count('..'):
+			r=3
+		test_log_results('specialfile_test(%s)'%cfn,s,o,r,None)
+	finally:
+		shutil.rmtree(d)
+	
+
 
 cfvenv=''
 cfvexe=os.path.join(os.pardir,'cfv')
@@ -1296,6 +1338,8 @@ def all_tests():
 		if fmt_cancreate(t) and fmt_available(t):
 			C_funkynames_test(t)
 			manyfiles_test(t)
+	for fn in glob(os.path.join('fifotest','fifo.*')):
+		specialfile_test(fn)
 
 	test_generic(cfvcmd+" -m -v -T -t sfv", lambda s,o: cfv_typerestrict_test(s,o,'sfv'))
 	test_generic(cfvcmd+" -m -v -T -t sfvmd5", lambda s,o: cfv_typerestrict_test(s,o,'sfvmd5'))
