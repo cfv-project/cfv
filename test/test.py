@@ -35,7 +35,9 @@ except NameError:
 		return map(None, a, b) #not exactly the same, but good enough for us.
 	
 
-try: import BitTorrent
+try:
+	try: import BitTorrent
+	except ImportError: import BitTornado; BitTorrent = BitTornado
 except ImportError: BitTorrent = None
 
 

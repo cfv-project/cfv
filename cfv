@@ -1272,9 +1272,13 @@ class Torrent(ChksumType):
 
 	def do_test_chksumfile(self, file):
 		try:
-			import BitTorrent.bencode, BitTorrent.btformats, sha
-			metainfo = BitTorrent.bencode.bdecode(file.read())
-			BitTorrent.btformats.check_message(metainfo)
+			import sha
+			try:
+				from BitTorrent import bencode, btformats
+			except ImportError:
+				from BitTornado import bencode; from BitTornado.BT1 import btformats
+			metainfo = bencode.bdecode(file.read())
+			btformats.check_message(metainfo)
 		except (ImportError,ValueError), e:
 			raise EnvironmentError, str(e) or 'invalid or corrupt torrent'
 
