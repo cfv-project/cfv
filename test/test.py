@@ -361,10 +361,18 @@ def cfv_test(s,o, op=op_gt, opval=0):
 		return 0
 	return 1
 
-def cfv_all_test(s,o, files=-2, ok=0, unv=0, notfound=0, badcrc=0, badsize=0, cferror=0, ferror=0, misnamed=0):
+def cfv_status_test(s,o, unv=0, notfound=0, badcrc=0, badsize=0, cferror=0, ferror=0):
 	expected_status = (badcrc and 2) | (badsize and 4) | (notfound and 8) | (ferror and 16) | (unv and 32) | (cferror and 64)
+	if s==expected_status:
+		return 0
+	return 'bad status expected %s got %s'%(expected_status, s)
+
+def cfv_all_test(s,o, files=-2, ok=0, unv=0, notfound=0, badcrc=0, badsize=0, cferror=0, ferror=0, misnamed=0):
+	sresult = cfv_status_test(s,o,unv=unv,notfound=notfound,badcrc=badcrc,badsize=badsize,cferror=cferror,ferror=ferror)
+	if sresult:
+		return sresult
 	x=re.search(rx_StatusLine,tail(o))
-	if s==expected_status and x:
+	if x:
 		if files==-2:
 			files = reduce(operator.add, [ok,badcrc,badsize,notfound,ferror])
 		expected = [files,ok,badcrc,badsize,notfound,ferror,unv,cferror,misnamed]
@@ -372,7 +380,7 @@ def cfv_all_test(s,o, files=-2, ok=0, unv=0, notfound=0, badcrc=0, badsize=0, cf
 		if not filter(icomp, map(None,expected,actual)):
 			return 0
 		return 'expected %s got %s'%(expected,actual)
-	return 'bad status expected %s got %s'%(expected_status, s)
+	return 'status line not found in output'
 
 def cfv_unv_test(s,o,unv=1):
 	x=re.search(rx_Begin+rx_unv+rx_End,tail(o))
@@ -976,23 +984,46 @@ def test_encoding2():
 	if not BitTorrent:
 		return
 	d = mkdtemp()
+	d2 = mkdtemp()
 	try:
 		cfn = os.path.join(d,u'\u3070\u304B.torrent')
 		shutil.copyfile('testencoding2.torrent.foo', cfn)
-		test_generic(cfvcmd+" -q -T -p "+d, rcurry(status_test,expected=8))
-		test_generic(cfvcmd+" -v -T -p "+d, rcurry(cfv_all_test,ok=0,notfound=4))
+		
+		datafns = [
+			('data1',u'\u2605'),
+			('data2',u'\u2606'),
+			('data3',u'\u262E'),
+			('data4',u'\u2600'),
+		]
+		fnerrs=fnok=0
+		for srcfn,destfn in datafns:
+			try:
+				shutil.copyfile(srcfn, os.path.join(d2,destfn))
+			except (EnvironmentError,UnicodeError):
+				fnerrs=fnerrs+1
+			else:
+				fnok=fnok+1
+		
+		test_generic(cfvcmd+" -q -T -p "+d, rcurry(cfv_status_test,notfound=fnok,ferror=fnerrs))
+		test_generic(cfvcmd+" -v -T -p "+d, rcurry(cfv_all_test,ok=0,notfound=fnok,ferror=fnerrs))
 		bakad = os.path.join(d,u'\u3070\u304B')
 		os.mkdir(bakad)
-		shutil.copyfile('data1',os.path.join(bakad,u'\u2605'))
-		shutil.copyfile('data2',os.path.join(bakad,u'\u2606'))
-		shutil.copyfile('data3',os.path.join(bakad,u'\u262E'))
-		shutil.copyfile('data4',os.path.join(bakad,u'\u2600'))
-		test_generic(cfvcmd+" -q -T -p "+d, rcurry(status_test,expected=0))
-		test_generic(cfvcmd+" -v -T -p "+d, rcurry(cfv_all_test,ok=4))
+		for srcfn,destfn in datafns:
+			try:
+				shutil.copyfile(srcfn, os.path.join(bakad,destfn))
+			except (EnvironmentError,UnicodeError):
+				pass
+		test_generic(cfvcmd+" -q -m -T -p "+d, rcurry(cfv_status_test,ferror=fnerrs))
+		test_generic(cfvcmd+" -v -m -T -p "+d, rcurry(cfv_all_test,ok=fnok,ferror=fnerrs))
+		if not fnerrs:
+			#if some of the files can't be found, checking of remaining files will fail due to missing pieces
+			test_generic(cfvcmd+" -q -T -p "+d, rcurry(cfv_status_test))
+			test_generic(cfvcmd+" -v -T -p "+d, rcurry(cfv_all_test,ok=4))
 	except:
 		import traceback
 		test_log_results('test_encoding2','foobar',''.join(traceback.format_exception(*sys.exc_info())),'foobar',{}) #yuck.  I really should switch this crap all to unittest ...
 	#finally:
+	shutil.rmtree(unicode(d2))
 	shutil.rmtree(unicode(d))
 	
 
