@@ -34,6 +34,11 @@ def chomp(line):
 	elif line[-1:] in '\r\n': return line[:-1]
 	return line
 
+def chompnulls(line):
+	p = line.find('\0')
+	if p < 0: return line
+	else:     return line[:p]
+
 
 curdir=os.getcwd()
 reldir=['']
@@ -816,6 +821,62 @@ class PAR(ChksumType, MD5_MixIn):
 register_cftype('par', PAR)
 
 
+class PAR2(ChksumType, MD5_MixIn):
+	def auto_chksumfile_match(file):
+		return file.peek(8)=='PAR2\0PKT'
+	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
+
+	def do_test_chksumfile(self, file):
+		pkt_header_fmt = '< 8s Q 16s 16s 16s'
+		pkt_header_size = struct.calcsize(pkt_header_fmt)
+		file_pkt_fmt = '< 16s 16s 16s Q'
+		file_pkt_size = struct.calcsize(file_pkt_fmt)
+				
+		self.do_test_chksumfile_print_testingline(file)#### hrm.  We find the creator packet too late to print it here.  Need to look for it ahead of time or something.
+		
+		num_file_pkts = 0
+
+		while 1:
+			d = file.read(pkt_header_size)
+			if not d:
+				break
+
+			magic, pkt_len, pkt_md5, set_id, pkt_type = struct.unpack(pkt_header_fmt, d)
+			if config.docrcchecks:
+				import md5
+				control_md5 = md5.new()
+				control_md5.update(d[0x20:])
+				stats.bytesread=stats.bytesread+len(d)
+				
+			d = file.read(pkt_len - pkt_header_size)
+			if config.docrcchecks:
+				control_md5.update(d)
+				stats.bytesread=stats.bytesread+len(d)
+				if control_md5.digest() != pkt_md5:
+					raise EnvironmentError, (errno.EINVAL,"corrupt par2 file - bad packet hash")
+
+			if pkt_type == 'PAR 2.0\0FileDesc':
+				num_file_pkts = num_file_pkts + 1
+				file_id, file_md5, file_md5_16k, file_size = struct.unpack(file_pkt_fmt, d[:file_pkt_size])
+				filename = chompnulls(d[file_pkt_size:])
+				c = "%02x"*16 % tuple(map(ord, file_md5))
+				self.test_file(filename, c, file_size)
+			elif pkt_type == 'PAR 2.0\0Creator\0':
+				pass #pverbose("par2 creator: "+chompnulls(d)) #### hrm.
+
+		if num_file_pkts == 0:
+			raise EnvironmentError, (errno.EINVAL,"corrupt or unsupported par2 file - no file description packets found")
+
+	#we don't support PAR2 in create mode, but add these methods so that we can get error messages that are probaby more user friendly.
+	auto_filename_match = 'par2$'
+
+	def make_std_filename(filename):
+		return filename+'.par2'
+	make_std_filename = staticmethod(make_std_filename)
+
+register_cftype('par2', PAR2)
+
+
 #---------- sfv ----------
 
 class CRC_MixIn:
@@ -1350,7 +1411,7 @@ def finish_test_dir():
 			perror('%s : not verified'%perhaps_showpath(file))
 			stats.unverified=stats.unverified+1
 
-atrem=re.compile(r'md5|\.(csv|sfv|par|crc)(\.gz)?$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
+atrem=re.compile(r'md5|\.(csv|sfv|par|par2|crc)(\.gz)?$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
 def autotest(args):
 	start_test_dir(args)
 	for a in os.listdir('.'):

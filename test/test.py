@@ -328,6 +328,8 @@ def all_tests():
 	#test par spec 0.9 files:
 	T_test("v09.par")
 	T_test("v09.p01")
+	T_test(".par2")
+	T_test(".vol0+1.par2")
 	T_test(".csv")
 	T_test(".sfv")
 	T_test("noheader.sfv")
