@@ -1,12 +1,14 @@
-cfv 1.3  Copyright 2000 Matt Mueller <donut@azstarnet.com>
+cfv 1.4  Copyright 2000 Matt Mueller <donut@azstarnet.com>
 
 Install:
 1) make sure you have python installed 
 1.5) make sure the python-zlib module and/or the python-fchksum
-module is installed.  (Preferably, fchksum, as it is fast.
+module is installed.  (Preferably, fchksum, as it is faster.
 http://www.azstarnet.com/~donut/programs/fchksum.html)
-2) make install (or manually put cfv and cfv.1 where you want)
-3) read man page, cfv -h, etc.  have fun.
+2) run make with no arguments to see possible installation methods
+3) run your chosen method (or manually put cfv and cfv.1 where you want)
+4) read man page, cfv -h, etc.  have fun.
+
 
 Copying:
 This program is free software; you can redistribute it and/or modify

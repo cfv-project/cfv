@@ -1,3 +1,11 @@
+2000-10-05 - v1.4:
+	* Added make install-wrapper option for faster startup times.
+	* Uses long int value for total bytes read, to avoid overflow if you are checking a lot of files. (>=2GB, on 32bit archs)
+	* Fixed divide by zero error on systems with lower resolution timers (ie, python-win32)
+	* Ignore blank lines in .cfvrc
+	* Loosened .sfv file recognition some more.
+	* Handle error on creating/writing checksum file better.
+	* Add handler for .csv files with no crc field (-t csv2).
 2000-08-16 - v1.3:
 	* .sfv file recognition loosened a bit (nvCRC32 says generated using instead of by)
 	* uses fchksum module if available. (1.1x-2.0x faster)
