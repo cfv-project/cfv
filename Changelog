@@ -4,6 +4,7 @@
 	* Add CFV_NOFCHKSUM and CFV_NOMMAP env vars. (Mostly for testing/debugging.)
 	* Handle files made by buggy programs that add quotes to filenames.
 	* Print stats about number of case differences and quoted filenames.
+	* In recursive mode, an unaccessible dir no longer causes an exception. (Reported by Harley Gorrell)
 2001-09-03 - v1.9:
 	* Support bsd style md5 files (-t bsdmd5).
 	* Make test.py not attempt to verify against md5sum if it is not available (ie, on bsd). (reported by Hannu Liljemark)

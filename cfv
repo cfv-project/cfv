@@ -717,10 +717,14 @@ def make(type,ifilename,testfiles):
 				if config.recursive==1:
 					testdirs.append(f)
 				elif config.recursive==2:
-					rfiles=os.listdir(f)
-					if config.dirsort:
-						rfiles.sort()
-					testfiles[i:i]=map(lambda x,p=f: os.path.join(p,x), rfiles)
+					try:
+						rfiles=os.listdir(f)
+						if config.dirsort:
+							rfiles.sort()
+						testfiles[i:i]=map(lambda x,p=f: os.path.join(p,x), rfiles)
+					except EnvironmentError, a:
+						perror('%s%s : %s'%(f, os.sep, a[1]))
+						stats.ferror=stats.ferror+1
 				continue
 			if tfauto:#if user isn't specifying files, don't even try to add dirs and stuff, and don't print errors about it.
 				continue
@@ -745,9 +749,14 @@ def make(type,ifilename,testfiles):
 	
 	for f in testdirs:
 		olddir=curdir
-		chdir(f)
-		make(type,ifilename,None)
-		chdir(olddir)
+		try:
+			chdir(f)
+		except EnvironmentError, a:
+			perror('%s%s : %s'%(f, os.sep, a[1]))
+			stats.ferror=stats.ferror+1
+		else:
+			make(type,ifilename,None)
+			chdir(olddir)
 
 def start_test_dir(args):
 	if not config.showunverified:
@@ -777,9 +786,14 @@ def autotest(args):
 	for a in os.listdir('.'):
 		if config.recursive and os.path.isdir(a):
 			olddir=curdir
-			chdir(a)
-			autotest(args)
-			chdir(olddir)
+			try:
+				chdir(a)
+			except EnvironmentError, e:
+				perror('%s%s : %s'%(a, os.sep, e[1]))
+				stats.ferror=stats.ferror+1
+			else:
+				autotest(args)
+				chdir(olddir)
 		if atrem.search(a):
 			test(a,args)
 	finish_test_dir()
