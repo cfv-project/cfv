@@ -248,7 +248,7 @@ def rx_test(pat,str):
 	if re.search(pat,str): return 0
 	return 1
 def status_test(s,o,expected=0):
-	if s==expected:
+	if WEXITSTATUS(s)==expected:
 		return 0
 	return 1
 
