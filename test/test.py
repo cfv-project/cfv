@@ -77,7 +77,11 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
 	if stdin is not None and ver_fchksum:
 		#we could reopen stdin, except that fchksum uses stdio, and python has no freopen (which is needed to update STDIN to the new stdin.)
 		return 'error',"cannot test stdin with fchksum in internal mode"
-	from cStringIO import StringIO
+	try:
+		from cStringIO import StringIO
+		StringIO().write(u'foo') # cStringIO with unicode doesn't work in python 1.6
+	except (ImportError, SystemError):
+		from StringIO import StringIO
 	from glob import glob
 	obuf = StringIO()
 	saved = sys.stdin,sys.stdout,sys.stderr,sys.argv
