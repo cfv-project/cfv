@@ -466,7 +466,7 @@ def all_tests():
 	T_test("noheadercrcrlf.sfv")
 	T_test("crcrlf.crc")
 
-	#test correct handling of args in recursive testmode (disabled since this isn't fixed yet ;)
+	#test handling of directory args in recursive testmode. (Disabled since this isn't implemented, and I'm not sure if it should be.  It would change the meaning of cfv *)
 	#test_generic(cfvcmd+" -r a",cfv_test)
 	#test_generic(cfvcmd+" -ri a",cfv_test)
 	#test_generic(cfvcmd+" -ri A",cfv_test)
@@ -474,7 +474,12 @@ def all_tests():
 	#test_generic(cfvcmd+" -rim a",cfv_test)
 	#test_generic(cfvcmd+" -r a/C",cfv_test)
 	#test_generic(cfvcmd+" -ri A/c",cfv_test)
-	#test_generic(cfvcmd+" -r a/C/foo.bar",cfv_test)
+
+	#test handling of testfile args in recursive testmode
+	test_generic(cfvcmd+" -r -p a C/foo.bar",cfv_test)
+	test_generic(cfvcmd+" -ri -p a c/fOo.BaR",cfv_test)
+	test_generic(cfvcmd+" -r -u -p a C/foo.bar",cfv_test)
+	test_generic(cfvcmd+" -ri -u -p a c/fOo.BaR",cfv_test)
 	
 	test_generic(cfvcmd+" --strippaths=0 -T -f teststrip0.csv4",cfv_test)
 	test_generic(cfvcmd+" --strippaths=1 -T -f teststrip1.csv4",cfv_test)

@@ -110,6 +110,20 @@ class FileInfoCache:
 	def __init__(self):
 		self.data = {}
 		self.stdin = {}
+		self.testfiles = {}
+	
+	def set_testfiles(self, testfiles):
+		for fn in testfiles:
+			fn = os.path.join(reldir[-1], fn)
+			if config.ignorecase:
+				fn = fn.lower()
+			self.testfiles[fn] = 1
+			
+	def should_test(self, fn):
+		fn = os.path.join(reldir[-1], fn)
+		if config.ignorecase:
+			fn = fn.lower()
+		return self.testfiles.get(fn,0)
 	
 	def set_verified(self, fn):
 		self.getfinfo(fn)['_verified'] = 1
@@ -591,9 +605,6 @@ def parse_commentline(comment, commentchars):
 
 
 class ChksumType:
-	def __init__(self, testfiles):
-		self.testfiles = testfiles
-	
 	def test_chksumfile(self,file,filename):
 		if config.showunverified: #we can't expect the checksum file itself to be checksummed
 			cache.set_verified(filename)
@@ -638,11 +649,8 @@ class ChksumType:
 		filename=os.path.normpath(filename)
 		if config.strippaths!='n':
 			filename=strippath(filename, config.strippaths)
-		if self.testfiles:
-			if config.ignorecase:
-				if string.lower(filename) not in self.testfiles:
-					return
-			elif filename not in self.testfiles:
+		if cache.testfiles:
+			if not cache.should_test(filename):
 				return
 		stats.num=stats.num+1
 		l_filename=filename
@@ -1377,9 +1385,9 @@ def visit_dir(name, st=None, noisy=1):
 		return 1
 	return 0
 
-def test(filename, typename, testfiles, restrict_typename='auto'):
+def test(filename, typename, restrict_typename='auto'):
 	if typename != 'auto':
-		cf = cftypes[typename](testfiles)
+		cf = cftypes[typename]()
 		cf.test_chksumfile(None, filename)
 		return
 
@@ -1389,7 +1397,7 @@ def test(filename, typename, testfiles, restrict_typename='auto'):
 		if restrict_typename != 'auto' and cftypes[restrict_typename] != cftype:
 			return
 		if cftype:
-			cf = cftype(testfiles)
+			cf = cftype()
 			cf.test_chksumfile(file, filename)
 			return
 	except EnvironmentError, a:
@@ -1456,7 +1464,7 @@ def make(cftype,ifilename,testfiles):
 		if file==None:
 			try:
 				file=doopen_write(filename)
-				cf = cftype(None)
+				cf = cftype()
 				cf.make_chksumfile(file)
 			except EnvironmentError, a:
 				stats.cferror=stats.cferror+1
@@ -1586,7 +1594,7 @@ def show_unverified_files(filelist):
 
 
 atrem=re.compile(r'md5|\.(csv|sfv|par|par2|crc)(\.gz)?$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
-def autotest(typename, args):
+def autotest(typename):
 	for a in os.listdir(os.curdir):
 		if config.recursive and visit_dir(a):
 			try:
@@ -1595,10 +1603,10 @@ def autotest(typename, args):
 				perror('%s%s : %s'%(a, os.sep, enverrstr(e)))
 				stats.ferror=stats.ferror+1
 			else:
-				autotest(typename, args)
+				autotest(typename)
 				cdup()
 		if atrem.search(a):
-			test(a, 'auto', args, typename)
+			test(a, 'auto', typename)
 
 def printusage(err=0):
 	perror('Usage: cfv [opts] [-p dir] [-T|-C] [-t type] [-f file] [files...]')
@@ -1692,9 +1700,8 @@ def main(argv=None):
 				manual=1 #filename selected manually, don't try to autodetect
 				filename=a
 				if mode==0:
-					if config.ignorecase:
-						args=map(string.lower,args) #lowercase it all now, so we don't have to keep doing it over and over in the testfile
-					test(a, typename, args)
+					cache.set_testfiles(args)
+					test(a, typename)
 				else:
 					if typename!='auto':
 						make(cftypes[typename],a,args)
@@ -1795,9 +1802,8 @@ def main(argv=None):
 
 	if not manual:
 		if mode==0:
-			if config.ignorecase:
-				args=map(string.lower,args) #lowercase it all now, so we don't have to keep doing it over and over in the testfile
-			autotest(typename, args)
+			cache.set_testfiles(args)
+			autotest(typename)
 		else:
 			if typename=='auto':
 				typename=config.defaulttype
