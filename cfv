@@ -207,7 +207,11 @@ except ImportError:
 	try:
 		if os.environ.get('CFV_NOMMAP'): raise ImportError
 		import mmap
-		if hasattr(mmap, 'PROT_READ'):
+		if hasattr(mmap, 'ACCESS_READ'):
+			def dommap(fileno, len):#generic mmap.  python2.2 adds ACCESS_* args that work on both nix and win.
+				if len==0: return '' #mmap doesn't like length=0
+				return mmap.mmap(fileno, len, access=mmap.ACCESS_READ)
+		elif hasattr(mmap, 'PROT_READ'):
 			def dommap(fileno, len):#unix mmap.  python default is PROT_READ|PROT_WRITE, but we open readonly.
 				if len==0: return '' #mmap doesn't like length=0
 				return mmap.mmap(fileno, len, mmap.MAP_SHARED, mmap.PROT_READ)
