@@ -1469,7 +1469,7 @@ if args:
 	cfvexe=args[0]
 
 #set everything to default in case user has different in config file
-cfvcmd='-ZNVRMUI --encoding=auto --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url'
+cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url'
 
 if run_internal:
 	runcfv = runcfv_py

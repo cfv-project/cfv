@@ -581,6 +581,15 @@ class Config:
 			return preferredencoding
 		else:
 			return self.encoding
+	def setencoding(self, v):
+		if v in ('raw', 'auto'):
+			pass
+		else:
+			try:
+				u'a'.encode(v)
+			except (UnicodeError, LookupError), e:
+				raise CFVValueError, "invalid encoding option: %s"%(e)
+		self.encoding = v
 	def setdefault(self,cftype):
 		if cftype in cftypes.keys():
 			self.defaulttype=cftype
@@ -698,15 +707,6 @@ class Config:
 			if not cftypes.has_key(typename):
 				raise CFVValueError, "filename_type: invalid type '%s'"%typename
 			self.user_cf_fn_regexs.append((re.compile(match, re.I).search, cftypes[typename]))
-		elif o=='encoding':
-			if v in ('raw', 'auto'):
-				pass
-			else:
-				try:
-					u'a'.encode(v)
-				except (UnicodeError, LookupError), e:
-					raise CFVValueError, "invalid %s option: %s"%(o,e)
-			self.setstr(o,v)
 		elif o=='announceurl':
 			self.setstr(o,v)
 		elif o=='piece_size_pow2':
@@ -2836,7 +2836,7 @@ def main(argv=None):
 			elif o=='--unquote':
 				config.setx('unquote', a)
 			elif o=='--encoding':
-				config.setx('encoding',a)
+				config.setencoding(a)
 			elif o=='--announceurl':
 				config.setx('announceurl', a)
 			elif o=='--piece_size_pow2':
