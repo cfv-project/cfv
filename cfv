@@ -17,7 +17,8 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import getopt, re, os, sys, errno, time, copy, struct, codecs
+import getopt, re, os, sys, errno, time, copy, struct
+import codecs, unicodedata
 from stat import *
 from StringIO import StringIO
 
@@ -117,14 +118,101 @@ def chompnulls(line):
 	if p < 0: return line
 	else:     return line[:p]
 
+try:
+	_unicodedata_east_asian_width = unicodedata.east_asian_width # unicodedata.east_asian_width only in python >= 2.4
+except AttributeError:
+	def _unicodedata_east_asian_width(c):
+		# Not a true replacement, only suitable for our width calculations.
+		# Adapted from http://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c version 2003-05-20
+		ucs = ord(c)
+		if (ucs >= 0x1100 and
+				(ucs <= 0x115f or                    # Hangul Jamo init. consonants */
+					ucs == 0x2329 or ucs == 0x232a or
+					(ucs >= 0x2e80 and ucs <= 0xa4cf and
+						ucs != 0x303f) or                  # CJK ... Yi */
+					(ucs >= 0xac00 and ucs <= 0xd7a3) or # Hangul Syllables */
+					(ucs >= 0xf900 and ucs <= 0xfaff) or # CJK Compatibility Ideographs */
+					(ucs >= 0xfe30 and ucs <= 0xfe6f) or # CJK Compatibility Forms */
+					(ucs >= 0xff00 and ucs <= 0xff60) or # Fullwidth Forms */
+					(ucs >= 0xffe0 and ucs <= 0xffe6) or
+					(ucs >= 0x20000 and ucs <= 0x2fffd) or
+					(ucs >= 0x30000 and ucs <= 0x3fffd))):
+			return 'W'
+		return 'Na'
+
+def uwidth(u):
+	#TODO: should it return -1 or something for control chars, like wcswidth?
+	# see http://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c for a sample implementation
+	#if is_rawstr(u):
+	#	return len(u)
+	w = 0
+	#for c in unicodedata.normalize('NFC', u):
+	for c in u:
+		if c in (u'\u0000', u'\u200B'): # null, ZERO WIDTH SPACE
+			continue
+		ccat = unicodedata.category(c)
+		if ccat in ('Mn', 'Me', 'Cf'): # "Mark, nonspacing", "Mark, enclosing", "Other, format"
+			continue
+		cwidth = _unicodedata_east_asian_width(c)
+		if cwidth in ('W', 'F'): # "East Asian Wide", "East Asian Full-width"
+			w += 2
+		else:
+			w += 1
+	return w
+
 def lchoplen(line, max):
-	if len(line)>max:
-		return '...'+line[-(max-3):]
-	return line
+	"""Return line cut on left so it takes at most max character cells when printed, and width of result.
+
+	>>> lchoplen(u'hello world',6)
+	(u'...rld', 6)
+	"""
+	if is_rawstr(line):
+		if len(line)>max:
+			return '...'+line[-(max-3):], max
+		return line, len(line)
+	chars = ['']
+	w = 0
+	for c in reversed(line):
+		cw = uwidth(c)
+		if w+cw > max:
+			while w > max - 3:
+				w -= uwidth(chars.pop(0))
+			w += 3
+			chars.insert(0,'...')
+			break
+		w += cw
+		chars[0] = c + chars[0]
+		if cw != 0:
+			chars.insert(0,'')
+	return ''.join(chars), w
+
 def rchoplen(line, max):
-	if len(line)>max:
-		return line[:max-3]+'...'
-	return line
+	"""Return line cut on right so it takes at most max character cells when printed, and width of result.
+
+	>>> rchoplen(u'hello world',6)
+	(u'hel...', 6)
+	"""
+	if is_rawstr(line):
+		if len(line)>max:
+			return line[:max-3]+'...', max
+		return line, len(line)
+	chars = ['']
+	w = 0
+	for c in line:
+		cw = uwidth(c)
+		if w+cw > max:
+			while w > max - 3:
+				w -= uwidth(chars.pop())
+			chars.append('...')
+			w += 3
+			break
+		w += cw
+		if cw == 0:
+			chars[-1] += c
+		else:
+			chars.append(c)
+	return ''.join(chars), w
+
 
 try:
 	''.lstrip('a') #str.lstrip(arg) only in python>=2.2
@@ -136,6 +224,14 @@ except TypeError:
 			if s[i]!=c:
 				break
 		return s[i:]
+
+try:
+	reversed #reversed(seq) only in python>=2.4
+except NameError:
+	def reversed(seq):
+		l = list(seq)
+		l.reverse()
+		return l
 
 try:
 	sorted #sorted(seq) only in python>=2.4
@@ -339,7 +435,7 @@ class ProgressMeter:
 		if size is None:
 			if name != '' and os.path.isfile(name):
 				size = os.path.getsize(name)
-		self.name = lchoplen(perhaps_showpath(name), scrwidth - self.steps - 4)
+		self.name, self.namewidth = lchoplen(perhaps_showpath(name), scrwidth - self.steps - 4)
 		if not size: #if stdin or device file, we don't know the size, so just use a spinner.  If the file is actually zero bytes, it doesn't matter either way.
 			self.stepsize = INF
 			self.steps = 1
@@ -369,7 +465,7 @@ class ProgressMeter:
 	
 	def cleanup(self):
 		if not self.needrefresh:
-			stdprogress.write('\r'+' '*(len(self.name)+3+self.steps+1)+'\r')
+			stdprogress.write('\r'+' '*(self.namewidth+3+self.steps+1)+'\r')
 			self.needrefresh = 1
 
 class TimedProgressMeter(ProgressMeter):
@@ -1082,7 +1178,7 @@ class ChksumType:
 	def do_test_chksumfile_print_testingline(self, file, comment=None):
 		if comment:
 			comment = ', ' + comment
-			comment = rchoplen(comment, 102) #limit the length in case its a really long one.
+			comment,_ = rchoplen(comment, 102) #limit the length in case its a really long one.
 		else:
 			comment = ''
 		pverbose('testing from %s (%s%s)'%(showfn(file.name), self.__class__.__name__.lower(), comment))
@@ -2122,7 +2218,7 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 		
 		#override the default testing line to show first comment line, if any
 		comment = ', ' + file.peekline().strip()
-		comment = rchoplen(comment, 102) #but limit the length in case its a really long one.
+		comment,_ = rchoplen(comment, 102) #but limit the length in case its a really long one.
 		pverbose('testing from %s (crc%s)'%(showfn(file.name), comment))
 
 	_commentboundary=re.compile(r'^-+(\s+-+){1,4}\s*$')
