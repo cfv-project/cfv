@@ -62,7 +62,18 @@ Section "$WINDIR\cfv.bat file"
   FileWrite $1 "@echo off$\r$\n" 
   FileWrite $1 "$\"" 
   FileWrite $1 $INSTDIR
-  FileWrite $1 "\cfv.exe$\" %1 %2 %3 %4 %5 %6 %7 %8 %9$\r$\n"
+  FileWrite $1 "\cfv.exe$\" "
+
+  ; we want to use %* in the .bat file, but it doesn't exist on win 9x/ME
+  ReadRegStr $2 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" CurrentVersion
+  IfErrors 0 lbl_winnt
+  ; we are not NT.
+  FileWrite $1 "%1 %2 %3 %4 %5 %6 %7 %8 %9$\r$\n"
+  Goto lbl_done
+lbl_winnt:
+  FileWrite $1 "%*$\r$\n"
+lbl_done:
+
   FileClose $1
 SectionEnd
 
