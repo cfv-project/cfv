@@ -69,6 +69,9 @@ def plistf(filename):
 	sys.stdout.write(perhaps_showpath(filename)+config.listsep)
 
 
+def enverrstr(e):
+	return e.strerror or str(e)
+
 class CFVException(Exception):
 	pass
 
@@ -493,7 +496,7 @@ class ChksumType:
 				cf_stats.print_stats()
 		except EnvironmentError, a:
 			stats.cferror=stats.cferror+1
-			perror('%s : %s (CF)'%(perhaps_showpath(filename),a[1]))
+			perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
 
 	def do_test_chksumfile_print_testingline(self, file):
 		pverbose('testing from %s (%s)'%(file.name, string.lower(self.__class__.__name__)))
@@ -567,7 +570,7 @@ class ChksumType:
 					plistf(l_filename)
 			else:
 				stats.ferror=stats.ferror+1
-			perror('%s : %s'%(perhaps_showpath(l_filename),a[1]))
+			perror('%s : %s'%(perhaps_showpath(l_filename),enverrstr(a)))
 			return -1
 		except CFVVerifyError, a:
 			reninfo=''
@@ -1173,7 +1176,7 @@ def test(filename, typename, testfiles):
 				return
 	except EnvironmentError, a:
 		stats.cferror=stats.cferror+1
-		perror('%s : %s (CF)'%(perhaps_showpath(filename),a[1]))
+		perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
 		return -1
 	perror("I don't recognize the type of %s"%filename)
 	stats.cferror=stats.cferror+1
@@ -1224,7 +1227,7 @@ def make(cftype,ifilename,testfiles):
 						testfiles[:i]=map(lambda x,p=f: os.path.join(p,x), rfiles)
 						i=0
 					except EnvironmentError, a:
-						perror('%s%s : %s'%(f, os.sep, a[1]))
+						perror('%s%s : %s'%(f, os.sep, enverrstr(a)))
 						stats.ferror=stats.ferror+1
 				continue
 			if tfauto:#if user isn't specifying files, don't even try to add dirs and stuff, and don't print errors about it.
@@ -1239,7 +1242,7 @@ def make(cftype,ifilename,testfiles):
 				cf.make_chksumfile(file)
 			except EnvironmentError, a:
 				stats.cferror=stats.cferror+1
-				perror('%s : %s (CF)'%(perhaps_showpath(filename),a[1]))
+				perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
 				file=IOError
 				continue
 			dof=cf.make_addfile
@@ -1250,13 +1253,13 @@ def make(cftype,ifilename,testfiles):
 				stats.notfound=stats.notfound+1
 			else:
 				stats.ferror=stats.ferror+1
-			perror('%s : %s'%(f,a[1]))
+			perror('%s : %s'%(f,enverrstr(a)))
 			continue
 		try:
 			file.write(dat)
 		except EnvironmentError, a:
 			stats.cferror=stats.cferror+1
-			perror('%s : %s (CF)'%(perhaps_showpath(filename),a[1]))
+			perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
 			file=IOError
 			continue
 		if filesize>=0:
@@ -1270,7 +1273,7 @@ def make(cftype,ifilename,testfiles):
 			file.close()
 		except EnvironmentError, a:
 			stats.cferror=stats.cferror+1
-			perror('%s : %s (CF)'%(perhaps_showpath(filename),a[1]))
+			perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
 		else:
 			if config.verbose>=0 or config.verbose==-3:
 				cf_stats.sub_stats_end(stats)
@@ -1281,7 +1284,7 @@ def make(cftype,ifilename,testfiles):
 		try:
 			chdir(f)
 		except EnvironmentError, a:
-			perror('%s%s : %s'%(f, os.sep, a[1]))
+			perror('%s%s : %s'%(f, os.sep, enverrstr(a)))
 			stats.ferror=stats.ferror+1
 		else:
 			make(cftype,ifilename,None)
@@ -1317,7 +1320,7 @@ def autotest(args):
 			try:
 				chdir(a)
 			except EnvironmentError, e:
-				perror('%s%s : %s'%(a, os.sep, e[1]))
+				perror('%s%s : %s'%(a, os.sep, enverrstr(e)))
 				stats.ferror=stats.ferror+1
 			else:
 				autotest(args)
