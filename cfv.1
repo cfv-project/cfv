@@ -1,4 +1,4 @@
-.TH cfv 1 "10 Jan 2002"
+.TH cfv 1 "5 Mar 2002"
 .SH NAME
 cfv \- Verify file concistency with .sfv, .csv, md5sum, or par files
 .SH SYNOPSIS
@@ -62,9 +62,10 @@ Don't create gzipped files automatically. (default)
 Never use gzip, even if file ends in ".gz".
 .IP "--fixpaths string"
 Convert all occurances of any characters in string to the dir seperator for the current platform.  No effect in create mode. Use an empty string to disable.
-.IP "-strippaths NUM"
-Strip NUM leading components from file names in test mode.  Like the -p/--strip options of patch, except that it defaults to 0.
-A value of -1 strips all path information (like the default in patch.)
+.IP "-strippaths VAL"
+Strip NUM leading components from file names in test mode.  Similar to the -p/--strip options of patch. 
+VAL may be 'none': leave exactly as is, 'all': strip everything but the filename, 0: strip the leading driveletter/slash (if any), 1+: strip this many path components in addition.  
+The default is 0.
 .IP "--showpaths int"
 Show full paths 0:never, 1:always, 2:only in recursive mode(default)
 .IP "-p dir"
@@ -194,7 +195,7 @@ fixpaths
 .br
 #fixpaths /\\
 .br
-#don't strip leading directories (-1 to strip all path info, 0+ to strip the first X components)
+#don't strip leading directories (all to strip all path info, 0+ to strip the leading / and the first X components, none for nothing)
 .br
 strippaths 0
 .br

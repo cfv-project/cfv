@@ -183,7 +183,18 @@ class Config:
 		elif o in ("recursive","showpaths"):
 			self.setintr(o,v,0,2)
 		elif o=="strippaths":
-			self.setintr(o,v,-1,sys.maxint)
+			if 'none'.startswith(v.lower()):
+				self.strippaths='n'
+			elif 'all'.startswith(v.lower()):
+				self.strippaths='a'
+			else:
+				try:
+					x=int(v)
+					if x<0:
+						raise ValueError
+					self.strippaths=x
+				except ValueError:
+					raise CFVValueError, "invalid strippaths option '%s', must be 'none', 'all', or int >=0"%v
 		elif o=="fixpaths":
 			self.setstr(o,v)
 		elif o=="renameformat":
@@ -472,11 +483,11 @@ class ChksumType:
 			line=line+1
 
 	def test_file(self,filename,filecrc,filesize=-1):
-		if len(config.fixpaths):
+		if config.fixpaths:
 			filename=fixpath(filename)
-		if config.strippaths:
+		filename=os.path.normpath(filename)
+		if config.strippaths!='n':
 			filename=strippath(filename, config.strippaths)
-		filename=normpath(filename)
 		if self.testfiles:
 			if config.ignorecase:
 				if string.lower(filename) not in self.testfiles:
@@ -806,7 +817,7 @@ class CSV4(ChksumType, CRC_MixIn):
 	def do_test_chksumline(self, l):
 		x=self._csv4rem.match(l)
 		if not x: return -1
-		self.test_file(os.path.join(x.group(4),x.group(1)),x.group(3),int(x.group(2))) 
+		self.test_file(os.path.join(fixpath(x.group(4)),x.group(1)),x.group(3),int(x.group(2))) #we need to fixpath before path.join since os.path.join looks for path.sep
 	
 	def make_std_filename(filename):
 		return filename+'.csv'
@@ -914,24 +925,29 @@ def nocase_findfile(filename):
 		stats.diffcase = stats.diffcase + 1
 	return cur
 	
-def strippath(filename, num=-1):
-	if num<0:
+def strippath(filename, num='a'):
+	if num=='a':#split all the path off
 		return os.path.split(filename)[1]
+	if num=='n':#split none of the path
+		return filename
+
+	if re.match(r"[a-z]:\\",filename[0:3],re.I): #we can't use os.path.splitdrive, since we want to get rid of it even if we are not on a dos system.
+		filename=filename[3:]
+	if filename[0]==os.sep:
+		filename=filename[1:]
+	
+	if num==0:#only split drive letter/root slash off
+		return filename
+
 	parts = path_split(filename)
 	if len(parts) <= num:
 		return parts[-1]
 	return os.path.join(*parts[num:])
 
 def fixpath(filename):
-	return re.sub('['+re.escape(config.fixpaths)+']',os.sep,filename)
-
-def normpath(filename):
-	t=os.path.normpath(filename)
-	if re.match(r"[a-z]:\\",t[0:3],re.I): #we can't use os.path.splitdrive, since we want to get rid of it even if we are not on a dos system.
-		return t[3:]
-	if t[0]==os.sep:
-		return t[1:]
-	return t
+	if config.fixpaths:
+		return re.sub('['+re.escape(config.fixpaths)+']', os.sep, filename)
+	return filename
 
 
 def test(filename,testfiles):
@@ -1100,7 +1116,7 @@ def printusage(err=0):
 	perror(' --list=<l> raw list files of type <l> (%s)'%string.join(LISTARGS.keys(),', '))
 	perror(' --list0=<l> same as list, but seperate files with nulls (useful for xargs -0)')
 	perror(' --fixpaths=<s>  replace any chars in <s> with %s'%os.sep)
-	perror(' --strippaths=NUM  strip NUM leading components from file names.')
+	perror(' --strippaths=VAL  strip leading components from file names.')
 	perror(' --showpaths=<p> show full paths 0:never, 1:always, 2:in recursive mode(default)')
 	perror(' --renameformat=<f> format string to use with -n option')
 	perror(' --help/-h show help')
@@ -1227,7 +1243,7 @@ def main(argv):
 		elif o=='--showpaths':
 			config.showpaths=int(a)
 		elif o=='--strippaths':
-			config.strippaths=int(a)
+			config.setx('strippaths',a)
 		elif o=='--fixpaths':
 			config.fixpaths=a
 		elif o=='-h' or o=='-?' or o=='--help':
