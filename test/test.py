@@ -18,7 +18,6 @@ def test_log_results(cmd,s,o,r):
 	o=output
 	r=result (false=ok, anything else=fail (anything other than 1 will be printed))
 	"""
-	global stats
 	log("*** testing "+cmd);
 	log(o);
 	if r:
