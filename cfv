@@ -665,7 +665,7 @@ class MD5(ChksumType, MD5_MixIn):
 	
 	_md5rem=re.compile(r'([0-9a-fA-F]{32}) ([ *])([^\r\n]+)[\r\n]*$')
 	def do_test_chksumline(self, l):
-		x=self._md5rem.match(chomp(l))
+		x=self._md5rem.match(l)
 		if not x: return -1
 		if x.group(2)==' ':
 			perror('warning: file %s tested in textmode' %x.group(3))
@@ -695,7 +695,7 @@ class BSDMD5(ChksumType, MD5_MixIn):
 	
 	_bsdmd5rem=re.compile(r'MD5 \((.+)\) = ([0-9a-fA-F]{32})[\r\n]*$')
 	def do_test_chksumline(self, l):
-		x=self._bsdmd5rem.match(chomp(l))
+		x=self._bsdmd5rem.match(l)
 		if not x: return -1
 		self.test_file(x.group(1),x.group(2))
 	
@@ -832,7 +832,7 @@ class SFV(ChksumType, CRC_MixIn):
 	_sfvrem=re.compile(r'(.+) ([0-9a-fA-F]+)[\r\n]*$')
 	def do_test_chksumline(self, l):
 		if l[0]==';': return
-		x=self._sfvrem.match(chomp(l))
+		x=self._sfvrem.match(l)
 		if not x: return -1
 		self.test_file(x.group(1),x.group(2))
 	
