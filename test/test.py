@@ -529,8 +529,31 @@ def ren_test(f,extra=None,verify=None,t=None):
 	finally:
 		shutil.rmtree(dir)
 
-def search_test(t):
+def search_test(t,test_nocrc=0):
 	cfn = os.path.join(os.getcwd(), 'test.'+t)
+	hassize = fmt_hassize(t)
+	if test_nocrc:
+		hascrc = 0
+		cmd = cfvcmd+" -m"
+	else:
+		hascrc = fmt_hascrc(t)
+		cmd = cfvcmd
+	
+	if not hascrc and not hassize:
+		# if using -m and type doesn't have size, make sure -s doesn't do anything silly
+		d = mkdtemp()
+		try:
+			for n,n2 in zip(range(1,5),range(4,0,-1)):
+				shutil.copyfile('data%s'%n, os.path.join(d,'fOoO%s'%n2))
+			test_generic(cmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
+			test_generic(cmd+" -v -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
+			test_generic(cmd+" -v -s -n -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
+			test_generic(cmd+" -v -s -u -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4,unv=4))
+		finally:
+			shutil.rmtree(d)
+		# then return, since all the following tests would be impossible.
+		return
+
 
 	d = mkdtemp()
 	try:
@@ -539,14 +562,14 @@ def search_test(t):
 				return str((o.count('fOoO3'), o.count('fOoO4')))
 			return cfv_all_test(s,o,ok=4,misnamed=4)
 
-		test_generic(cfvcmd+" -v -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
+		test_generic(cmd+" -v -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
 		for n,n2 in zip(range(1,5),range(4,0,-1)):
 			shutil.copyfile('data%s'%n, os.path.join(d,'fOoO%s'%n2))
-		test_generic(cfvcmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
-		test_generic(cfvcmd+" -v -s -T -p %s -f %s"%(d,cfn), dont_find_same_file_twice_test)
-		test_generic(cfvcmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
-		test_generic(cfvcmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4,misnamed=4))
-		test_generic(cfvcmd+" -v -u -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4))
+		test_generic(cmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
+		test_generic(cmd+" -v -s -T -p %s -f %s"%(d,cfn), dont_find_same_file_twice_test)
+		test_generic(cmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
+		test_generic(cmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4,misnamed=4))
+		test_generic(cmd+" -v -u -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4))
 	finally:
 		shutil.rmtree(d)
 
@@ -556,23 +579,23 @@ def search_test(t):
 	d = mkdtemp()
 	try:
 		misnamed1=misnamed2=4
-		if fmt_hassize(t) and fmt_hascrc(t):
+		if hassize and hascrc:
 			experrs={'badcrc':1,'badsize':2}
-		elif fmt_hassize(t):
+		elif hassize:
 			experrs={'badsize':2, 'ok':1}
 			misnamed1=3
 			misnamed2=4 #actually this depends on what order os.listdir finds stuff. (could actually be 3 or 4) Oh well.
-		else:#if fmt_hascrc(t):
+		else:#if hascrc:
 			experrs={'badcrc':3}
 
-		test_generic(cfvcmd+" -v -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
+		test_generic(cmd+" -v -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
 		for n,n2 in zip([1,3,4],[4,2,1]):
 			shutil.copyfile('data%s'%n, os.path.join(d,'data%s'%n2))
-		test_generic(cfvcmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=1,**experrs))
-		test_generic(cfvcmd+" -v -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4,misnamed=misnamed1))
-		test_generic(cfvcmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=1,**experrs))
-		test_generic(cfvcmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4,misnamed=misnamed2))
-		test_generic(cfvcmd+" -v -u -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4))
+		test_generic(cmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=1,**experrs))
+		test_generic(cmd+" -v -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4,misnamed=misnamed1))
+		test_generic(cmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=1,**experrs))
+		test_generic(cmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4,misnamed=misnamed2))
+		test_generic(cmd+" -v -u -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=4))
 	finally:
 		shutil.rmtree(d)
 	
@@ -584,10 +607,10 @@ def search_test(t):
 				shutil.copyfile('data%s'%n, os.path.join(d,'foo%s'%n2))
 			for n in string.lowercase:
 				os.symlink('noexist', os.path.join(d,n))
-			test_generic(cfvcmd+" -v -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=1,misnamed=1,notfound=3))
-			test_generic(cfvcmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
-			test_generic(cfvcmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=1,misnamed=1,notfound=3))
-			test_generic(cfvcmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=1,notfound=3))
+			test_generic(cmd+" -v -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=1,misnamed=1,notfound=3))
+			test_generic(cmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,notfound=4))
+			test_generic(cmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=1,misnamed=1,notfound=3))
+			test_generic(cmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=1,notfound=3))
 		finally:
 			shutil.rmtree(d)
 
@@ -596,11 +619,11 @@ def search_test(t):
 	try:
 		shutil.copyfile('data4', os.path.join(d,'foo'))
 		os.chmod(d,stat.S_IRUSR|stat.S_IXUSR)
-		test_generic(cfvcmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=1,ferror=1,notfound=3))
+		test_generic(cmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=1,ferror=1,notfound=3))
 		os.chmod(d,stat.S_IRWXU)
 		open(os.path.join(d,'data4'),'w').close()
 		os.chmod(d,stat.S_IRUSR|stat.S_IXUSR)
-		test_generic(cfvcmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=1,ferror=2,notfound=3))
+		test_generic(cmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=1,ferror=2,notfound=3))
 	finally:
 		os.chmod(d,stat.S_IRWXU)
 		shutil.rmtree(d)
@@ -609,14 +632,14 @@ def search_test(t):
 	d = mkdtemp()
 	try:
 		shutil.copyfile('data4', os.path.join(d,'foo'))
-		test_generic(cfvcmd+" -v -uu -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=1,notfound=3,unv=0))
-		test_generic(cfvcmd+" -v -uu -s -n -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=1,notfound=3,unv=0))
+		test_generic(cmd+" -v -uu -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=1,notfound=3,unv=0))
+		test_generic(cmd+" -v -uu -s -n -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=1,notfound=3,unv=0))
 		
 		open(os.path.join(d,'data1'),'w').close()
-		if fmt_hassize(t): experrs={'badsize':1}
+		if hassize: experrs={'badsize':1}
 		else:              experrs={'badcrc':1}
-		test_generic(cfvcmd+" -v -uu -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=0,notfound=2,unv=0,**experrs))
-		test_generic(cfvcmd+" -v -uu -s -n -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=0,notfound=2,unv=1,**experrs))
+		test_generic(cmd+" -v -uu -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=0,notfound=2,unv=0,**experrs))
+		test_generic(cmd+" -v -uu -s -n -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=0,notfound=2,unv=1,**experrs))
 	finally:
 		shutil.rmtree(d)
 
@@ -628,40 +651,40 @@ def search_test(t):
 			os.mkdir(os.path.join(d, "aOeU.AoEu"))
 			os.mkdir(os.path.join(d, "aOeU.AoEu", "boO.FaRr"))
 			shutil.copyfile('data1', os.path.join(d, "aOeU.AoEu", "boO.FaRr", "DaTa1"))
-			test_generic(cfvcmd+" -v -rr -C -p %s -t %s -f %s"%(d,t,dcfn), rcurry(cfv_all_test,files=1,ok=1))
+			test_generic(cmd+" -v -rr -C -p %s -t %s -f %s"%(d,t,dcfn), rcurry(cfv_all_test,files=1,ok=1))
 			os.rename(os.path.join(d, "aOeU.AoEu", "boO.FaRr", "DaTa1"), os.path.join(d, "aOeU.AoEu", "boO.FaRr", "Foo1"))
 			shutil.copyfile('data4', os.path.join(d, "aOeU.AoEu", "boO.FaRr", "DaTa1"))
-			test_generic(cfvcmd+" -v -s -T -p %s -f %s"%(d,dcfn), rcurry(cfv_all_test,files=1,ok=1,misnamed=1))
+			test_generic(cmd+" -v -s -T -p %s -f %s"%(d,dcfn), rcurry(cfv_all_test,files=1,ok=1,misnamed=1))
 			shutil.rmtree(os.path.join(d, "aOeU.AoEu"))
 			os.mkdir(os.path.join(d, "AoEu.aOeU"))
 			os.mkdir(os.path.join(d, "AoEu.aOeU", "BOo.fArR"))
 			shutil.copyfile('data4', os.path.join(d, "AoEu.aOeU", "BOo.fArR","dAtA1"))
 			shutil.copyfile('data1', os.path.join(d, "AoEu.aOeU", "BOo.fArR","Foo1"))
-			test_generic(cfvcmd+" -i -v -s -T -p %s -f %s"%(d,dcfn), rcurry(cfv_all_test,files=1,ok=1,misnamed=1))
-			if fmt_hassize(t): experrs={'badsize':1}
+			test_generic(cmd+" -i -v -s -T -p %s -f %s"%(d,dcfn), rcurry(cfv_all_test,files=1,ok=1,misnamed=1))
+			if hassize: experrs={'badsize':1}
 			else:              experrs={'badcrc':1}
-			test_generic(cfvcmd+" -i -v -T -p %s -f %s"%(d,dcfn), rcurry(cfv_all_test,files=1,ok=0,**experrs))
-			test_generic(cfvcmd+" -i -v -s -n -T -p %s -f %s"%(d,dcfn), rcurry(cfv_all_test,files=1,ok=1,misnamed=1))
-			test_generic(cfvcmd+" -i -v -T -p %s -f %s"%(d,dcfn), rcurry(cfv_all_test,files=1,ok=1))
+			test_generic(cmd+" -i -v -T -p %s -f %s"%(d,dcfn), rcurry(cfv_all_test,files=1,ok=0,**experrs))
+			test_generic(cmd+" -i -v -s -n -T -p %s -f %s"%(d,dcfn), rcurry(cfv_all_test,files=1,ok=1,misnamed=1))
+			test_generic(cmd+" -i -v -T -p %s -f %s"%(d,dcfn), rcurry(cfv_all_test,files=1,ok=1))
 		finally:
 			shutil.rmtree(d)
 
-	if fmt_cancreate(t) and fmt_hassize(t):
+	if fmt_cancreate(t) and hassize:
 		d = mkdtemp()
 		try:
 			dcfn = os.path.join(d,'foo.'+t)
 			os.mkdir(os.path.join(d, "aoeu"))
 			dirsize = os.path.getsize(os.path.join(d, "aoeu"))
 			f=open(os.path.join(d,"idth"),'wb'); f.write('a'*dirsize); f.close()
-			test_generic(cfvcmd+" -v -C -p %s -t %s -f %s"%(d,t,dcfn), rcurry(cfv_all_test,files=1,ok=1))
+			test_generic(cmd+" -v -C -p %s -t %s -f %s"%(d,t,dcfn), rcurry(cfv_all_test,files=1,ok=1))
 			os.remove(os.path.join(d,"idth"))
 			os.rename(os.path.join(d,"aoeu"), os.path.join(d,'idth'))
 			def dont_find_dir_test(s,o):
 				if not o.count('idth')==1:
 					return str((o.count('idth'),))
 				return cfv_all_test(s,o,ok=0,notfound=1)
-			test_generic(cfvcmd+" -v -m -T -p %s -f %s"%(d,dcfn), dont_find_dir_test) # test not finding non-file things in normal mode
-			test_generic(cfvcmd+" -v -m -s -T -p %s -f %s"%(d,dcfn), dont_find_dir_test) # test not finding non-file things in search mode
+			test_generic(cmd+" -v -m -T -p %s -f %s"%(d,dcfn), dont_find_dir_test) # test not finding non-file things in normal mode
+			test_generic(cmd+" -v -m -s -T -p %s -f %s"%(d,dcfn), dont_find_dir_test) # test not finding non-file things in search mode
 		finally:
 			shutil.rmtree(d)
 
@@ -859,6 +882,7 @@ def all_tests():
 
 	for t in 'md5', 'bsdmd5', 'sfv', 'sfvmd5', 'csv', 'csv2', 'csv4', 'crc', 'par', 'par2':
 		search_test(t)
+		search_test(t,test_nocrc=1)
 
 	T_test(".md5")
 	T_test(".md5.gz")
