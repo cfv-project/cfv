@@ -17,20 +17,8 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-# this initialization stuff should go in its own file somewhere, when I think of a good name for it.
-import os,sys
-
-import imp
-_cfvfn = os.path.join(os.pardir,'cfv')
-cfv = imp.load_source('cfv', _cfvfn+'.py', open(_cfvfn))
-sys.modules['cfv'] = cfv
-
-#sys.path.insert(0, os.path.abspath(os.pardir))
-#import cfv
-
-
-import unittest
-from unittest import TestCase
+import cfvtest
+from cfvtest import TestCase
 
 from cfv import uwidth, lchoplen, rchoplen
 
@@ -113,4 +101,4 @@ class chopTestCase(TestCase):
 
 
 if __name__ == '__main__':
-	unittest.main()
+	cfvtest.main()

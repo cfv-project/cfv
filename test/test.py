@@ -17,8 +17,6 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-default_ns = globals().copy()
-
 import re,os,sys,string,operator,shutil,getopt,gzip,zlib,stat,traceback,time
 from glob import glob
 try: # tempfile.mkdtemp is only in python 2.3+
@@ -30,6 +28,7 @@ except ImportError:
 		os.mkdir(d)
 		return d
 	
+import cfvtest
 
 import locale
 if hasattr(locale,'getpreferredencoding'):
@@ -131,14 +130,6 @@ class rcurry:
 		kw.update(_kwargs)
 		return apply(self.curry_func, (_args+self.curry_args), kw)
 
-class NullFile:
-	def isatty(self): return 0
-	def write(self,s): pass
-	def writelines(self,l): pass
-	def flush(self): pass
-	def close(self): pass
-nullfile = NullFile()
-
 def pathfind(p, path=string.split(os.environ.get('PATH',os.defpath),os.pathsep)):
 	for d in path:
 		if os.path.exists(os.path.join(d,p)):
@@ -183,11 +174,6 @@ def logr(text):
 def log(text):
 	logr(text+"\n");
 
-def get_version_flags():
-	global ver_fchksum, ver_mmap
-	s,o=runcfv(cfvcmd+" --version")
-	ver_fchksum = string.find(o,'fchksum')>=0
-	ver_mmap = string.find(o,'mmap')>=0
 
 def test_log_results(cmd,s,o,r,kw):
 	"""
@@ -213,121 +199,6 @@ def test_log_results(cmd,s,o,r,kw):
 	log("");
 	
 
-def expand_cmdline(cmd):
-	argv = []
-	for arg in cmd.split(' '): #bad.  shlex.split would be perfect, but its only in python >=2.3
-		arg = arg.replace('"','') # hack so --foo="bar" works.
-		if '*' in arg or '?' in arg or '[' in arg:
-			argv.extend(glob(arg))
-		else:
-			argv.append(arg)
-	return argv
-
-def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None):
-	try:
-		import subprocess # subprocess module only in python >= 2.4, but it works on windows, unlike commands
-	except ImportError:
-		from commands import getstatusoutput
-		runcmd = cfvenv+cfvexe+' '+cmd
-		if stdin:
-			runcmd = 'cat '+stdin+' | '+runcmd
-		if stdout:
-			runcmd = runcmd + ' > '+stdout
-		if stderr:
-			runcmd = runcmd + ' 2> '+stderr
-		s,o = getstatusoutput(runcmd)
-		if os.WIFSIGNALED(s):
-			s = -os.WTERMSIG(s)
-		else:
-			s = os.WEXITSTATUS(s)
-		return s,o
-	else:
-		def open_output(fn):
-			if fn=='/dev/null' and not os.path.exists(fn):
-				fn='nul'
-			return open(fn,'wb')
-		p_stdin = p_stdout = p_stderr = subprocess.PIPE
-		if stdin:
-			p_stdin = open(stdin,'rb')
-		if stdout:
-			p_stdout = open_output(stdout)
-		else:
-			p_stderr = subprocess.STDOUT
-		if stderr:
-			p_stderr = open_output(stderr)
-		argv = [cfvexe]+expand_cmdline(cmd)
-		proc = subprocess.Popen(argv, stdin=p_stdin, stdout=p_stdout, stderr=p_stderr)
-		for f in p_stdin, p_stdout, p_stderr:
-			if f not in (subprocess.PIPE, subprocess.STDOUT, None):
-				f.close()
-		obuf,ebuf = proc.communicate()
-		if ebuf or obuf is None:
-			assert not obuf
-			o = ebuf
-		else:
-			o = obuf
-		s = proc.returncode
-		if o:
-			if o[-2:] == '\r\n': o = o[:-2]
-			elif o[-1:] in '\r\n': o = o[:-1]
-		return s, o
-		
-
-def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
-	if stdin is not None and ver_fchksum:
-		fileno =  os.open(stdin, os.O_RDONLY | getattr(os,'O_BINARY', 0))
-		assert fileno >= 0
-		saved_stdin_fileno = os.dup(sys.stdin.fileno())
-		os.dup2(fileno, sys.stdin.fileno())
-		os.close(fileno)
-	try:
-		from cStringIO import StringIO
-		StringIO().write(u'foo') # cStringIO with unicode doesn't work in python 1.6
-	except (ImportError, SystemError):
-		from StringIO import StringIO
-	obuf = StringIO()
-	saved = sys.stdin,sys.stdout,sys.stderr,sys.argv
-	cwd = os.getcwd()
-	def open_output(file,obuf=obuf):
-		if file:
-			if file=="/dev/null":
-				return nullfile
-			return open(file,'wb')
-		else:
-			return obuf
-	try:
-		if stdin:  sys.stdin = open(stdin,'rb')
-		else:      sys.stdin = StringIO()
-		sys.stdout = open_output(stdout)
-		sys.stderr = open_output(stderr)
-		sys.argv = [cfvexe] + expand_cmdline(cmd)
-		cfv_ns = default_ns.copy()
-		try:
-			exec cfv_compiled in cfv_ns
-			s = 'no exit?'
-		except SystemExit, e:
-			s = e.code
-			if stdin:  sys.stdin.close()
-			if stdout: sys.stdout.close()
-			if stderr: sys.stderr.close()
-		except KeyboardInterrupt:
-			raise
-		except:
-			import traceback
-			traceback.print_exc(file=obuf)
-			s = 1
-	finally:
-		sys.stdin,sys.stdout,sys.stderr,sys.argv = saved
-		if locals().has_key('saved_stdin_fileno'):
-			os.dup2(saved_stdin_fileno, sys.stdin.fileno())
-			os.close(saved_stdin_fileno)
-		os.chdir(cwd)
-	o = obuf.getvalue()
-	if o:
-		if o[-2:] == '\r\n': o = o[:-2]
-		elif o[-1:] in '\r\n': o = o[:-1]
-	return s, o
-
 def test_external(cmd,test):
 	from commands import getstatusoutput
 	s,o = getstatusoutput(cmd)
@@ -338,7 +209,7 @@ def test_generic(cmd,test, **kw):
 	#s,o=runcfv(cmd)
 	s,o=apply(runcfv,(cmd,), kw)
 	r=test(s,o)
-	test_log_results(cfvenv+cfvexe+" "+cmd,s,o,r, kw)
+	test_log_results(cfvtest.cfvenv+cfvtest.cfvfn+" "+cmd,s,o,r, kw)
 
 class cst_err(Exception): pass
 def cfv_stdin_test(cmd,file):
@@ -1342,7 +1213,6 @@ def test_encoding2():
 			test_generic(cfvcmd+" --encoding=raw -v -T -p "+d, rcurry(cfv_all_test,ok=raw_fnok,notfound=raw_fnerrs))
 			test_generic(cfvcmd+" --encoding=raw -v -u -T -p "+d, rcurry(cfv_all_test,ok=raw_fnok,unv=fnok-raw_fnok,notfound=raw_fnerrs))
 	except:
-		import traceback
 		test_log_results('test_encoding2','foobar',''.join(traceback.format_exception(*sys.exc_info())),'foobar',{}) #yuck.  I really should switch this crap all to unittest ...
 	#finally:
 	shutil.rmtree(unicode(d2))
@@ -1391,7 +1261,7 @@ def manyfiles_test(t):
 		shutil.rmtree(d)
 
 def specialfile_test(cfpath):
-	if run_internal and ver_fchksum: #current versions of fchksum don't release the GIL, so this deadlocks if doing internal testing and using fchksum.
+	if run_internal and cfvtest.ver_fchksum: #current versions of fchksum don't release the GIL, so this deadlocks if doing internal testing and using fchksum.
 		return
 	try:
 		import threading
@@ -1433,8 +1303,6 @@ def specialfile_test(cfpath):
 	
 
 
-cfvenv=''
-cfvexe=os.path.join(os.pardir,'cfv')
 run_internal = 1
 run_long_tests = 0
 
@@ -1448,7 +1316,7 @@ def show_help_and_exit(err=None):
 	print ' --long  include tests that may use large amounts of CPU or disk'
 	print ' --help  show this help'
 	print
-	print 'default [cfv] is:', cfvexe
+	print 'default [cfv] is:', cfvtest.cfvfn
 	print 'default run mode is:', run_internal and 'internal' or 'external'
 	sys.exit(1)
 
@@ -1472,18 +1340,11 @@ for o,a in optlist:
 	else:
 		show_help_and_exit("bad opt %r"%o)
 
-if args:
-	cfvexe=args[0]
+cfvtest.setcfv(fn=args and args[0] or None, internal=run_internal)
+from cfvtest import runcfv
 
 #set everything to default in case user has different in config file
 cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url'
-
-if run_internal:
-	runcfv = runcfv_py
-	_cfv_code = open(cfvexe,'r').read().replace('\r\n','\n').replace('\r','\n')
-	cfv_compiled = compile(_cfv_code,cfvexe,'exec')
-else:
-	runcfv = runcfv_exe
 
 logfile=open("test.log","w")
 
@@ -1706,18 +1567,13 @@ def all_tests():
 	print donestr
 
 print 'testing...'
-get_version_flags()
 all_tests()
-if ver_fchksum:
+if cfvtest.ver_fchksum:
 	print 'testing without fchksum...'
-	cfvenv="CFV_NOFCHKSUM=x "+cfvenv
-	os.environ["CFV_NOFCHKSUM"]="x"
-	get_version_flags()
+	cfvtest.setenv('CFV_NOFCHKSUM','x')
 	all_tests()
-if ver_mmap:
+if cfvtest.ver_mmap:
 	print 'testing without mmap...'
-	cfvenv="CFV_NOMMAP=x "+cfvenv
-	os.environ["CFV_NOMMAP"]="x"
-	get_version_flags()
+	cfvtest.setenv('CFV_NOMMAP','x')
 	all_tests()
 
