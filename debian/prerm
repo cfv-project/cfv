@@ -4,7 +4,7 @@
 # Written 1998 by Gregor Hoffleit <flight@debian.org>.
 #
 
-PACKAGE=cfv
+PACKAGE=`basename $0 .prerm`
 
 dpkg --listfiles $PACKAGE |
 	awk '$0~/\.py$/ {print $0"c\n" $0"o"}' |

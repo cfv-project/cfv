@@ -1,3 +1,26 @@
+cfv (1.9-4) unstable; urgency=low
+
+  * Removed dependency on package not in debian archive (closes: #116867)
+  * Upstream changes to support 2.1 (new python policy)
+
+ -- Stefan Alfredsson <alfs@debian.org>  Mon,  5 Nov 2001 23:02:12 +0100
+
+cfv (1.9-3) unstable; urgency=low
+
+  * Update to the new python policy.
+
+ -- Matthew Mueller <donut@azstarnet.com>  Sun,  4 Nov 2001 12:52:42 -0700
+
+cfv (1.9-2) unstable; urgency=low
+
+  * First upload to the debian archive; Previous versions have been
+    packaged by the upstream author and offered locally, but to
+    get the package into the official debian archive it must be
+    maintained by a debian developer. Hence, this upload by me
+    (after checking that the packaging was OK).
+
+ -- Stefan Alfredsson <alfs@debian.org>  Wed, 19 Sep 2001 18:32:39 +0200
+
 cfv (1.9-1) unstable; urgency=low
 
   * New release.

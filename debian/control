@@ -1,13 +1,13 @@
 Source: cfv
 Section: utils
 Priority: optional
-Maintainer: Matthew Mueller <donut@azstarnet.com>
+Maintainer: Stefan Alfredsson <alfs@debian.org>
+Build-Depends: python2.1, debhelper
 Standards-Version: 3.0.1
 
 Package: cfv
 Architecture: all
-Depends: python-base, python-zlib | python-fchksum (>= 1.2-1)
-Recommends: python-fchksum (>= 1.2-1)
+Depends: python2.1
 Description: tests and creates .sfv, .csv and md5 files
  cfv is a utility to both test and create .sfv (Simple File Verify) .csv,
  and md5sum files. These files are commonly used to ensure the correct
