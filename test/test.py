@@ -279,10 +279,11 @@ rx_badsize=r', (\d+) badsize'
 rx_cferror=r', (\d+) chksum file errors'
 rx_misnamed=r', (\d+) misnamed'
 rx_End=r'(, \d+ differing cases)?(, \d+ quoted filenames)?.  [\d.]+ seconds, [\d.]+K(/s)?$'
-rxo_TestingFrom=re.compile(r'^testing from .* \((.+?)\b.*\)$', re.M)
+rxo_TestingFrom=re.compile(r'^testing from .* \((.+?)\b.*\)[\n\r]*$', re.M)
 
 def optionalize(s):
 	return '(?:%s)?'%s
+rx_StatusLine=rx_Begin+''.join(map(optionalize,[rx_badcrc,rx_badsize,rx_notfound,rx_ferror,rx_unv,rx_cferror,rx_misnamed]))+rx_End
 
 class OneOf:
 	def __init__(self, *possibilities):
@@ -301,7 +302,15 @@ def icomp(foo):
 	return exp!=act
 
 def tail(s):
-	return string.split(s,'\n')[-1]
+	#the last line might not be what we want, since stdout and stderr can get mixed up in some cases.
+	#return string.split(s,'\n')[-1]
+	lines = s.splitlines()
+	lines.reverse()
+	for line in lines:
+		if re.search(rx_StatusLine, line):
+			return line
+	return ''
+
 def cfv_test(s,o, op=op_gt, opval=0):
 	x=re.search(rx_Begin+rx_End,tail(o))
 	if s==0 and x and x.group(1) == x.group(2) and op(int(x.group(1)),opval):
@@ -310,7 +319,7 @@ def cfv_test(s,o, op=op_gt, opval=0):
 
 def cfv_all_test(s,o, files=-2, ok=0, unv=0, notfound=0, badcrc=0, badsize=0, cferror=0, ferror=0, misnamed=0):
 	expected_status = (badcrc and 2) | (badsize and 4) | (notfound and 8) | (ferror and 16) | (unv and 32) | (cferror and 64)
-	x=re.search(rx_Begin+''.join(map(optionalize,[rx_badcrc,rx_badsize,rx_notfound,rx_ferror,rx_unv,rx_cferror,rx_misnamed]))+rx_End,tail(o))
+	x=re.search(rx_StatusLine,tail(o))
 	if WEXITSTATUS(s)==expected_status and x:
 		if files==-2:
 			files = reduce(operator.add, [ok,badcrc,badsize,notfound,ferror])
