@@ -11,11 +11,18 @@ Optional:
     (may speed up checksumming speed a bit, especially if your python
      wasn't built with the mmap module.)
 
-Install:
+Unix Install:
 1) run make with no arguments to see possible installation methods
 2) run your chosen method (or manually put cfv and cfv.1 where you want)
 3) read man page, cfv -h, etc.  have fun.
 4) optional: run tests to verify correct operation: cd test; ./test.py
+
+Windows Install:
+1) move cfv.py to c:\python22\lib\site-packages\
+2) move cfv.bat to somewhere in the path
+3) Edit the cfv.bat file if your python is installed somewhere other than 
+  c:\python22 (and obviously you'll need to change the path in step 1 too.)
+
 
 Copying:
 This program is free software; you can redistribute it and/or modify

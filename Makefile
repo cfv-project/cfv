@@ -60,4 +60,24 @@ clean:
 	-rm *.py[co] cfv.wrapper
 
 distclean: clean
-	-rm -r tags test/test.log `find . -regex '.*~\|.*/\.#.*' -o -name CVS`
+	-rm -r cfv.nsi tags test/test.log `find . -regex '.*~\|.*/\.#.*' -o -name CVS -o -name .cvsignore`
+
+distclean-unixsrc: distclean
+	-rm cfv.bat cfv.txt
+
+cfv.txt: %.txt: %.1
+	man -l $< | sed -e 's/.//g' > $@
+
+distclean-winsrc: distclean cfv.txt
+	-rm Makefile cfv.1
+	mv cfv cfv.py
+	todos *.txt COPYING README Changelog cfv.bat cfv.py test/*.py
+
+nsis-prepare: cfv.txt
+	#hahaha, ugly hardcodedhackness
+	cp cfv.txt cfv.nsi ~/mnt/tmp/cfv
+	cp Changelog ~/mnt/tmp/cfv/Changelog.txt
+	cp COPYING ~/mnt/tmp/cfv/COPYING.txt
+	cp cfv ~/mnt/tmp/2exe/cfv.py
+	todos ~/mnt/tmp/cfv/*.txt
+
