@@ -1,14 +1,22 @@
 cfv 1.11  Copyright 2000-2002 Matthew Mueller <donut@azstarnet.com>
 
+
+Requirements:
+  Python >= 1.6           http://www.python.org/
+    (including the zlib module)
+
+Optional:
+  Python Imaging Library  http://www.pythonware.com/products/pil/
+    (only needed if you want to create the dimensions column of .crc files)
+  python-fchksum          http://www.azstarnet.com/~donut/programs/fchksum.html
+    (may speed up checksumming speed a bit, especially if your python
+     wasn't built with the mmap module.)
+
 Install:
-1) make sure you have python installed (v1.6 or greater)
-1.5) make sure the python-zlib module and/or the python-fchksum (v1.2 or greater)
-module is installed.  (Preferably, fchksum, as it is faster.
-http://www.azstarnet.com/~donut/programs/fchksum.html)
-2) run make with no arguments to see possible installation methods
-3) run your chosen method (or manually put cfv and cfv.1 where you want)
-4) read man page, cfv -h, etc.  have fun.
-5) optional: run tests to verify correct operation: cd test; ./test.py
+1) run make with no arguments to see possible installation methods
+2) run your chosen method (or manually put cfv and cfv.1 where you want)
+3) read man page, cfv -h, etc.  have fun.
+4) optional: run tests to verify correct operation: cd test; ./test.py
 
 Copying:
 This program is free software; you can redistribute it and/or modify
