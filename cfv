@@ -1296,10 +1296,10 @@ def perhaps_showpath(file):
 _nocase_dir_cache = {}
 def nocase_dirfiles(dir,match):
 	"return list of filenames in dir whose string.lower() equals match"
-	dir=os.path.normpath(os.path.join(curdir,dir))
-	if not _nocase_dir_cache.has_key(dir):
+	dirkey=get_path_key(dir)
+	if not _nocase_dir_cache.has_key(dirkey):
 		d={}
-		_nocase_dir_cache[dir]=d
+		_nocase_dir_cache[dirkey]=d
 		for a in os.listdir(dir):
 			l=string.lower(a)
 			if d.has_key(l):
@@ -1307,7 +1307,7 @@ def nocase_dirfiles(dir,match):
 			else:
 				d[l]=[a]
 	else:
-		d=_nocase_dir_cache[dir]
+		d=_nocase_dir_cache[dirkey]
 	if d.has_key(match):
 		return d[match]
 	return []
