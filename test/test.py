@@ -410,6 +410,14 @@ def T_test(f, extra=None):
 	if f.endswith('.csv2'): #csv2 has only filesize, hence checksum never happens, so no progress
 		test_generic(cmd+" -T --progress=yes -f test"+f, noprogress_test)
 	else:
+		#test handling of COLUMNS env var #TODO: should actually check that the value is being respected...
+		os.environ["COLUMNS"]="40"
+		try:
+			test_generic(cmd+" -T --progress=yes -f test"+f, progress_test)
+			os.environ["COLUMNS"]="foobar"
+			test_generic(cmd+" -T --progress=yes -f test"+f, progress_test)
+		finally:
+			del os.environ["COLUMNS"]
 		test_generic(cmd+" -T --progress=yes -f test"+f, progress_test)
 	test_generic(cmd+" -T --progress=auto -f test"+f, noprogress_test)
 	test_generic(cmd+" -T --progress=no -f test"+f, noprogress_test)

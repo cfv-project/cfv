@@ -107,7 +107,11 @@ def getscrwidth():
 		pass
 	if w>0:
 		return w
-	return os.environ.get('COLUMNS',80)
+	c = os.environ.get('COLUMNS',80)
+	try:
+		return int(c)
+	except ValueError:
+		return 80
 scrwidth = getscrwidth()
 
 stdout = sys.stdout
