@@ -41,6 +41,8 @@ class Stats:
 	notfound=0
 	ferror=0
 	bytesread=0L #use long int for size, to avoid possible overflow.
+	unverifiedfiles=[]
+	unverified=0
 
 class Config:
 	verbose=0 # -1=quiet  0=norm  1=noisy
@@ -48,6 +50,7 @@ class Config:
 	dirsort=1
 	cmdlinesort=1
 	recursive=0
+	showunverified=0
 	defaulttype='sfv'
 	def setdefault(self,type):
 		if type in types.keys():
@@ -74,7 +77,7 @@ class Config:
 	def setx(self,o,v):
 		if o=="default":
 			self.setdefault(v)
-		elif o in ("dirsort","cmdlinesort","verbose"):
+		elif o in ("dirsort","cmdlinesort","verbose","showunverified"):
 			self.setbool(o,v)
 		elif o=="recursive":
 			self.setintr(o,v,0,2)
@@ -108,7 +111,7 @@ class Config:
 	def __init__(self):
 		self.readconfig()
 
-version='1.4'
+version='1.5'
 
 
 #---------- md5 ----------
@@ -153,7 +156,7 @@ def testmd5(file,testfiles):
 		if x:
 			if x.group(2)==' ':
 				print 'warning: file %s tested in textmode' %x.group(3)
-			if not testfiles or x.group(1) in testfiles:
+			if not testfiles or x.group(3) in testfiles:
 				testfile(testfilemd5,x.group(3),x.group(1))
 
 
@@ -245,7 +248,7 @@ types['csv'].testmatch=(r'[^,]+,[0-9]+,[0-9a-fA-F]+',0)
 types['csv'].automake_filenametest=lambda o: o[-3:]=='csv'
 types['csv'].make_std_filename=lambda o: o+'.csv'
 types['csv'].writeheader=lambda file: None
-types['csv'].make_dofile=lambda a: '%s,%i,%08X,\n'%(a,os.path.getsize(a),getfilecrc(a))
+types['csv'].make_dofile=lambda a: '%s,%i,%s,\n'%(a,os.path.getsize(a),getfilecrc(a))
 
 
 #---------- csv with only 2 fields ----------
@@ -276,6 +279,11 @@ def testfile(crctestfunc,filename,filecrc,filesize=-1):
 	global stats,config
 	stats.num=stats.num+1
 	try:
+		if config.showunverified:
+			try:
+				stats.unverifiedfiles[-1].remove(filename)
+			except ValueError:
+				pass #don't error if file has already been removed.
 		if filesize>=0:
 			fs=os.path.getsize(filename)
 			if fs!=string.atoi(filesize):
@@ -317,6 +325,8 @@ def test(filename,testfiles):
 	file.seek(0)#go back to start so that type-specific test funcs get whole file
 	for typename,type in types.items():
 		if re.match(type.testmatch[0],l,type.testmatch[1]):
+			if config.showunverified:#we can't except the checksum file itself to be checksummed
+				stats.unverifiedfiles[-1].remove(filename)
 			if config.verbose>0:
 				print 'testing from %s (%s)'%(filename,typename)
 			type.checksumfile(file,testfiles)
@@ -386,6 +396,30 @@ def make(type,ifilename,testfiles):
 		make(type,ifilename,None)
 		os.chdir(olddir)
 	
+def start_test_dir():
+	if not config.showunverified:
+		return
+	global stats;
+	if len(args):
+		import copy
+		filelist=copy.copy(args) #make a copy so we don't modify the args list (teehee)
+	else:
+		filelist=os.listdir('.')
+	#dir=os.getcwd()
+	#stats.unverifiedfiles[dir]=map(lambda d: os.path.join(dir,d),filelist))
+	#stats.unverifiedfiles[dir]=filelist
+	stats.unverifiedfiles.append(filelist)
+def finish_test_dir():
+	if not config.showunverified:
+		return
+	global stats;
+	dir=os.getcwd()
+	unverified=stats.unverifiedfiles.pop()
+	for file in unverified:
+		if os.path.isfile(file):
+			print '%s : not verified'%os.path.join(dir,file)
+			stats.unverified=stats.unverified+1
+
 stats=Stats()
 config=Config()
 manual=0
@@ -394,7 +428,7 @@ type='auto'
 starttime=time.time()
 
 def printusage():
-	print 'Usage: cfv [-v|-V] [-r|-R] [-T|-C] [-m|-M] [-t type] [-f file] [files...]'
+	print 'Usage: cfv [-v|-V] [-r|-R] [-T|-C] [-m|-M] [-u|-U] [-t type] [-f file] [files...]'
 	print '  -r       recursive mode 1 (make seperate chksum files for each dir)'
 	print '  -rr      recursive mode 2 (make a single file with deep listing in it)'
 	print '  -R       not recursive (default)'
@@ -404,6 +438,8 @@ def printusage():
 	print '  -f <f>   use <f> as list file'
 	print '  -m       check only for missing files (don\'t compare checksums)'
 	print '  -M       check checksums (default)'
+	print '  -u       show unverified files'
+	print '  -U       don\'t show unverified files (default)'
 	print '  -v       verbose'
 	print '  -V       not verbose (default)'
 	sys.exit()
@@ -412,7 +448,7 @@ def printhelp():
 	printusage()
 
 try:
-	optlist, args = getopt.getopt(sys.argv[1:], 'rRTCt:f:mMvVh?')
+	optlist, args = getopt.getopt(sys.argv[1:], 'rRTCt:f:mMuUvVh?')
 except getopt.error, a:
 	print "cfv: %s"%a
 	printusage()
@@ -435,10 +471,12 @@ for o,a in optlist:
 		manual=1 #filename selected manually, don't try to autodetect
 		filename=a
 		if mode==0:
+			start_test_dir()
 			if type=='auto':
 				test(a,args)
 			else:
 				types[type].checksumfile(open(a,'r'),args)
+			finish_test_dir()
 		else:
 			if type!='auto':
 				make(types[type],a,args)
@@ -452,6 +490,10 @@ for o,a in optlist:
 				if not ok:
 					print 'specify a filetype with -t, or use standard extension'
 					sys.exit(1)
+	elif o=='-U':
+		config.showunverified=0
+	elif o=='-u':
+		config.showunverified=1
 	elif o=='-m':
 		config.docrcchecks=0
 	elif o=='-M':
@@ -475,6 +517,7 @@ if not manual:
 	if mode==0:
 		rem=re.compile(r'md5|\.(csv|sfv)$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
 		def autotest(rem):
+			start_test_dir()
 			for a in os.listdir('.'):
 				if config.recursive and os.path.isdir(a):
 					olddir=os.getcwd()
@@ -483,6 +526,7 @@ if not manual:
 					os.chdir(olddir)
 				if rem.search(a):
 					test(a,args)
+			finish_test_dir()
 		autotest(rem)
 	else:
 		if type=='auto':
@@ -499,6 +543,8 @@ if stats.notfound:
 	sys.stdout.write(', %i not found' %stats.notfound)
 if stats.ferror:
 	sys.stdout.write(', %i file errors' %stats.ferror)
+if stats.unverified:
+	sys.stdout.write(', %i unverified' %stats.unverified)
 
 elapsed=time.time()-starttime
 sys.stdout.write('.  %.2f seconds, '%(elapsed))

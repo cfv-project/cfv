@@ -1,8 +1,8 @@
-.TH cfv 1 "05 Oct 2000"
+.TH cfv 1 "11 Oct 2000"
 .SH NAME
 cfv \- Verify file concistency with .sfv, .csv, or md5sum files
 .SH SYNOPSIS
-.B cfv [-v|-V] [-r|-rr|-R] [-T|-C] [-m|-M] [-t type] [-f file] [files...]
+.B cfv [-v|-V] [-r|-rr|-R] [-T|-C] [-m|-M] [-u|-U] [-t type] [-f file] [files...]
 .SH DESCRIPTION
 .B cfv
 verifies that the files you have are the same as those that the were used to create
@@ -25,9 +25,13 @@ Set test mode. (default)
 .IP "-C"
 Set create mode.
 .IP "-m"
-check only for missing files (don't compare checksums)
+Check only for missing files (don't compare checksums)
 .IP "-M"
-check checksums (default)
+Check checksums (default)
+.IP "-u"
+Show unverified files.  Currently has no effect in create mode.
+.IP "-U"
+Don't show unverified files (default)
 .IP "-f file"
 Specify the name of the checksum file to test or create.
 .IP "-t type"
@@ -46,6 +50,8 @@ is a comma seperated value file, with the fields being name,size,
 .br
 .B md5
 is md5sum format file
+.SH NOTES
+Since different platforms represent the path seperator differently, using recursive mode 2 (-rr) is not recommended for anything other than personal usage.
 .SH EXAMPLES
 If no options are specified, the default will be -T -t auto, and it will search the current directory for any sfv or csv files.
 .br
@@ -71,6 +77,11 @@ Create a csv file for only the zip files in the current dir, and specify the fil
 .br
 .B
 cfv -C -tcsv -fsomezips.csv *.zip
+.P
+Check if all files in current and subdirs are verified, but don't verify checksums of files that are.  (For example, before writing a directory to a cdr and you want to make sure all the files are verified.):
+.br
+.B
+cfv -r -m -u
 .SH CONFIGURATION
 Upon startup, cfv will test for ~/.cfvrc and if it exists, read configuration information from it.
 The file consists of any number of lines, each having a single option name and the value seperated by a space.
@@ -97,6 +108,10 @@ cmdlinesort 1
 #don't be recursive (set to 0 for -R,  1 for -r,  2 for -rr)
 .br
 recursive 0
+.br
+#don't show unverified files
+.br
+showunverified 0
 .SH FILES
 .PP
 .IP "~/.cfvrc"

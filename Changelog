@@ -1,3 +1,8 @@
+2000-10-12 - v1.5:
+	* Fixed "illegal argument type" error when creating csv format files.
+	* Added note to manpage about -rr and path seperators.
+	* Added show unverified files option.
+	* Fixed md5 file testing when specifying files to test as command line args.
 2000-10-05 - v1.4:
 	* Added make install-wrapper option for faster startup times.
 	* Uses long int value for total bytes read, to avoid overflow if you are checking a lot of files. (>=2GB, on 32bit archs)
