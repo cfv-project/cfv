@@ -180,19 +180,16 @@ try:
 		p("old fchksum version installed, using std python modules. please update.",nl=1,outf=sys.stderr) #can't use perror yet since config hasn't been done..
 		raise ImportError
 	def getfilemd5(file):
-		global stats
 		c,s=fchksum.fmd5t(file)
 		stats.bytesread=stats.bytesread+s
 		return c,s
 	def getfilecrc(file):
-		global stats
 		c,s=fchksum.fcrc32t(file)
 		stats.bytesread=stats.bytesread+s
 		return c,s
 except ImportError:
 	import md5,zlib
 	def getfilemd5(file):
-		global stats
 		m=md5.new()
 		if file=='':
 			f=sys.stdin
@@ -210,7 +207,6 @@ except ImportError:
 			s=s+len(x)
 			m.update(x)
 	def getfilecrc(file):
-		global stats
 		if file=='':
 			f=sys.stdin
 		else:
@@ -525,7 +521,6 @@ def testfile(testfiles,crctestfunc,filename,filecrc,filesize=-1):
 				return
 		elif filename not in testfiles:
 			return
-	global stats,config
 	stats.num=stats.num+1
 	l_filename=filename
 	try:
@@ -608,7 +603,6 @@ def test(filename,testfiles):
 	stats.cferror=stats.cferror+1
 
 def make(type,ifilename,testfiles):
-	global stats
 	file=None
 	if ifilename:
 		filename=ifilename
@@ -673,7 +667,6 @@ def make(type,ifilename,testfiles):
 def start_test_dir(args):
 	if not config.showunverified:
 		return
-	global stats;
 	if len(args):
 		filelist=args[:] #make a copy so we don't modify the args list (teehee)
 	else:
@@ -685,7 +678,6 @@ def start_test_dir(args):
 def finish_test_dir():
 	if not config.showunverified:
 		return
-	global stats;
 	unverified=stats.unverifiedfiles.pop()
 	for file in unverified:
 		if os.path.isfile(file):
