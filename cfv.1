@@ -2,7 +2,7 @@
 .SH NAME
 cfv \- Verify file concistency with .sfv, .csv, or md5sum files
 .SH SYNOPSIS
-.B cfv [-v|-V|-VV] [-r|-rr|-R] [-T|-C] [-m|-M] [-i|-I] [-u|-U] [--fixpaths <s>] [--showpaths <i>] [-t type] [-f file] [files...]
+.B cfv [-v|-V|-VV] [-r|-rr|-R] [-zz|-z|-Z|-ZZ] [-T|-C] [-m|-M] [-i|-I] [-u|-U] [--fixpaths <s>] [--showpaths <i>] [-t type] [-f file] [files...]
 .SH DESCRIPTION
 .B cfv
 verifies that the files you have are the same as those that the were used to create
@@ -40,6 +40,14 @@ Don't ignore case (default)
 Show unverified files.  Currently has no effect in create mode.
 .IP "-U"
 Don't show unverified files (default)
+.IP "-zz"
+Force making/reading checksum files as gzipped files, even if not ending in .gz (mainly useful for "-f -")
+.IP "-z"
+Make gzipped files in create mode.
+.IP "-Z"
+Don't create gzipped files automatically. (default)
+.IP "-ZZ"
+Never use gzip, even if file ends in ".gz".
 .IP "--fixpaths string"
 Convert all occurances of any characters in string to the dir seperator for the current platform.  No effect in create mode. Use an empty string to disable.
 .IP "--showpaths int"
@@ -158,6 +166,10 @@ fixpaths
 #show full paths in recursive mode (set to 0 for never, 1 for always, 2 for only in recursive mode)
 .br
 showpaths 2
+.br
+#access checksum filenames that end with .gz as gzipped files (-1 for never, 0 for with .gz, and 1 to make -C make .gz files automatically)
+.br
+gzip 0
 .SH FILES
 .PP
 .IP "~/.cfvrc"
