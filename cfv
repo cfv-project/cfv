@@ -412,6 +412,8 @@ class PeekFile:
 
 
 def doopen(filename,mode='r'):
+	if mode[0]=='r' and string.find(mode,'b')<0:
+		mode=mode+'b' #read all files in binary mode (since .pars are binary, and we don't always know the filetype when opening, just open everything binary.  The text routines should cope with all types of line endings anyway, so this doesn't hurt us.)
 	if filename=='-':
 		fileobj=(mode[0]=='r' and sys.stdin or sys.stdout)
 	if config.gzip>=2 or (config.gzip>=0 and string.lower(filename[-3:])=='.gz'):
