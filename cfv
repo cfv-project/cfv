@@ -832,7 +832,7 @@ def do_f_verifyerror(l_filename, a):
 	if config.list&LISTBAD:
 		plistf(l_filename)
 	if config.rename:
-		formatmap=make_rename_formatmap(l_filename) 
+		formatmap=make_rename_formatmap(l_filename)
 		for count in xrange(0,sys.maxint):
 			formatmap['count']=count
 			newfilename=config.renameformat%formatmap
@@ -941,7 +941,7 @@ def ver2str(v):
 	return '.'.join(vers)
 
 try: #support for 64bit ints in struct module was only added in python 2.2
-	struct.calcsize('< Q') 
+	struct.calcsize('< Q')
 except struct.error:
 	class _Struct:
 		def calcsize(self, fmt, _calcsize=struct.calcsize):
@@ -1168,7 +1168,7 @@ class Torrent(ChksumType):
 			for finfo in info['files']:
 				flength = finfo['length']
 				files.append(init_file(os.path.join(info['name'], *finfo['path']), total_len, flength))
-				total_len = total_len + flength 
+				total_len = total_len + flength
 
 		def readfpiece(f, pos, size):
 			if f.l_filename is None:
@@ -1478,7 +1478,7 @@ class JPEGSheriff_CRC(ChksumType, CRC_MixIn):
 			self.in_comments = not self.in_comments
 			return
 		x=self._crcrem.match(l)
-		if not x: 
+		if not x:
 			if self.in_comments:
 				return
 			return -1
@@ -1520,7 +1520,7 @@ class JPEGSheriff_CRC(ChksumType, CRC_MixIn):
 		
 		boundary = '-'*flens[0] + '  ' + '-'*flens[1] + '  '
 		if self.use_dimensions:
-			boundary = boundary + '-'*(flens[2]+flens[3]+3) + '  ' 
+			boundary = boundary + '-'*(flens[2]+flens[3]+3) + '  '
 		boundary = boundary + '-'*flens[4] + '  ' + '-'*flens[5] + '\n'
 		
 		writedata(header)
