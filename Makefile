@@ -1,8 +1,9 @@
+PYTHON=python
 prefix=/usr/local
 exec_prefix=${prefix}
 
 #finds the site-packages dir that matches the selected prefix, or if none do, falls back to wherever it can find one..
-pkgdir=`python -c 'import sys,re; x=filter(lambda x: re.match("$(prefix).*site-packages",x),sys.path); y=filter(lambda y: re.search("site-packages",y),sys.path); x.sort(lambda x,y: cmp(len(x),len(y))); y.sort(lambda x,y: cmp(len(x),len(y))); x.extend(y); print x[0]'`
+pkgdir=`$(PYTHON) -c 'import sys,re; x=filter(lambda x: re.match("$(prefix).*site-packages",x),sys.path); y=filter(lambda y: re.search("site-packages",y),sys.path); x.sort(lambda x,y: cmp(len(x),len(y))); y.sort(lambda x,y: cmp(len(x),len(y))); x.extend(y); print x[0]'`
 #nice little expression, huh? ;)
 
 bindir=${exec_prefix}/bin
@@ -32,16 +33,18 @@ foo:
 	@echo "of time will be inconsequential."
 
 
+#this will create a wrapper script that calls python directly (if we can find it), or using the bin/env trick.
+#we don't need to check for PYTHON being set to something, since os.path.join handles the case of the component being an absolute path
 cfv.wrapper:
-	python -c 'import string,os; py=filter(lambda x: os.path.isfile(x),map(lambda x: os.path.join(x,"python"),string.split(os.environ["PATH"],":"))); py.append(" /usr/bin/env python"); open("cfv.wrapper","w").write("#!%s\nimport cfv\n"%py[0])'
+	$(PYTHON) -c 'import string,os; py=filter(lambda x: os.path.isfile(x),map(lambda x: os.path.join(x,"$(PYTHON)"),string.split(os.environ["PATH"],":"))); py.append(" /usr/bin/env $(PYTHON)"); open("cfv.wrapper","w").write("#!%s\nimport cfv\n"%py[0])'
 
 install-wrapper-only: cfv.wrapper install_man
 	$(install) -o $(user) -g $(group) -m 0644 cfv $(DESTDIR)$(pkgdir)/cfv.py
 	$(install) -o $(user) -g $(group) -m 0755 cfv.wrapper $(DESTDIR)$(bindir)/cfv
 
 install-wrapper: install-wrapper-only
-	python -c "import py_compile; py_compile.compile('$(DESTDIR)$(pkgdir)/cfv.py')" 
-	python -O -c "import py_compile; py_compile.compile('$(DESTDIR)$(pkgdir)/cfv.py')" 
+	$(PYTHON) -c "import py_compile; py_compile.compile('$(DESTDIR)$(pkgdir)/cfv.py')" 
+	$(PYTHON) -O -c "import py_compile; py_compile.compile('$(DESTDIR)$(pkgdir)/cfv.py')" 
 
 install: install_man
 	$(install) -o $(user) -g $(group) -m 0755 cfv $(DESTDIR)$(bindir)
