@@ -512,6 +512,8 @@ class ChksumType:
 	auto_filename_match = staticmethod(auto_filename_match)
 
 	def test_chksumfile(self,file,filename):
+		if config.showunverified and filename in stats.unverifiedfiles[-1]:#we can't expect the checksum file itself to be checksummed
+			stats.unverifiedfiles[-1].remove(filename)
 		try:
 			if config.verbose>=0 or config.verbose==-3:
 				cf_stats = stats.make_sub_stats()
@@ -1011,14 +1013,17 @@ def fixpath(filename):
 	return filename
 
 
-def test(filename,testfiles):
+def test(filename, typename, testfiles):
+	if typename != 'auto':
+		cf = cftypes[typename](testfiles)
+		cf.test_chksumfile(None, filename)
+		return
+
 	try:
 		file=doopen(filename,'r')
 		for typename,cftype in cftypes.items():
 			if cftype.auto_chksumfile_match(file):
 				cf = cftype(testfiles)
-				if config.showunverified and filename in stats.unverifiedfiles[-1]:#we can't expect the checksum file itself to be checksummed
-					stats.unverifiedfiles[-1].remove(filename)
 				cf.test_chksumfile(file, filename)
 				return
 	except EnvironmentError, a:
@@ -1143,7 +1148,7 @@ def autotest(args):
 				autotest(args)
 				cdup()
 		if atrem.search(a):
-			test(a,args)
+			test(a, 'auto', args)
 	finish_test_dir()
 
 def printusage(err=0):
@@ -1235,11 +1240,7 @@ def main(argv):
 					if config.ignorecase:
 						args=map(string.lower,args) #lowercase it all now, so we don't have to keep doing it over and over in the testfile
 					start_test_dir(args)
-					if typename=='auto':
-						test(a,args)
-					else:
-						cf = cftypes[typename](args)
-						cf.test_chksumfile(None,filename)
+					test(a, typename, args)
 					finish_test_dir()
 				else:
 					if typename!='auto':

@@ -1,5 +1,6 @@
 2002-xx-xx - v1.xx:
 	* Fix make install when target directories don't already exist. (Reported by Svend S. Sorensen)
+	* Fix cfv -u -t blah -f foo.blah from reporting foo.blah as unverified.
 2002-04-08 - v1.11:
 	* Due to architectural changes, unicode requirements(for .par support), etc, cfv now requires python 1.6 or higher.
 	* Add test-only support for PAR files. (python 1.6 or 2.2 recommended for better performance.)

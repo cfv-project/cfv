@@ -369,6 +369,7 @@ def all_tests():
 	#test_generic("../cfv -V -T -f test.md5",cfv_test)
 	#test_generic("../cfv -V -tcsv -T -f test.md5",cfv_test)
 
+	test_generic(cfvcmd+" -u -t md5 -f test.md5 data* test.py test.md5",cfv_unv_test)
 	test_generic(cfvcmd+" -u -f test.md5 data* test.py",cfv_unv_test)
 	test_generic(cfvcmd+" -u -f test.md5 data* test.py test.md5",cfv_unv_test)
 	test_generic(cfvcmd+r" -i --fixpaths \\/ -Trru",lambda s,o: cfv_unv_test(s,o,None))
