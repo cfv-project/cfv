@@ -1,9 +1,6 @@
 prefix=/usr/local
 exec_prefix=${prefix}
 
-#finds the site-packages dir that matches the selected prefix.
-#pkgdir=`python -c 'import sys,re; x=filter(lambda x: re.match("$(prefix).*site-packages",x),sys.path); x.sort(lambda x,y: cmp(len(x),len(y))); print x[0]'`
-
 #finds the site-packages dir that matches the selected prefix, or if none do, falls back to wherever it can find one..
 pkgdir=`python -c 'import sys,re; x=filter(lambda x: re.match("$(prefix).*site-packages",x),sys.path); y=filter(lambda y: re.search("site-packages",y),sys.path); x.sort(lambda x,y: cmp(len(x),len(y))); y.sort(lambda x,y: cmp(len(x),len(y))); x.extend(y); print x[0]'`
 #nice little expression, huh? ;)
