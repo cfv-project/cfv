@@ -864,6 +864,9 @@ class ChksumType:
 						raise EnvironmentError #can't continue in try: until python 2.1+
 					filecrct=hexlify(filecrc)
 				else:
+					if not os.path.isfile(fn):
+						#continue
+						raise EnvironmentError #can't continue in try: until python 2.1+
 					filecrct='exists'
 			except EnvironmentError:
 				continue

@@ -644,6 +644,25 @@ def search_test(t):
 		finally:
 			shutil.rmtree(d)
 
+	if fmt_cancreate(t) and fmt_hassize(t):
+		d = mkdtemp()
+		try:
+			dcfn = os.path.join(d,'foo.'+t)
+			os.mkdir(os.path.join(d, "aoeu"))
+			dirsize = os.path.getsize(os.path.join(d, "aoeu"))
+			f=open(os.path.join(d,"idth"),'wb'); f.write('a'*dirsize); f.close()
+			test_generic(cfvcmd+" -v -C -p %s -t %s -f %s"%(d,t,dcfn), rcurry(cfv_all_test,files=1,ok=1))
+			os.remove(os.path.join(d,"idth"))
+			os.rename(os.path.join(d,"aoeu"), os.path.join(d,'idth'))
+			def dont_find_dir_test(s,o):
+				if not o.count('idth')==1:
+					return str((o.count('idth'),))
+				return cfv_all_test(s,o,ok=0,notfound=1)
+			test_generic(cfvcmd+" -v -m -T -p %s -f %s"%(d,dcfn), dont_find_dir_test) # test not finding non-file things in normal mode
+			test_generic(cfvcmd+" -v -m -s -T -p %s -f %s"%(d,dcfn), dont_find_dir_test) # test not finding non-file things in search mode
+		finally:
+			shutil.rmtree(d)
+
 def symlink_test():
 	dir='s.test'
 	dir1='d1'
