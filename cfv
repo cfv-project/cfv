@@ -1088,9 +1088,15 @@ def make(cftype,ifilename,testfiles):
 		if file==IOError:
 			continue
 		if file==None:
-			file=doopen(filename,'w')
-			cf = cftype(None)
-			cf.make_chksumfile(file)
+			try:
+				file=doopen(filename,'w')
+				cf = cftype(None)
+				cf.make_chksumfile(file)
+			except EnvironmentError, a:
+				stats.cferror=stats.cferror+1
+				perror('%s : %s (CF)'%(perhaps_showpath(filename),a[1]))
+				file=IOError
+				continue
 			dof=cf.make_addfile
 		try:
 			dof(f)
