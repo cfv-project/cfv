@@ -943,14 +943,16 @@ def largefile_test():
 cfvenv=''
 cfvexe=os.path.join(os.pardir,'cfv')
 run_internal = 1
+run_long_tests = 0
 
 def show_help_and_exit(err=None):
 	if err:
 		print 'error:',err
 		print
-	print 'usage: test.py [-i|-e] [cfv]'
+	print 'usage: test.py [-i|-e] [--full] [cfv]'
 	print ' -i      run tests internally'
 	print ' -e      launch seperate cfv process for each test'
+	print ' --long  include tests that may use large amounts of CPU or disk'
 	print ' --help  show this help'
 	print
 	print 'default [cfv] is:', cfvexe
@@ -958,7 +960,7 @@ def show_help_and_exit(err=None):
 	sys.exit(1)
 
 try:
-	optlist, args = getopt.getopt(sys.argv[1:], 'ie',['help'])
+	optlist, args = getopt.getopt(sys.argv[1:], 'ie',['long','help'])
 except getopt.error, e:
 	show_help_and_exit(e)
 
@@ -968,6 +970,8 @@ if len(args)>1:
 for o,a in optlist:
 	if o=='--help':
 		show_help_and_exit()
+	elif o=='--long':
+		run_long_tests = 1
 	elif o=='-i':
 		run_internal = 1
 	elif o=='-e':
@@ -1168,7 +1172,8 @@ def all_tests():
 		finally:
 			shutil.rmtree(d)
 
-	largefile_test()
+	if run_long_tests:
+		largefile_test()
 
 	test_generic(cfvcmd+" -h",cfv_version_test)
 
