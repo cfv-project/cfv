@@ -1,4 +1,4 @@
-.TH cfv 1 "01 Feb 2005"
+.TH cfv 1 "05 Feb 2005"
 .SH NAME
 cfv \- Verify file consistency with .sfv, .csv, .crc, .md5, md5sum, sha1sum, .torrent, par, or par2 files
 .SH SYNOPSIS
@@ -94,6 +94,7 @@ May be useful for handling invalid filenames on disk or within a checksum file.
 .IP "auto"
 The default.
 For checksum file formats that specify their encoding explicitly, that value is used.
+For text checksum file formats that start with a Unicode BOM (Byte Order Mark), the encoding is detected automatically.
 Otherwise, Python's notion of the users preferred encoding is used.
 .RE
 .IP "\-\-unquote BOOL"

@@ -896,20 +896,35 @@ class PeekFile:
 		self._init_decodeobj()
 		self.name = filename or fileobj.name
 	def _init_decodeobj(self):
+		self._encoding = None
+		self._decode_start = 0
 		if config.encoding=='raw':
 			self.decodeobj = self.fileobj
 		else:
-			self.decodeobj = codecs_getreader(config.getencoding())(self.fileobj)
-			if not codec_supports_readline(config.getencoding()):
+			if config.encoding=='auto':
+				magic=self.fileobj.read(4)
+				# utf32 are tested first, since utf-32le BOM starts the same as utf-16le's.
+				if magic in ('\x00\x00\xfe\xff','\xff\xfe\x00\x00'):
+					self._encoding='UTF-32'
+				elif magic[:2] in ('\xfe\xff', '\xff\xfe'):
+					self._encoding='UTF-16'
+				elif magic.startswith('\xef\xbb\xbf'):
+					self._encoding='UTF-8'
+					self._decode_start = 3
+			if not self._encoding:
+				self._encoding = config.getencoding()
+		self._reset_decodeobj()
+	def _reset_decodeobj(self):
+		self.fileobj.seek(self._decode_start)
+		if self._encoding:
+			self.decodeobj = codecs_getreader(self._encoding)(self.fileobj)
+			if not codec_supports_readline(self._encoding):
 				#print "codec doesn't support readline, hacking it."
 				try:
 					self.decodeobj = StringIO(self.decodeobj.read())
 				except UnicodeError:
 					self.decodeobj = StringIO(u"")
 		self._prevlineend=None
-	def _reset_decodeobj(self):
-		self.fileobj.seek(0)
-		self._init_decodeobj()
 	def _readline(self,*args):
 		line = self.decodeobj.readline(*args)
 		#work around corrupted files that have crcrlf line endings.  (With StreamReaders in python versions >= 2.4, you no longer get it all as one line.)

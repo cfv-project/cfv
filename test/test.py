@@ -103,7 +103,15 @@ def allfmts():
 	return fmt_info.keys()
 def allavailablefmts():
 	return filter(fmt_available, allfmts())
+def allcreatablefmts():
+	return filter(fmt_cancreate, allavailablefmts())
 
+try:
+	enumerate #enumerate only in python>=2.3
+except NameError:
+	def enumerate(seq):
+		seq = list(seq)
+		return zip(range(len(seq)), seq)
 
 if hasattr(operator,'gt'):
 	op_gt=operator.gt
@@ -150,16 +158,19 @@ def readfile(fn):
 	f.close()
 	return d
 
+def writefile(fn,data):
+	f = open(fn,'wb')
+	if data:
+		f.write(data)
+	f.close()
+
 def writefile_and_reopen(fn,data):
 	"""Write data to file, close, and then reopen readonly, and return the fd.
 
 	This is for the benefit of windows, where you need to close and reopen the
 	file as readonly in order for it to be openable simultaneously.
 	"""
-	f = open(fn,'wb')
-	if data:
-		f.write(data)
-	f.close()
+	writefile(fn,data)
 	f = open(fn,'rb')
 	return f
 
@@ -1189,6 +1200,48 @@ def deep_unverified_test():
 	finally:
 		shutil.rmtree(dir)
 
+def test_encoding_detection():
+	datad = mkdtemp()
+	d = mkdtemp()
+	try:
+		datafns = ['data1','data3','data4']
+		destfns = [
+			u'\u0061', # LATIN SMALL LETTER A
+			u'\u00c4', # LATIN CAPITAL LETTER A WITH DIAERESIS
+			u'\u03a0', # GREEK CAPITAL LETTER PI
+			u'\u0470', # CYRILLIC CAPITAL LETTER PSI
+			u'\u2605', # BLACK STAR
+			u'\u3052', # HIRAGANA LETTER GE
+			u'\u6708', # CJK UNIFIED IDEOGRAPH-6708
+		]
+		BOM=u'\uFEFF'
+		utfencodings = [ 'utf-8', 'utf-16le', 'utf-16be', 'utf-32le', 'utf-32be', ]
+		fnerrs=fnok=0
+		for i,destfn in enumerate(destfns):
+			srcfn = datafns[i%len(datafns)]
+			try:
+				shutil.copyfile(srcfn, os.path.join(datad,destfn))
+			except (EnvironmentError,UnicodeError):
+				fnerrs=fnerrs+1
+			else:
+				fnok=fnok+1
+		for t in allcreatablefmts():
+			if fmt_istext(t):
+				utf8cfn = os.path.join(d,'utf8nobom.'+t)
+				test_generic(cfvcmd+" -C --encoding=utf-8 -p %s -t %s -f %s"%(datad,t,utf8cfn), rcurry(cfv_all_test,ok=fnok))
+				chksumdata = unicode(readfile(utf8cfn), 'utf-8')
+				for enc in utfencodings:
+					bommedcfn = os.path.join(d,enc+'.'+t)
+					try:
+						writefile(bommedcfn, (BOM + chksumdata).encode(enc))
+					except LookupError:
+						pass
+					else:
+						test_generic(cfvcmd+" -T -p %s -t %s -f %s"%(datad,t,bommedcfn), rcurry(cfv_all_test,ok=fnok))
+						test_generic(cfvcmd+" -T -p %s -f %s"%(datad,bommedcfn), rcurry(cfv_all_test,ok=fnok))
+	finally:
+		shutil.rmtree(d)
+		shutil.rmtree(unicode(datad))
 
 def test_encoding2():
 	"""Non-trivial (actual non-ascii characters) encoding test.
@@ -1501,6 +1554,7 @@ def all_tests():
 			T_test("smallpiece.torrent",extra='--strip=%s'%strip)
 			T_test("encoding.torrent",extra='--strip=%s'%strip)
 		test_encoding2()
+	test_encoding_detection()
 
 	#test handling of directory args in recursive testmode. (Disabled since this isn't implemented, and I'm not sure if it should be.  It would change the meaning of cfv *)
 	#test_generic(cfvcmd+" -r a",cfv_test)
