@@ -1,8 +1,8 @@
-.TH cfv 1 "21 Jun 2000"
+.TH cfv 1 "10 Jul 2000"
 .SH NAME
-cfv \- Verify file concistency with .sfv or .csv files
+cfv \- Verify file concistency with .sfv, .csv, or md5sum files
 .SH SYNOPSIS
-.B cfv [-v] [-T|-C] [-t type] [-f file] [files...]
+.B cfv [-v|-V] [-T|-C] [-m|-M] [-t type] [-f file] [files...]
 .SH DESCRIPTION
 .B cfv
 verifies that the files you have are the same as those that the were used to create
@@ -11,16 +11,22 @@ the checksum file.
 .PP
 .IP "-v"
 Enable printing of extra messages.
+.IP "-V"
+Disable printing of extra messages. (default)
 .IP "-T"
 Set test mode. (default)
 .IP "-C"
 Set create mode.
+.IP "-m"
+check only for missing files (don't compare checksums)
+.IP "-M"
+check checksums (default)
 .IP "-f file"
 Specify the name of the checksum file to test or create.
 .IP "-t type"
-Specify the type of the file.  Can be sfv, csv, or auto.  The default is auto,
-which will detect the file type for you.  When creating, if type is auto, an sfv
-will be made.
+Specify the type of the file.  Can be sfv, csv, md5, or auto.  The default is auto,
+which will detect the file type for you.  When creating, if type is auto an sfv
+will be made, unless a different default has been set in the config file.
 .SH EXAMPLES
 If no options are specified, the default will be -T -t auto, and it will search the current directory for any sfv or csv files.
 .br
@@ -46,9 +52,37 @@ Create a csv file for only the zip files in the current dir, and specify the fil
 .br
 .B
 cfv -C -tcsv -fsomezips.csv *.zip
+.SH CONFIGURATION
+Upon startup, cfv will test for ~/.cfvrc and if it exists, read configuration information from it.
+The file consists of any number of lines, each having a single option name and the value seperated by a space.
+Empty lines and lines beginning with a # are ignored.
+.SH EXAMPLE CONFIGURATION
+#this is an example .cfvrc that specifies all the default options
+.br
+#don't be verbose
+.br
+verbose 0
+.br
+#create sfv files by default
+.br
+default sfv
+.br
+#sort dir listings before creating a checksum file
+.br
+dirsort 1
+.br
+#sort command line specified files
+.br
+cmdlinesort 1
+.SH FILES
+.PP
+.IP "~/.cfvrc"
+cfv configuration file.  See configuration section.
 .SH AUTHOR
 Matt Mueller <donut@azstarnet.com>
 .P
 The latest version, and other programs I have written, are available from:
 .br
 http://www.azstarnet.com/~donut/programs/cfv.html
+.SH "SEE ALSO"
+.BR md5sum(1)

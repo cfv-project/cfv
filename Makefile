@@ -14,3 +14,9 @@ foo:
 install:
 	$(install) -o $(user) -g $(group) -m 0755 cfv $(bindir)
 	$(install) -o $(user) -g $(group) -m 0644 cfv.1 $(mandir)/man1
+
+clean:
+	#nothing
+
+distclean:
+	-rm *~
