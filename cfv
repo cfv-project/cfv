@@ -1306,6 +1306,9 @@ class Torrent(ChksumType):
 					#here we fall through and just let it use the undecoded filename.. is that really ok?
 					
 			filename = os.path.join(*filenameparts)
+			if not config.docrcchecks: #if we aren't testing checksums, just use the standard test_file function, so that -s and such will work.
+				self.test_file(filename, None, filesize)
+				return
 			filename = mangle_filename(filename)
 			done = cache.testfiles and not cache.should_test(filename) #if we don't want to test this file, just pretending its done already has the desired effect.
 			if not done:
@@ -1317,8 +1320,7 @@ class Torrent(ChksumType):
 					raise EnvironmentError, (errno.ENOENT,"missing")
 				if not os.path.isfile(l_filename):
 					raise EnvironmentError, (errno.ENOENT,"not a file")
-				if config.docrcchecks:
-					fh = open(l_filename,'rb')
+				fh = open(l_filename,'rb')
 				fs=os.path.getsize(l_filename)
 				if fs!=filesize:
 					if not done:
@@ -1344,6 +1346,9 @@ class Torrent(ChksumType):
 				flength = finfo['length']
 				files.append(init_file([info['name']]+finfo['path'], total_len, flength))
 				total_len = total_len + flength
+		
+		if not config.docrcchecks:
+			return
 
 		def readfpiece(f, pos, size):
 			if f.l_filename is None:
@@ -1362,62 +1367,61 @@ class Torrent(ChksumType):
 				return None
 			return d
 
-		if config.docrcchecks:
-			curf = 0
-			curpos = 0
-			for piece in range(0, len(hashes)):
-				if piece < len(hashes) - 1:
-					curend = curpos + piecelen
-				else:
-					curend = total_len
-				piecefiles = []
-				wanttest = 0
-				while curpos < curend:
-					while curpos < files[curf].totpos or curpos >= files[curf].totpos+files[curf].size:
-						curf = curf + 1
-					f=files[curf]
-					fcurpos = curpos-f.totpos
-					fpiecelen = min(curend-curpos, f.size-fcurpos)
-					piecefiles.append((f,fcurpos,fpiecelen))
-					curpos = curpos + fpiecelen
-					if not f.done:
-						wanttest = 1
-				if wanttest:
-					sh = sha.sha()
-					for f,fcurpos,fpiecelen in piecefiles:
-						if stdprogress and f.l_filename and f.l_filename!=progress.filename:
-							progress.cleanup()
-							progress.init(f.l_filename,f.size,fcurpos)
-						d = readfpiece(f, fcurpos, fpiecelen)
-						if d is None:
-							break
-						sh.update(d)
-						if stdprogress and f.l_filename: progress.update(fcurpos+fpiecelen)
+		curf = 0
+		curpos = 0
+		for piece in range(0, len(hashes)):
+			if piece < len(hashes) - 1:
+				curend = curpos + piecelen
+			else:
+				curend = total_len
+			piecefiles = []
+			wanttest = 0
+			while curpos < curend:
+				while curpos < files[curf].totpos or curpos >= files[curf].totpos+files[curf].size:
+					curf = curf + 1
+				f=files[curf]
+				fcurpos = curpos-f.totpos
+				fpiecelen = min(curend-curpos, f.size-fcurpos)
+				piecefiles.append((f,fcurpos,fpiecelen))
+				curpos = curpos + fpiecelen
+				if not f.done:
+					wanttest = 1
+			if wanttest:
+				sh = sha.sha()
+				for f,fcurpos,fpiecelen in piecefiles:
+					if stdprogress and f.l_filename and f.l_filename!=progress.filename:
+						progress.cleanup()
+						progress.init(f.l_filename,f.size,fcurpos)
+					d = readfpiece(f, fcurpos, fpiecelen)
 					if d is None:
-						for f,fcurpos,fpiecelen in piecefiles:
-							if not f.done:
+						break
+					sh.update(d)
+					if stdprogress and f.l_filename: progress.update(fcurpos+fpiecelen)
+				if d is None:
+					for f,fcurpos,fpiecelen in piecefiles:
+						if not f.done:
+							if stdprogress: progress.cleanup()
+							do_f_badcrc(f.l_filename, 'piece %i missing data'%(piece))
+							f.done=1
+				elif sh.digest()!=hashes[piece]:
+					for f,fcurpos,fpiecelen in piecefiles:
+						if not f.done:
+							if stdprogress: progress.cleanup()
+							do_f_badcrc(f.l_filename, 'piece %i (at %i..%i) crc does not match (%s!=%s)'%(piece,fcurpos,fcurpos+fpiecelen,hexlify(hashes[piece]), sh.hexdigest()))
+							f.done=1
+				else:
+					for f,fcurpos,fpiecelen in piecefiles:
+						if not f.done:
+							if fcurpos+fpiecelen==f.size:
 								if stdprogress: progress.cleanup()
-								do_f_badcrc(f.l_filename, 'piece %i missing data'%(piece))
+								do_f_ok(f.l_filename,f.size,'all pieces ok')
 								f.done=1
-					elif sh.digest()!=hashes[piece]:
-						for f,fcurpos,fpiecelen in piecefiles:
-							if not f.done:
-								if stdprogress: progress.cleanup()
-								do_f_badcrc(f.l_filename, 'piece %i (at %i..%i) crc does not match (%s!=%s)'%(piece,fcurpos,fcurpos+fpiecelen,hexlify(hashes[piece]), sh.hexdigest()))
-								f.done=1
-					else:
-						for f,fcurpos,fpiecelen in piecefiles:
-							if not f.done:
-								if fcurpos+fpiecelen==f.size:
-									if stdprogress: progress.cleanup()
-									do_f_ok(f.l_filename,f.size,'all pieces ok')
-									f.done=1
 
-			if stdprogress: progress.cleanup()
+		if stdprogress: progress.cleanup()
 
 		for f in files:
 			if not f.done:
-				do_f_ok(f.l_filename,f.size,config.docrcchecks and 'all pieces ok' or 'exists')
+				do_f_ok(f.l_filename,f.size,'all pieces ok')
 			if f.fh:
 				f.fh.close()
 			

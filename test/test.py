@@ -529,7 +529,7 @@ def ren_test(f,extra=None,verify=None,t=None):
 	finally:
 		shutil.rmtree(dir)
 
-def search_test(t,test_nocrc=0):
+def search_test(t,test_nocrc=0,extra=None):
 	cfn = os.path.join(os.getcwd(), 'test.'+t)
 	hassize = fmt_hassize(t)
 	if test_nocrc:
@@ -538,6 +538,8 @@ def search_test(t,test_nocrc=0):
 	else:
 		hascrc = fmt_hascrc(t)
 		cmd = cfvcmd
+	if extra:
+		cmd = cmd + " " + extra
 	
 	if not hascrc and not hassize:
 		# if using -m and type doesn't have size, make sure -s doesn't do anything silly
@@ -883,6 +885,7 @@ def all_tests():
 	for t in 'md5', 'bsdmd5', 'sfv', 'sfvmd5', 'csv', 'csv2', 'csv4', 'crc', 'par', 'par2':
 		search_test(t)
 		search_test(t,test_nocrc=1)
+	search_test('torrent',test_nocrc=1,extra="--strip=1")
 
 	T_test(".md5")
 	T_test(".md5.gz")
