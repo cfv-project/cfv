@@ -951,6 +951,7 @@ def all_tests():
 	test_generic(cfvcmd+" --strippaths=2 -T -f teststrip2.csv4",cfv_test)
 	test_generic(cfvcmd+" --strippaths=all -T -f teststrip-1.csv4",cfv_test)
 	test_generic(cfvcmd+" --strippaths=none -T -f teststrip-none.csv4",cfv_notfound_test)
+	test_generic(cfvcmd+r" --strippaths=0 --fixpaths \\/ -T -f testdrivestrip.md5",rcurry(cfv_all_test,ok=4))
 
 	test_generic(cfvcmd+" -i -T -f testcase.csv",cfv_test)
 	test_generic(cfvcmd+" -T -f testquoted.sfv",cfv_test)

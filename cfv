@@ -49,6 +49,17 @@ def lchoplen(line, max):
 		return '...'+line[-(max-3):]
 	return line
 
+try:
+	''.lstrip('a') #str.lstrip(arg) only in python>=2.2
+	def lstrip(s,c):
+		return s.lstrip(c)
+except TypeError:
+	def lstrip(s, c):
+		for i in range(0,len(s)):
+			if s[i]!=c:
+				break
+		return s[i:]
+	
 
 _realpath = getattr(os.path, 'realpath', os.path.abspath) #realpath is only in Python>=2.2
 _path_key_cache = {}
@@ -1808,7 +1819,7 @@ def nocase_findfile_updstats(filename):
 		stats.diffcase = stats.diffcase + 1
 	return cur
 	
-def strippath(filename, num='a', _splitdrivere=re.compile(r"[a-z]:\\",re.I)):
+def strippath(filename, num='a', _splitdrivere=re.compile(r"[a-z]:[/\\]",re.I)):
 	if num=='a':#split all the path off
 		return os.path.split(filename)[1]
 	if num=='n':#split none of the path
@@ -1817,7 +1828,7 @@ def strippath(filename, num='a', _splitdrivere=re.compile(r"[a-z]:\\",re.I)):
 	if _splitdrivere.match(filename,0,3): #we can't use os.path.splitdrive, since we want to get rid of it even if we are not on a dos system.
 		filename=filename[3:]
 	if filename[0]==os.sep:
-		filename=filename[1:]
+		filename=lstrip(filename, os.sep)
 	
 	if num==0:#only split drive letter/root slash off
 		return filename
