@@ -1,3 +1,9 @@
+cfv (1.10-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Stefan Alfredsson <alfs@debian.org>  Sat,  8 Dec 2001 00:04:22 +0100
+
 cfv (1.9-4) unstable; urgency=low
 
   * Removed dependency on package not in debian archive (closes: #116867)
