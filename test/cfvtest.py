@@ -24,7 +24,9 @@ import os,sys
 import traceback
 from glob import glob
 
+import unittest
 from unittest import TestCase, main
+import doctest
 
 import imp
 
@@ -200,6 +202,22 @@ def setenv(k,v):
 	get_version_flags()
 
 
+
+def all_unittests_suite():
+	testpath = os.path.split(__file__)[0] or os.curdir
+	modules_to_test = [os.path.splitext(f)[0] for f in os.listdir(testpath) if f.lower().startswith("test_") and f.lower().endswith(".py")]
+	alltests = unittest.TestSuite()
+	for module in map(__import__, modules_to_test):
+		alltests.addTest(unittest.findTestCases(module))
+	for module in cfv,:
+		alltests.addTest(doctest.DocTestSuite(module))
+	return alltests
+
+
+
 # initialize with default options
 setcfv(fn=os.path.join(os.pardir,'cfv'), internal=1)
+
+if __name__ == '__main__':
+	main(defaultTest='all_unittests_suite')
 
