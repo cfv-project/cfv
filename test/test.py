@@ -331,7 +331,11 @@ def all_tests():
 		md5verify=None
 	C_test("md5",verify=md5verify)
 	C_test("csv")
-	C_test("sfv")
+	if pathfind('cksfv'): #don't report pointless errors on systems that don't have cksfv
+		sfvverify=lambda f: test_generic("cksfv -f "+f,status_test)
+	else:
+		sfvverify=None
+	C_test("sfv",verify=sfvverify)
 	C_test("csv2","-t csv2")
 	C_test("csv4","-t csv4")
 	#test_generic("../cfv -V -T -f test.md5",cfv_test)
