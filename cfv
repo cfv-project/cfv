@@ -19,6 +19,81 @@
 
 import getopt, re, os, sys, errno, time, copy, struct, codecs
 from stat import *
+from StringIO import StringIO
+
+import locale
+if hasattr(locale,'getpreferredencoding'):
+	preferredencoding = locale.getpreferredencoding() or 'ascii'
+else:
+	preferredencoding = 'ascii'
+
+if hasattr(sys,'getfilesystemencoding'):
+	fsencoding = sys.getfilesystemencoding()
+else:
+	fsencoding = preferredencoding
+
+try:
+	UnicodeDecodeError
+except NameError:
+	UnicodeDecodeError=UnicodeError
+
+try:
+	os.stat(os.curdir+u'\0foobarbaz')
+	_fs_nullsok=0 #if os.stat succeeded, it means the filename was cut off at the null (or the user has funny files ;)
+except EnvironmentError:
+	_fs_nullsok=1
+except TypeError:
+	_fs_nullsok=0
+
+if os.name in ('nt','dos'):
+	endl='\r\n'
+else:
+	endl='\n'
+
+def is_unicode(s, _unitype=type(u'')):
+	return type(s) == _unitype
+def is_rawstr(s, _stype=type('')):
+	return type(s) == _stype
+
+def cfencode(s, preferred=None):
+	if config.encoding=='raw':
+		if is_unicode(s):
+			return s.encode(fsencoding)
+		return s
+	else:
+		return s.encode(config.getencoding(preferred))
+
+class FilenameError(ValueError): pass
+def cfdecode(s, preferred=None):
+	if config.encoding!='raw':
+		s = unicode(s, config.getencoding(preferred))
+	if not _fs_nullsok and '\0' in s:
+		raise FilenameError, "filename contains null characters"
+	return s
+
+def showfn(s):
+	if is_rawstr(s):
+		return unicode(s, 'ascii', 'replace')
+	return s
+
+def codecs_getreader(e):
+	return codecs.lookup(e)[2] #codecs.getreader is only in python2.2+
+
+def codec_supports_readline(e):
+	"""Figure out whether the given codec's StreamReader supports readline.
+
+	Some (utf-16) raise NotImplementedError, others (cp500) are just broken.
+	With recent versions of python (cvs as of 20050203), readline seems to
+	work on all codecs.  Yay.
+	"""
+	testa=u'a'*80 + u'\n'
+	testb=u'b'*80 + u'\n'
+	test=testa+testb
+	r=codecs_getreader(e)(StringIO(test.encode(e)))
+	try:
+		return r.readline()==testa and r.readline()==testb
+	except NotImplementedError:
+		return 0
 
 cftypes={}
 _cf_fn_exts, _cf_fn_matches, _cf_fn_searches = [], [], []
@@ -74,23 +149,75 @@ def get_path_key(path):
 	dk = _path_key_cache.get(path)
 	if dk is not None:
 		return dk
-	st = os.stat(path or os.curdir)
+	st = os.stat(path or os_curdiru)
 	if st[ST_INO]:
 		dk = (st[ST_DEV],  st[ST_INO])
 	else:
-		dk = _realpath(os.path.join(curdir, path))
+		dk = _realpath(path_join(curdir, path))
 	_path_key_cache[path] = dk
 	return dk
-	
-curdir=os.getcwd()
-reldir=['']
+
+if hasattr(os,'getcwdu'):
+	def os_getcwdu():
+		try:
+			return os.getcwdu()
+		except UnicodeDecodeError:
+			return os.getcwd()
+else:
+	def os_getcwdu():
+		d = os.getcwd()
+		try:
+			return unicode(d,fsencoding)
+		except UnicodeDecodeError:
+			return d
+
+os_curdiru=unicode(os.curdir)
+
+if sys.hexversion>=0x020300f0:
+	os_listdir = os.listdir
+else:
+	def os_listdir(path):
+		r = []
+		for fn in os.listdir(path):
+			try:
+				r.append(unicode(fn, fsencoding))
+			except UnicodeError:
+				r.append(fn)
+		return r
+
+def path_join(*paths):
+	#The assumption here is that the only reason a raw string path component can get here is that it cannot be represented in unicode (Ie, it is not a valid encoded string)
+	#In that case, we convert the parts that are valid back to raw strings and join them together.  If the unicode can't be represented in the fsencoding, then there's nothing that can be done, and this will blow up.  Oh well.
+	if filter(is_rawstr, paths):
+		#import traceback;traceback.print_stack() ####
+		#perror("path_join: non-unicode args "+repr(paths))
+
+		npaths = []
+		for p in paths:
+			if is_unicode(p):
+				npaths.append(p.encode(fsencoding))
+			else:
+				npaths.append(p)
+		paths = npaths
+	return os.path.join(*paths)
+
+def safesort(l):
+	sl = filter(is_rawstr, l)
+	ul = filter(lambda e: not is_rawstr(e), l)
+	sl.sort()
+	ul.sort()
+	l[:] = ul+sl
+
+
+curdir=os_getcwdu()
+reldir=[u'']
 prevdir=[]
 def chdir(d):
 	global curdir,_path_key_cache
 	os.chdir(d)
 	prevdir.append((curdir,_path_key_cache))
-	reldir.append(os.path.join(reldir[-1], d))
-	curdir=os.getcwd()
+	reldir.append(path_join(reldir[-1], d))
+	curdir=os_getcwdu()
 	_path_key_cache = {}
 def cdup():
 	global curdir,_path_key_cache
@@ -133,22 +260,18 @@ def set_stdout_special():
 	stdinfo = stderr
 
 class CodecWriter:
-	"""Similar to codecs.StreamWriter, but str objects are passed through directly to the output stream.
-	This is necessary as some codecs barf on trying to encode even ascii strings.
-	Also, filenames read from disk will not be unicode, but rather strings encoded in the filesystemencoding, which will make any StreamWriter barf.
-	But printing them directly should (hopefully) work fine.
+	"""Similar to codecs.StreamWriter, but str objects are decoded (as ascii) before then being passed to the the output encoder.
+	This is necessary as some codecs barf on trying to encode ascii strings.
 	"""
-	#Another approach could be to convert str objects to unicode and then pass them to encode, but that would be extra work.
 	def __init__(self, encoding, stream, errors='strict'):
 		self.stream = stream
 		self.errors = errors
 		self.encode = codecs.lookup(encoding)[0] #codecs.getencoder(encoding) #codecs.getencoder is only in python2.2+, but lookup(...)[0] is equivalent
 	def write(self, object):
-		if type(object)==type(''):
-			self.stream.write(object)
-		else:
-			data, consumed = self.encode(object, self.errors)
-			self.stream.write(data)
+		if is_rawstr(object):
+			object = unicode(object,'ascii')
+		data, consumed = self.encode(object, self.errors)
+		self.stream.write(data)
 	def writelines(self, list):
 		self.write(''.join(list))
 	def __getattr__(self, name, getattr=getattr):
@@ -164,8 +287,8 @@ except:
 
 def setup_output():
 	global stdinfo,stdprogress,stdout,stderr
-	stdout = CodecWriter(getattr(sys.stdout,'encoding',None) or 'ascii', sys.stdout, errors=codec_error_handler)
-	stderr = CodecWriter(getattr(sys.stderr,'encoding',None) or getattr(sys.stdout,'encoding',None) or 'ascii', sys.stderr, errors=codec_error_handler)
+	stdout = CodecWriter(getattr(sys.stdout,'encoding',None) or preferredencoding, sys.stdout, errors=codec_error_handler)
+	stderr = CodecWriter(getattr(sys.stderr,'encoding',None) or getattr(sys.stdout,'encoding',None) or preferredencoding, sys.stderr, errors=codec_error_handler)
 	stdinfo = _stdout_special and stderr or stdout
 	# if one of stdinfo (usually stdout) or stderr is a tty, use it.  Otherwise use stdinfo.
 	stdprogress = stdinfo.isatty() and stdinfo or stderr.isatty() and stderr or stdinfo
@@ -184,6 +307,7 @@ def pinfo(s,nl='\n'):
 	if config.verbose>=0 or config.verbose==-3:
 		stdinfo.write(s+nl)
 def perror(s,nl='\n'):
+	#import traceback;traceback.print_stack()####
 	if config.verbose>=-1:
 		stdout.flush() # avoid inconsistent screen state if stdout has unflushed data
 		stderr.write(s+nl)
@@ -285,13 +409,16 @@ class FileInfoCache:
 	
 	def set_testfiles(self, testfiles):
 		for fn in testfiles:
-			fn = os.path.join(reldir[-1], fn)
+			fn = path_join(reldir[-1], fn)
 			if config.ignorecase:
 				fn = fn.lower()
+			if config.encoding=='raw' and is_unicode(fn):
+				try: fn = fn.encode(fsencoding)
+				except UnicodeError: pass
 			self.testfiles[fn] = 1
 			
 	def should_test(self, fn):
-		fn = os.path.join(reldir[-1], fn)
+		fn = path_join(reldir[-1], fn)
 		if config.ignorecase:
 			fn = fn.lower()
 		return self.testfiles.get(fn,0)
@@ -447,6 +574,14 @@ class Config:
 	progress='a'
 	announceurl=None
 	piece_size_pow2=18
+	encoding='auto'
+	def getencoding(self, preferred=None):
+		assert self.encoding!='raw'
+		if self.encoding=='auto':
+			if preferred: return preferred
+			return preferredencoding
+		else:
+			return self.encoding
 	def setdefault(self,cftype):
 		if cftype in cftypes.keys():
 			self.defaulttype=cftype
@@ -470,6 +605,9 @@ class Config:
 			raise CFVValueError, "invalid bool type '%s' for %s"%(v,o)
 		self.__dict__[o]=x
 	def setyesnoauto(self,o,v):
+		#ugly work around for bug in python < 2.2: str.startswith(unicode) was buggy
+		try: v = str(v)
+		except UnicodeError: pass
 		if 'yes'.startswith(v.lower()):
 			self.__dict__[o]='y'
 		elif 'auto'.startswith(v.lower()):
@@ -505,6 +643,9 @@ class Config:
 		elif o=="showpaths":
 			p=0
 			a=0
+			#ugly work around for bug in python < 2.2: str.startswith(unicode) was buggy
+			try: v = str(v)
+			except UnicodeError: pass
 			for v in v.split('-'):
 				if not p:
 					if 'none'.startswith(v.lower()) or v=='0':
@@ -525,6 +666,9 @@ class Config:
 						a=1; continue
 				raise CFVValueError, "invalid showpaths option '%s', must be 'none', 'auto', 'yes', 'absolute', or 'relative'"%v
 		elif o=="strippaths":
+			#ugly work around for bug in python < 2.2: str.startswith(unicode) was buggy
+			try: v = str(v)
+			except UnicodeError: pass
 			if 'none'.startswith(v.lower()):
 				self.strippaths='n'
 			elif 'all'.startswith(v.lower()):
@@ -555,6 +699,15 @@ class Config:
 			if not cftypes.has_key(typename):
 				raise CFVValueError, "filename_type: invalid type '%s'"%typename
 			self.user_cf_fn_regexs.append((re.compile(match, re.I).search, cftypes[typename]))
+		elif o=='encoding':
+			if v in ('raw', 'auto'):
+				pass
+			else:
+				try:
+					u'a'.encode(v)
+				except (UnicodeError, LookupError), e:
+					raise CFVValueError, "invalid %s option: %s"%(o,e)
+			self.setstr(o,v)
 		elif o=='announceurl':
 			self.setstr(o,v)
 		elif o=='piece_size_pow2':
@@ -595,7 +748,7 @@ def make_rename_formatmap(l_filename):
 	sp=os.path.splitext(l_filename)
 	return {'name':sp[0], 'ext':sp[1], 'fullname':l_filename}
 
-version='1.18.1'#.1-pre'+'$Revision$'[11:-2]
+version='2.0-pre'+'$Revision$'[11:-2]
 
 _hassymlinks=hasattr(os,'symlink')
 
@@ -667,22 +820,38 @@ try:
 	if os.environ.get('CFV_NOFCHKSUM'): raise ImportError
 	import fchksum
 	try:
-		if fchksum.version()<4:raise ImportError
+		if fchksum.version()<5:raise ImportError
 	except:
 		stderr.write("old fchksum version installed, using std python modules. please update.\n") #can't use perror yet since config hasn't been done..
 		raise ImportError
-	def _getfilemd5(file):
-		if stdprogress: progress.init(file)
+	def _getfilemd5(filename):
+		if stdprogress: progress.init(filename)
 		try:
-			c,s=fchksum.fmd5(file, stdprogress and progress.update or None, 0.03)
+			if filename=='':
+				f = sys.stdin
+			else:
+				f = open(filename, 'rb')
+			if is_unicode(filename):
+				sname = filename.encode(fsencoding, 'replace')
+			else:
+				sname = filename
+			c,s=fchksum.fmd5(sname, stdprogress and progress.update or None, 0.03, fileno=f.fileno())
 			stats.bytesread=stats.bytesread+s
 		finally:
 			if stdprogress: progress.cleanup()
 		return c,s
-	def _getfilecrc(file):
-		if stdprogress: progress.init(file)
+	def _getfilecrc(filename):
+		if stdprogress: progress.init(filename)
 		try:
-			c,s=fchksum.fcrc32d(file, stdprogress and progress.update or None, 0.03)
+			if filename=='':
+				f = sys.stdin
+			else:
+				f = open(filename, 'rb')
+			if is_unicode(filename):
+				sname = filename.encode(fsencoding, 'replace')
+			else:
+				sname = filename
+			c,s=fchksum.fcrc32d(sname, stdprogress and progress.update or None, 0.03, fileno=f.fileno())
 			stats.bytesread=stats.bytesread+s
 		finally:
 			if stdprogress: progress.cleanup()
@@ -725,42 +894,84 @@ except NameError:
 class PeekFile:
 	def __init__(self, fileobj, filename=None):
 		self.fileobj = fileobj
+		self._init_decodeobj()
 		self.name = filename or fileobj.name
+	def _init_decodeobj(self):
+		if config.encoding=='raw':
+			self.decodeobj = self.fileobj
+		else:
+			self.decodeobj = codecs_getreader(config.getencoding())(self.fileobj)
+			if not codec_supports_readline(config.getencoding()):
+				#print "codec doesn't support readline, hacking it."
+				try:
+					self.decodeobj = StringIO(self.decodeobj.read())
+				except UnicodeError:
+					self.decodeobj = StringIO(u"")
+		self._prevlineend=None
+	def _reset_decodeobj(self):
+		self.fileobj.seek(0)
+		self._init_decodeobj()
+	def _readline(self,*args):
+		line = self.decodeobj.readline(*args)
+		#work around corrupted files that have crcrlf line endings.  (With StreamReaders in python versions >= 2.4, you no longer get it all as one line.)
+		if self._prevlineend=='\r' and line=='\r\n':
+			self._prevlineend=None
+			return self._readline(*args)
+		self._prevlineend=line[-1:]
+		return line
 	def peek(self, *args):
 		self.fileobj.seek(0)
 		return self.fileobj.read(*args)
+	def peekdecoded(self, *args):
+		self._reset_decodeobj()
+		try:
+			return self.decodeobj.read(*args)
+		except UnicodeDecodeError:
+			return u''
 	def peekline(self, *args):
-		self.fileobj.seek(0)
-		return self.fileobj.readline(*args)
+		self._reset_decodeobj()
+		try:
+			return self._readline(*args)
+		except UnicodeDecodeError:
+			return u''
 	def peeknextline(self, *args):
-		return self.fileobj.readline(*args)
-	def _done_peeking(self):
-		self.fileobj.seek(0)
+		try:
+			return self._readline(*args)
+		except UnicodeDecodeError:
+			return u''
+	def _done_peeking(self,raw):
+		if raw:
+			fileobj = self.fileobj
+			fileobj.seek(0)
+			del self.decodeobj
+		else:
+			self._reset_decodeobj()
+			fileobj = self.decodeobj
+			del self.fileobj
 		self.peeknextline = None
+		self.peekdecoded = None
 		self.peekline = None
 		self.peek = None
-		self.readline = self.fileobj.readline
-		self.read = self.fileobj.read
-		self.seek = self.fileobj.seek
+		self.readline = self._readline
+		self.read = fileobj.read
+		self.seek = fileobj.seek
 	def seek(self, *args):
-		self._done_peeking()
+		self._done_peeking(raw=1)
 		return self.seek(*args)
 	def readline(self, *args):
-		self._done_peeking()
-		return self.readline(*args)
+		self._done_peeking(raw=0)
+		return self._readline(*args)
 	def read(self, *args):
-		self._done_peeking()
+		self._done_peeking(raw=1)
 		return self.read(*args)
 
 def PeekFileNonseekable(fileobj, filename):
-	import StringIO
-	return PeekFile(StringIO.StringIO(fileobj.read()), filename)
+	return PeekFile(StringIO(fileobj.read()), filename)
 
 def PeekFileGzip(filename):
 	import gzip
 	if filename=='-':
-		import StringIO
-		f = gzip.GzipFile(mode="rb",fileobj=StringIO.StringIO(sys.stdin.read())) #lovely hack since gzip.py requires a bunch of seeking.. bleh.
+		f = gzip.GzipFile(mode="rb",fileobj=StringIO(sys.stdin.read())) #lovely hack since gzip.py requires a bunch of seeking.. bleh.
 	else:
 		f = gzip.open(filename,"rb")
 	try:
@@ -783,13 +994,12 @@ def doopen_read(filename):
 	else:
 		if filename=='-':
 			return PeekFileNonseekable(sys.stdin, filename)
-		return PeekFile(open(filename, mode))
+		return PeekFile(open(filename, mode), filename)
 
-def doopen_write(filename):
-	mode = 'w'
+def doopen_write_raw(filename):
+	mode = 'wb' #write all files in binary mode. (Otherwise we can run into problems with some encodings, and also with binary files like torrent)
 	if config.gzip>=2 or (config.gzip>=0 and filename[-3:].lower()=='.gz'):
 		import gzip
-		mode=mode+'b' #open gzip files in binary mode
 		if filename=='-':
 			return gzip.GzipFile(filename=filename, mode=mode, fileobj=sys.stdout)
 		return gzip.open(filename, mode)
@@ -798,6 +1008,11 @@ def doopen_write(filename):
 			return NoCloseFile(sys.stdout)
 		return open(filename, mode)
 
+def doopen_write(filename):
+	if config.encoding=='raw':
+		return doopen_write_raw(filename)
+	else:
+		return CodecWriter(config.getencoding(), doopen_write_raw(filename))
 
 def auto_filename_match(*names):
 	for searchfunc, cftype in config.user_cf_fn_regexs + _cf_fn_matches + _cf_fn_exts + _cf_fn_searches:
@@ -829,7 +1044,7 @@ def register_cftype(name, cftype):
 
 
 def parse_commentline(comment, commentchars):
-	if comment[0] in commentchars:
+	if comment and comment[0] in commentchars:
 		return comment[1:].strip()
 	return None
 
@@ -846,7 +1061,7 @@ class ChksumType:
 			self.do_test_chksumfile(file)
 			if config.verbose>=0 or config.verbose==-3:
 				cf_stats.sub_stats_end(stats)
-				pinfo(perhaps_showpath(file.name)+': ','')
+				pinfo(perhaps_showpath(filename)+': ','')
 				cf_stats.print_stats()
 		except EnvironmentError, a:
 			stats.cferror=stats.cferror+1
@@ -859,19 +1074,7 @@ class ChksumType:
 				comment = comment[:99]+'...'
 		else:
 			comment = ''
-		pverbose('testing from %s (%s%s)'%(file.name, self.__class__.__name__.lower(), comment))
-
-	def do_test_chksumfile(self, file):
-		self.do_test_chksumfile_print_testingline(file)
-		line=1
-		while 1:
-			l=file.readline()
-			if not l:
-				break
-			if self.do_test_chksumline(l):
-				stats.cferror=stats.cferror+1
-				perror('%s : unrecognized line %i (CF)'%(perhaps_showpath(file.name),line))
-			line=line+1
+		pverbose('testing from %s (%s%s)'%(showfn(file.name), self.__class__.__name__.lower(), comment))
 
 	def search_file(self, filename, filecrc, filesize, errfunc, errargs):
 		if (not config.search or
@@ -884,14 +1087,14 @@ class ChksumType:
 			if fpath:
 				if config.ignorecase:
 					fpath = nocase_findfile(fpath, FINDDIR)
-					filename = os.path.join(fpath,filenametail) #fix the dir the orig filename is in, so that the do_f_found can rename it correctly
+					filename = path_join(fpath,filenametail) #fix the dir the orig filename is in, so that the do_f_found can rename it correctly
 			else:
-				fpath = os.curdir
-			ftails = os.listdir(fpath)
+				fpath = os_curdiru
+			ftails = os_listdir(fpath)
 		except EnvironmentError:
 			ftails = []
 		for ftail in ftails:
-			fn = os.path.join(fpath,ftail)
+			fn = path_join(fpath,ftail)
 			try:
 				if filesize>=0:
 					fs=os.path.getsize(fn)
@@ -963,6 +1166,33 @@ class ChksumType:
 
 	def make_chksumfile_finish(self, file):
 		pass
+	
+	def filename_ok(fn):
+		return 1
+	filename_ok = staticmethod(filename_ok)
+
+
+class TextChksumType(ChksumType):
+	def do_test_chksumfile(self, file):
+		self.do_test_chksumfile_print_testingline(file)
+		line=0
+		while 1:
+			line=line+1
+			try:
+				l=file.readline()
+			except UnicodeDecodeError,e:
+				stats.cferror=stats.cferror+1
+				perror('%s : line %i: %s (CF)'%(perhaps_showpath(file.name),line,e))
+				continue
+			if not l:
+				break
+			if self.do_test_chksumline(l):
+				stats.cferror=stats.cferror+1
+				perror('%s : unrecognized line %i (CF)'%(perhaps_showpath(file.name),line))
+	
+	def filename_ok(fn):
+		return len((fn+'a').splitlines())==1
+	filename_ok = staticmethod(filename_ok)
 
 
 def do_f_enverror(l_filename, ex, foundok=0):
@@ -1004,11 +1234,11 @@ def do_f_verifyerror(l_filename, a, foundok=0):
 			if os.path.exists(newfilename):
 				if fcmp(l_filename, newfilename):
 					os.unlink(l_filename)
-					reninfo=' (dupe of %s removed)'%newfilename
+					reninfo=' (dupe of %s removed)'%showfn(newfilename)
 					break
 			else:
 				rename(l_filename, newfilename)
-				reninfo=' (renamed to %s)'%newfilename
+				reninfo=' (renamed to %s)'%showfn(newfilename)
 				break
 	perror('%s : %s%s'%(perhaps_showpath(l_filename),a,reninfo))
 
@@ -1047,7 +1277,7 @@ def do_f_found(filename, found_fn, filesize, filecrct, alreadyok=0):
 	if config.showunverified:
 		cache.set_verified(l_filename)
 	stats.misnamed=stats.misnamed+1
-	do_f_ok(filename, filesize, filecrct, msg="OK(%s %s)"%(action,found_fn), l_filename=l_filename)
+	do_f_ok(filename, filesize, filecrct, msg="OK(%s %s)"%(action,showfn(found_fn)), l_filename=l_filename)
 
 def do_f_ok(filename, filesize, filecrct, msg="OK", l_filename=None):
 	cache.set_flag(l_filename or filename, '_ok')
@@ -1069,9 +1299,9 @@ class SHA1_MixIn:
 			return c
 
 # Base class for md5sum/sha1sum style checksum file formats.
-class FooSum_Base(ChksumType):
+class FooSum_Base(TextChksumType):
 	def do_test_chksumfile_print_testingline(self, file):
-		ChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(128), ';#'))
+		TextChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(128), ';#'))
 	
 	def do_test_chksumline(self, l):
 		if l[0] in ';#': return
@@ -1106,7 +1336,7 @@ class SHA1(FooSum_Base, SHA1_MixIn):
 	
 	def make_addfile(self, filename):
 		crc=hexlify(getfilesha1(filename)[0])
-		return (crc, -1), '%s *%s\n'%(crc,filename)
+		return (crc, -1), '%s *%s'%(crc,filename)+endl
 
 register_cftype('sha1', SHA1)
 
@@ -1141,14 +1371,14 @@ class MD5(FooSum_Base, MD5_MixIn):
 	
 	def make_addfile(self, filename):
 		crc=hexlify(getfilemd5(filename)[0])
-		return (crc, -1), '%s *%s\n'%(crc,filename)
+		return (crc, -1), '%s *%s'%(crc,filename)+endl
 
 register_cftype('md5', MD5)
 
 
 #---------- bsdmd5 ----------
 
-class BSDMD5(ChksumType, MD5_MixIn):
+class BSDMD5(TextChksumType, MD5_MixIn):
 	description = 'BSD md5'
 	descinfo = 'name,MD5'
 
@@ -1170,7 +1400,7 @@ class BSDMD5(ChksumType, MD5_MixIn):
 	
 	def make_addfile(self, filename):
 		crc=hexlify(getfilemd5(filename)[0])
-		return (crc, -1), 'MD5 (%s) = %s\n'%(filename, crc)
+		return (crc, -1), 'MD5 (%s) = %s'%(filename, crc)+endl
 
 register_cftype('bsdmd5', BSDMD5)
 
@@ -1231,7 +1461,7 @@ class PAR(ChksumType, MD5_MixIn):
 		if version not in (0x00000900, 0x00010000): #ver 0.9 and 1.0 are the same, as far as we care.  Future versions (if any) may very likey have incompatible changes, so don't accept them either.
 			raise EnvironmentError, (errno.EINVAL,"can't handle PAR version %s"%ver2str(version))
 
-		pverbose('testing from %s (par v%s, created by %s v%s)'%(file.name,ver2str(version), prog2str(client>>24), ver2str(client&0xFFFFFF)))
+		pverbose('testing from %s (par v%s, created by %s v%s)'%(showfn(file.name),ver2str(version), prog2str(client>>24), ver2str(client&0xFFFFFF)))
 
 		for i in range(0, num_files):
 			d = file.read(par_entry_fmtsize)
@@ -1239,10 +1469,15 @@ class PAR(ChksumType, MD5_MixIn):
 			if config.docrcchecks:
 				control_md5.update(d)
 			d = file.read(size - par_entry_fmtsize)
-			filename = unicode(d, 'utf-16-le')
 			if config.docrcchecks:
 				control_md5.update(d)
 				stats.bytesread=stats.bytesread+size
+			try:
+				filename = cfdecode(d, 'utf-16-le')
+			except (UnicodeError, FilenameError), e:
+				stats.cferror=stats.cferror+1
+				perror('%s : file %i: %s (CF)'%(perhaps_showpath(file.name), i, e))
+				continue
 			self.test_file(filename, md5, file_size)
 
 		if config.docrcchecks:
@@ -1325,6 +1560,12 @@ class PAR2(ChksumType, MD5_MixIn):
 				if seen_file_ids.get(file_id) is None:
 					seen_file_ids[file_id] = 1
 					filename = chompnulls(d[file_pkt_size:])
+					try:
+						filename = cfdecode(filename)
+					except (UnicodeDecodeError, FilenameError), e:
+						stats.cferror=stats.cferror+1
+						perror('%s : file %s: %s (CF)'%(perhaps_showpath(file.name), hexlify(file_id), e))
+						continue
 					self.test_file(filename, file_md5, file_size)
 			elif pkt_type == "PAR 2.0\0Main\0\0\0\0":
 				if not config.docrcchecks:
@@ -1395,40 +1636,41 @@ class Torrent(ChksumType):
 		encoding = metainfo.get('encoding')
 
 		def init_file(filenameparts, ftotpos, filesize, encoding=encoding, file=file, self=self):
-			if encoding:
-				try:
-					filenameparts = map(lambda p,encoding=encoding: unicode(p,encoding), filenameparts)
-				except LookupError, e: #lookup error is raised when specified encoding isn't found.
-					raise EnvironmentError, str(e)
-				except UnicodeError, e:
-					stats.cferror=stats.cferror+1
-					perror('%s : error decoding filename %r : %s (CF)'%(perhaps_showpath(file.name),filenameparts,str(e)))
-					#here we fall through and just let it use the undecoded filename.. is that really ok?
-					
-			filename = os.path.join(*filenameparts)
-			if not config.docrcchecks: #if we aren't testing checksums, just use the standard test_file function, so that -s and such will work.
-				self.test_file(filename, None, filesize)
-				return
-			filename = mangle_filename(filename)
-			done = cache.testfiles and not cache.should_test(filename) #if we don't want to test this file, just pretending its done already has the desired effect.
-			if not done:
-				stats.num=stats.num+1
+			done = 0
 			try:
-				l_filename = find_local_filename(filename)
-				if not os.path.exists(l_filename):
-					raise EnvironmentError, (errno.ENOENT,"missing")
-				if not os.path.isfile(l_filename):
-					raise EnvironmentError, (errno.ENOENT,"not a file")
-				fs=os.path.getsize(l_filename)
-				if fs!=filesize:
-					if not done:
-						do_f_badsize(l_filename, filesize, fs)
-						done=1
-			except (EnvironmentError, UnicodeError), e: #UnicodeError can occur if python can't map the filename to the filesystem's encoding
+				filenameparts = map(lambda p,encoding=encoding: cfdecode(p,encoding), filenameparts)
+			except LookupError, e: #lookup error is raised when specified encoding isn't found.
+				raise EnvironmentError, str(e)
+			except (UnicodeError, FilenameError), e:
+				stats.cferror=stats.cferror+1
+				perror('%s : error decoding filename %r : %s (CF)'%(perhaps_showpath(file.name),filenameparts,str(e)))
+				done = 1
+				l_filename = filename = None
+			if not done:
+				filename = path_join(*filenameparts)
+				if not config.docrcchecks: #if we aren't testing checksums, just use the standard test_file function, so that -s and such will work.
+					self.test_file(filename, None, filesize)
+					return
+				filename = mangle_filename(filename)
+				done = cache.testfiles and not cache.should_test(filename) #if we don't want to test this file, just pretending its done already has the desired effect.
 				if not done:
-					do_f_enverror(filename, e)
-					done=1
-				l_filename = None
+					stats.num=stats.num+1
+				try:
+					l_filename = find_local_filename(filename)
+					if not os.path.exists(l_filename):
+						raise EnvironmentError, (errno.ENOENT,"missing")
+					if not os.path.isfile(l_filename):
+						raise EnvironmentError, (errno.ENOENT,"not a file")
+					fs=os.path.getsize(l_filename)
+					if fs!=filesize:
+						if not done:
+							do_f_badsize(l_filename, filesize, fs)
+							done=1
+				except (EnvironmentError, UnicodeError), e: #UnicodeError can occur if python can't map the filename to the filesystem's encoding
+					if not done:
+						do_f_enverror(filename, e)
+						done=1
+					l_filename = None
 			return Data(totpos=ftotpos, size=filesize, filename=filename, l_filename=l_filename, done=done)
 
 		info = metainfo['info']
@@ -1441,11 +1683,12 @@ class Torrent(ChksumType):
 			dirpart = [info['name']]
 			if config.strippaths==0:
 				dirname = info['name']
-				if encoding:
-					try:
-						dirname = unicode(dirname, encoding)
-					except (LookupError, UnicodeError): #lookup error is raised when specified encoding isn't found.
-						pass
+				try:
+					dirname = cfdecode(dirname, encoding)
+				except (LookupError, UnicodeError, FilenameError), e: #lookup error is raised when specified encoding isn't found.
+					stats.cferror=stats.cferror+1
+					raise EnvironmentError, e
+					
 				dirname = strippath(dirname, 0)
 				if config.ignorecase:
 					try:
@@ -1453,7 +1696,10 @@ class Torrent(ChksumType):
 					except EnvironmentError:
 						dirpart = []
 				else:
-					if not os.path.isdir(dirname):
+					try:
+						if not os.path.isdir(dirname):
+							dirpart = []
+					except UnicodeError:
 						dirpart = []
 				#if not dirpart:
 				#	pinfo("enabling .torrent path strip hack")
@@ -1566,7 +1812,7 @@ class Torrent(ChksumType):
 			raise EnvironmentError, _btimporterror
 		if config.announceurl==None:
 			raise EnvironmentError, 'announce url required'
-		file = ChksumType.make_chksumfile(self, filename)
+		file = doopen_write_raw(filename)
 		self.sh = sha.sha()
 		self.files = []
 		self.pieces = []
@@ -1596,7 +1842,8 @@ class Torrent(ChksumType):
 				self.piece_done = 0
 		f.close()
 		if stdprogress: progress.cleanup()
-		self.files.append({'length':fs, 'path':path_split(filename)})
+		def cfencode_utf8pref(s): return cfencode(s, 'UTF-8')
+		self.files.append({'length':fs, 'path':map(cfencode_utf8pref, path_split(filename))})
 		return ('pieces %i..%i'%(firstpiece,len(self.pieces)),fs), ''
 	
 	def make_chksumfile_finish(self, file):
@@ -1605,7 +1852,8 @@ class Torrent(ChksumType):
 
 		info = {'pieces':''.join(self.pieces), 'piece length':self.piece_length}
 		if len(self.files)==1 and len(self.files[0]['path'])==1:
-			info['name'],info['length'] = self.files[0]['path'][0],self.files[0]['length']
+			info['length'] = self.files[0]['length']
+			info['name'] = self.files[0]['path'][0]
 		else:
 			commonroot = self.files[0]['path'][0]
 			for fileinfo in self.files[1:]:
@@ -1616,12 +1864,14 @@ class Torrent(ChksumType):
 				for fileinfo in self.files:
 					del fileinfo['path'][0]
 			else:
-				commonroot = os.path.split(os.getcwd())[1]
+				commonroot = cfencode(os.path.split(os_getcwdu())[1], 'UTF-8')
 			info['files'] = self.files
 			info['name'] = commonroot
 
 		btformats.check_info(info)
-		data = {'info': info, 'announce': config.announceurl.strip(), 'creation date': long(time.time())}
+		data = {'info': info, 'announce': cfencode(config.announceurl.strip(),'UTF-8'), 'creation date': long(time.time())}
+		if config.encoding!='raw':
+			data['encoding'] = str(config.getencoding('UTF-8'))
 		#if comment:
 		#	data['comment'] = comment
 		file.write(bencode.bencode(data))
@@ -1638,12 +1888,12 @@ class CRC_MixIn:
 		if c!=filecrc:
 			return c
 		
-class SFV_Base(ChksumType):
+class SFV_Base(TextChksumType):
 	description = 'Simple File Verify'
 
 	def do_test_chksumfile_print_testingline(self, file):
 		#override the default testing line to show first SFV comment line, if any
-		ChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(128), ';'))
+		TextChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(128), ';'))
 
 	def do_test_chksumline(self, l):
 		if l[0]==';': return
@@ -1652,8 +1902,8 @@ class SFV_Base(ChksumType):
 		self.test_file(x.group(1),unhexlify(x.group(2)))
 	
 	def make_chksumfile(self, filename):
-		file = ChksumType.make_chksumfile(self, filename)
-		file.write('; Generated by cfv v%s on %s\n;\n'%(version,time.strftime('%Y-%m-%d at %H:%M.%S',time.gmtime(time.time()))))
+		file = TextChksumType.make_chksumfile(self, filename)
+		file.write('; Generated by cfv v%s on %s'%(version,time.strftime('%Y-%m-%d at %H:%M.%S',time.gmtime(time.time())))+endl+';'+endl)
 		return file
 
 
@@ -1678,7 +1928,7 @@ class SFV(SFV_Base, CRC_MixIn):
 		
 	def make_addfile(self, filename):
 		crc=hexlify(getfilecrc(filename)[0])
-		return (crc, -1), '%s %s\n'%(filename,crc)
+		return (crc, -1), '%s %s'%(filename,crc)+endl
 
 register_cftype('sfv', SFV)
 
@@ -1705,7 +1955,7 @@ class SFVMD5(SFV_Base, MD5_MixIn):
 		
 	def make_addfile(self, filename):
 		crc=hexlify(getfilemd5(filename)[0])
-		return (crc, -1), '%s %s\n'%(filename,crc)
+		return (crc, -1), '%s %s'%(filename,crc)+endl
 	
 register_cftype('sfvmd5', SFVMD5)
 
@@ -1724,7 +1974,7 @@ def csvunquote(g1,g2):
 		return g1.replace('""','"')
 	return g2
 
-class CSV(ChksumType, CRC_MixIn):
+class CSV(TextChksumType, CRC_MixIn):
 	description = 'Comma Separated Values'
 	descinfo = 'name,size,CRC32'
 
@@ -1747,14 +1997,14 @@ class CSV(ChksumType, CRC_MixIn):
 	def make_addfile(self, filename):
 		c,s=getfilecrc(filename)
 		c = hexlify(c)
-		return (c,s), '%s,%i,%s,\n'%(csvquote(filename),s,c)
+		return (c,s), '%s,%i,%s,'%(csvquote(filename),s,c)+endl
 
 register_cftype('csv', CSV)
 
 
 #---------- csv with 4 fields ----------
 
-class CSV4(ChksumType, CRC_MixIn):
+class CSV4(TextChksumType, CRC_MixIn):
 	description = 'Comma Separated Values'
 	descinfo = 'name,size,CRC32,path'
 	
@@ -1768,7 +2018,7 @@ class CSV4(ChksumType, CRC_MixIn):
 		if not x: return -1
 		name = csvunquote(x.group(1),x.group(2))
 		path = csvunquote(x.group(5),x.group(6))
-		self.test_file(os.path.join(fixpath(path),name),unhexlify(x.group(4)),int(x.group(3))) #we need to fixpath before path.join since os.path.join looks for path.sep
+		self.test_file(path_join(fixpath(path),name),unhexlify(x.group(4)),int(x.group(3))) #we need to fixpath before path.join since path_join looks for path.sep
 	
 	def make_std_filename(filename):
 		return filename+'.csv'
@@ -1778,14 +2028,14 @@ class CSV4(ChksumType, CRC_MixIn):
 		c,s=getfilecrc(filename)
 		c = hexlify(c)
 		p=os.path.split(filename)
-		return (c,s), '%s,%i,%s,%s,\n'%(csvquote(p[1]),s,c,csvquote(p[0]))
+		return (c,s), '%s,%i,%s,%s,'%(csvquote(p[1]),s,c,csvquote(p[0]))+endl
 
 register_cftype('csv4', CSV4)
 
 
 #---------- csv with only 2 fields ----------
 
-class CSV2(ChksumType):
+class CSV2(TextChksumType):
 	description = 'Comma Separated Values'
 	descinfo = 'name,size'
 
@@ -1808,7 +2058,7 @@ class CSV2(ChksumType):
 			s=getfilecrc(filename)[1]#no way to get size of stdin other than to read it
 		else:
 			s=os.path.getsize(filename)
-		return (None, s), '%s,%i,\n'%(csvquote(filename),s)
+		return (None, s), '%s,%i,'%(csvquote(filename),s)+endl
 
 register_cftype('csv2', CSV2)
 
@@ -1834,18 +2084,18 @@ def commaize(n):
 		n = n[:-3]
 	return s
 
-class JPEGSheriff_CRC(ChksumType, CRC_MixIn):
+class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 	description = 'JPEGSheriff'
 	descinfo = 'name,size,dimensions,CRC32'
 
 	def auto_chksumfile_match(file, _autorem=re.compile(r'^Filename\s+(Filesize\s+)?.*?CRC-?32.*^-+(\s+-+){1,4}\s*$', re.DOTALL|re.IGNORECASE|re.MULTILINE)):
-		return _autorem.search(file.peek(1024)) is not None
+		return _autorem.search(file.peekdecoded(1024)) is not None
 	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	auto_filename_match = 'crc$'
 	
 	def do_test_chksumfile_print_testingline(self, file):
-		x=re.search(r'^Filename\s+(Filesize\s+)?(.+?)??CRC-?32.*^-+(\s+-+){1,4}\s*$', file.peek(1024), re.DOTALL|re.IGNORECASE|re.MULTILINE)
+		x=re.search(r'^Filename\s+(Filesize\s+)?(.+?)??CRC-?32.*^-+(\s+-+){1,4}\s*$', file.peekdecoded(1024), re.DOTALL|re.IGNORECASE|re.MULTILINE)
 		self.has_size = x.group(1) is not None
 		self.has_dimensions = x.group(2) is not None
 		
@@ -1863,7 +2113,7 @@ class JPEGSheriff_CRC(ChksumType, CRC_MixIn):
 		comment = ', ' + file.peekline().strip()
 		if len(comment)>102: #but limit the length in case its a really long one.
 			comment = comment[:99]+'...'
-		pverbose('testing from %s (crc%s)'%(file.name, comment))
+		pverbose('testing from %s (crc%s)'%(showfn(file.name), comment))
 
 	_commentboundary=re.compile(r'^-+(\s+-+){1,4}\s*$')
 	_nstrip=re.compile(r'[.,]')
@@ -1887,10 +2137,10 @@ class JPEGSheriff_CRC(ChksumType, CRC_MixIn):
 	make_std_filename = staticmethod(make_std_filename)
 
 	def make_chksumfile(self, filename):
-		file = ChksumType.make_chksumfile(self, filename)
-		file.write('Generated by: cfv (v%s)\n'%(version))
-		file.write('Generated at: %s\n'%time.strftime('%a, %d %b %Y %H:%M:%S',time.gmtime(time.time())))
-		file.write('Find  it  at: http://cfv.sourceforge.net/\n\n')
+		file = TextChksumType.make_chksumfile(self, filename)
+		file.write('Generated by: cfv (v%s)'%(version)+endl)
+		file.write('Generated at: %s'%(time.strftime('%a, %d %b %Y %H:%M:%S',time.gmtime(time.time())))+endl)
+		file.write('Find  it  at: http://cfv.sourceforge.net/'+endl+endl)
 		try:
 			import Image
 			self.use_dimensions=1 ####should this be made optional somehow?
@@ -1907,7 +2157,7 @@ class JPEGSheriff_CRC(ChksumType, CRC_MixIn):
 			file.write(data[0].ljust(flens[0]) + '  ' + data[1].rjust(flens[1]))
 			if self.use_dimensions:
 				file.write('  ' + data[2].rjust(flens[2]) + ' x ' + data[3].rjust(flens[3]))
-			file.write('  ' + data[4].rjust(flens[4]) +	'  ' + data[5] + '\n')
+			file.write('  ' + data[4].rjust(flens[4]) +	'  ' + data[5] + endl)
 			
 		header = ('Filename', ' Filesize ', ' W', 'H '.ljust(flens[3]), ' CRC-32 ', 'Description')
 		for i in range(0, len(header)-1):
@@ -1916,15 +2166,20 @@ class JPEGSheriff_CRC(ChksumType, CRC_MixIn):
 		boundary = '-'*flens[0] + '  ' + '-'*flens[1] + '  '
 		if self.use_dimensions:
 			boundary = boundary + '-'*(flens[2]+flens[3]+3) + '  '
-		boundary = boundary + '-'*flens[4] + '  ' + '-'*flens[5] + '\n'
+		boundary = boundary + '-'*flens[4] + '  ' + '-'*flens[5] + endl
 		
 		writedata(header)
 		file.write(boundary)
 		for fdata in self._flist:
-			writedata(fdata)
+			try:
+				writedata(fdata)
+			except UnicodeError, e:
+				stats.ferror = stats.ferror + 1
+				stats.ok = stats.ok - 1 #ugly hack, since this is incremented after make_addfile returns, since we don't know then that it will cause an error
+				perror('%s : unencodable filename: %s'%(perhaps_showpath(fdata[0]), e))
 		file.write(boundary)
-		file.write('\nCount of files: %i\n'%len(self._flist))
-		file.write('Total of sizes: %s\n'%commaize(self._ftotal))
+		file.write(endl+'Count of files: %i'%len(self._flist)+endl)
+		file.write('Total of sizes: %s'%commaize(self._ftotal)+endl)
 	
 	def make_addfile(self, filename):
 		crc,size=getfilecrc(filename)
@@ -1948,14 +2203,14 @@ register_cftype('crc', JPEGSheriff_CRC)
 
 #---------- generic ----------
 
-def perhaps_showpath(file):
+def perhaps_showpath(filename):
 	if config.showpaths==1 or (config.showpaths==2 and config.recursive):
 		if config.showpathsabsolute:
 			dir=curdir
 		else:
 			dir=reldir[-1]
-		return os.path.join(dir,file)
-	return file
+		return path_join(showfn(dir),showfn(filename))
+	return showfn(filename)
 
 _nocase_dir_cache = {}
 def nocase_dirfiles(dir,match):
@@ -1964,7 +2219,7 @@ def nocase_dirfiles(dir,match):
 	if not _nocase_dir_cache.has_key(dirkey):
 		d={}
 		_nocase_dir_cache[dirkey]=d
-		for a in os.listdir(dir):
+		for a in os_listdir(dir):
 			l=a.lower()
 			if d.has_key(l):
 				d[l].append(a)
@@ -1993,7 +2248,7 @@ def path_split(filename):
 FINDFILE=1
 FINDDIR=0
 def nocase_findfile(filename,find=FINDFILE):
-	cur=os.curdir
+	cur=os_curdiru
 	parts=path_split(filename.lower())
 	#print 'nocase_findfile:',filename,parts,len(parts)
 	for i in range(0,len(parts)):
@@ -2002,17 +2257,17 @@ def nocase_findfile(filename,find=FINDFILE):
 		matches=nocase_dirfiles(cur,p) #nice and speedy :)
 		#print 'i:',i,' cur:',cur,' p:',p,' matches:',matches
 		if i==len(parts)-find:#if we are on the last part of the path and using FINDFILE, we want to match a file
-			matches=filter(lambda f,cur=cur: os.path.isfile(os.path.join(cur,f)), matches)
+			matches=filter(lambda f,cur=cur: os.path.isfile(path_join(cur,f)), matches)
 		else:#otherwise, we want to match a dir
-			matches=filter(lambda f,cur=cur: os.path.isdir(os.path.join(cur,f)), matches)
+			matches=filter(lambda f,cur=cur: os.path.isdir(path_join(cur,f)), matches)
 		if not matches:
 			raise IOError, (errno.ENOENT,os.strerror(errno.ENOENT))
 		if len(matches)>1:
-			raise IOError, (errno.EEXIST,"More than one name matches %s"%os.path.join(cur,p))
-		if cur==os.curdir:
+			raise IOError, (errno.EEXIST,"More than one name matches %s"%path_join(cur,p))
+		if cur==os_curdiru:
 			cur=matches[0] #don't put the ./ on the front of the name
 		else:
-			cur=os.path.join(cur,matches[0])
+			cur=path_join(cur,matches[0])
 	return cur
 
 def nocase_findfile_updstats(filename):
@@ -2107,7 +2362,7 @@ def test(filename, typename, restrict_typename='auto'):
 		stats.cferror=stats.cferror+1
 		perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
 		return -1
-	perror("I don't recognize the type of %s"%filename)
+	perror("I don't recognize the type of %s"%showfn(filename))
 	stats.cferror=stats.cferror+1
 
 def make(cftype,ifilename,testfiles):
@@ -2119,7 +2374,7 @@ def make(cftype,ifilename,testfiles):
 		if config.gzip==1 and filename[-3:]!='.gz': #if user does -zz, perhaps they want to force the filename to be kept?
 			filename=filename+'.gz'
 	if not hasattr(cftype, "make_addfile"):
-		perror("%s : %s not supported in create mode"%(filename, cftype.__name__.lower()))
+		perror("%s : %s not supported in create mode"%(showfn(filename), cftype.__name__.lower()))
 		stats.cferror=stats.cferror+1
 		return
 	if os.path.exists(filename):
@@ -2128,9 +2383,9 @@ def make(cftype,ifilename,testfiles):
 		file=IOError #just need some special value to indicate a cferror so that recursive mode still continues to work, IOError seems like a good choice ;)
 	if not testfiles:
 		tfauto=1
-		testfiles=os.listdir(os.curdir)
+		testfiles=os_listdir(os_curdiru)
 		if config.dirsort:
-			testfiles.sort()
+			safesort(testfiles)
 	else:
 		tfauto=0
 	testdirs=[]
@@ -2143,26 +2398,43 @@ def make(cftype,ifilename,testfiles):
 		f=testfiles[i]
 		i=i+1
 		if not tfauto and f=='-':
-			f=''
+			f=u''
 		elif not os.path.isfile(f):
 			if config.recursive and visit_dir(f):
 				if config.recursive==1:
 					testdirs.append(f)
 				elif config.recursive==2:
 					try:
-						rfiles=os.listdir(f)
+						rfiles=os_listdir(f)
 						if config.dirsort:
-							rfiles.sort()
-						testfiles[:i]=map(lambda x,p=f: os.path.join(p,x), rfiles)
+							safesort(rfiles)
+						testfiles[:i]=map(lambda x,p=f: path_join(p,x), rfiles)
 						i=0
 					except EnvironmentError, a:
-						perror('%s%s : %s'%(f, os.sep, enverrstr(a)))
+						perror('%s%s : %s'%(showfn(f), os.sep, enverrstr(a)))
 						stats.ferror=stats.ferror+1
 				continue
 			if tfauto:#if user isn't specifying files, don't even try to add dirs and stuff, and don't print errors about it.
 				continue
 		stats.num=stats.num+1
 		if file==IOError:
+			continue
+		if config.encoding!='raw':
+			if is_rawstr(f):
+				stats.ferror = stats.ferror + 1
+				perror('%s : undecodable filename'%perhaps_showpath(f))
+				continue
+		else:
+			if is_unicode(f):
+				try:
+					f = f.encode(fsencoding)
+				except UnicodeError, e:
+					stats.ferror = stats.ferror + 1
+					perror('%s : %s'%(perhaps_showpath(f), e))
+					continue
+		if not cftype.filename_ok(f):
+			stats.ferror = stats.ferror + 1
+			perror('%s : filename invalid for this cftype'%(perhaps_showpath(f)))
 			continue
 		if file==None:
 			try:
@@ -2181,7 +2453,7 @@ def make(cftype,ifilename,testfiles):
 				stats.notfound=stats.notfound+1
 			else:
 				stats.ferror=stats.ferror+1
-			perror('%s : %s'%(f,enverrstr(a)))
+			perror('%s : %s'%(perhaps_showpath(f),enverrstr(a)))
 			continue
 		try:
 			file.write(dat)
@@ -2189,6 +2461,10 @@ def make(cftype,ifilename,testfiles):
 			stats.cferror=stats.cferror+1
 			perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
 			file=IOError
+			continue
+		except UnicodeError, e:
+			stats.ferror = stats.ferror + 1
+			perror('%s : unencodable filename: %s'%(perhaps_showpath(f), e))
 			continue
 		if filesize>=0:
 			pverbose('%s : OK (%i,%s)'%(perhaps_showpath(f),filesize,filecrc))
@@ -2212,7 +2488,7 @@ def make(cftype,ifilename,testfiles):
 		try:
 			chdir(f)
 		except EnvironmentError, a:
-			perror('%s%s : %s'%(f, os.sep, enverrstr(a)))
+			perror('%s%s : %s'%(showfn(f), os.sep, enverrstr(a)))
 			stats.ferror=stats.ferror+1
 		else:
 			make(cftype,ifilename,None)
@@ -2233,13 +2509,17 @@ def unverified_file(file):
 
 def show_unverified_dir(path, unvchild=0):
 	pathcache = cache.getpathcache(path)
-	pathfiles = os.listdir(path or os.curdir)
+	pathfiles = os_listdir(path or os_curdiru)
 	vsub = 0
 	unvsave = stats.unverified
 	unv = 0
 	unv_sub_dirs = []
 	for fn in pathfiles:
-		file = os.path.join(path, fn)
+		sfn = fn
+		if config.encoding=='raw' and is_unicode(fn):
+			try: sfn = fn.encode(fsencoding)
+			except UnicodeError: pass
+		file = path_join(path, fn)
 		try:
 			st = os.stat(file)
 			if S_ISDIR(st[ST_MODE]) and visit_dir(file,st,noisy=0):
@@ -2249,7 +2529,7 @@ def show_unverified_dir(path, unvchild=0):
 				if stats.unverified - dunvsave and not dv: #if this directory (and its subdirs) had unverified files and no verified files
 					unv_sub_dirs.append(file)
 			elif pathcache:
-				if not pathcache.get(fn,{}).get('_verified'):
+				if not (pathcache.get(fn,{}).get('_verified') or pathcache.get(sfn,{}).get('_verified')):
 					if S_ISREG(st[ST_MODE]):
 						show_unverified_file(file)
 			else:
@@ -2261,24 +2541,28 @@ def show_unverified_dir(path, unvchild=0):
 	if not pathcache and pathfiles:
 		if vsub: # if sub directories do have verified files
 			if unv: # and this directory does have unverified files
-				print_unverified(os.path.join(path,'*'))
+				print_unverified(path_join(path,u'*'))
 			for file in unv_sub_dirs: # print sub dirs that had unverified files and no verified files
-				print_unverified(os.path.join(file,'**'))
+				print_unverified(path_join(file,u'**'))
 		elif not unvchild: # if this is the root of a tree with no verified files
 			if stats.unverified - unvsave: # and there were unverified files in the tree
-				print_unverified(os.path.join(path,'**'))
+				print_unverified(path_join(path,u'**'))
 	return vsub + (not not pathcache)
 			
 def show_unverified_dir_verbose(path):
 	pathcache = cache.getpathcache(path)
-	pathfiles = os.listdir(path or os.curdir)
+	pathfiles = os_listdir(path or os_curdiru)
 	for fn in pathfiles:
-		file = os.path.join(path, fn)
+		sfn = fn
+		if config.encoding=='raw' and is_unicode(fn):
+			try: sfn = fn.encode(fsencoding)
+			except UnicodeError: pass
+		file = path_join(path, fn)
 		try:
 			st = os.stat(file)
 			if S_ISDIR(st[ST_MODE]) and visit_dir(file,st,noisy=0):
 				show_unverified_dir_verbose(file)
-			elif not pathcache.get(fn,{}).get('_verified'):
+			elif not (pathcache.get(fn,{}).get('_verified') or pathcache.get(sfn,{}).get('_verified')):
 				if S_ISREG(st[ST_MODE]):
 					show_unverified_file(file)
 		except OSError,e:
@@ -2302,19 +2586,19 @@ def show_unverified_files(filelist):
 	else:
 		_visited_dirs.clear()
 		if config.showunverified==2:
-			show_unverified_dir_verbose('')
+			show_unverified_dir_verbose(u'')
 		else:
-			show_unverified_dir('')
+			show_unverified_dir(u'')
 
 
 atrem=re.compile(r'md5|sha1|\.(csv|sfv|par|p[0-9][0-9]|par2|torrent|crc)(\.gz)?$',re.IGNORECASE)#md5sum/sha1sum files have no standard extension, so just search for files with md5/sha1 in the name anywhere, and let the test func see if it really is one.
 def autotest(typename):
-	for a in os.listdir(os.curdir):
+	for a in os_listdir(os_curdiru):
 		if config.recursive and visit_dir(a):
 			try:
 				chdir(a)
 			except EnvironmentError, e:
-				perror('%s%s : %s'%(a, os.sep, enverrstr(e)))
+				perror('%s%s : %s'%(showfn(a), os.sep, enverrstr(e)))
 				stats.ferror=stats.ferror+1
 			else:
 				autotest(typename)
@@ -2356,6 +2640,7 @@ def printusage(err=0):
 	perror('  -ZZ      never use gzip, even if file ends in .gz')
 	perror(' --list=<l> raw list files of type <l> (%s)'%', '.join(LISTARGS.keys()))
 	perror(' --list0=<l> same as list, but seperate files with nulls (useful for xargs -0)')
+	perror(' --encoding=<e>  encoding of checksum files (raw, auto(default), or...)')
 	perror(' --unquote=VAL  handle checksum files with quoted filenames (yes or no(default))')
 	perror(' --fixpaths=<s>  replace any chars in <s> with %s'%os.sep)
 	perror(' --strippaths=VAL  strip leading components from file names.')
@@ -2387,6 +2672,14 @@ cache=FileInfoCache()
 progress=TimedProgressMeter()
 
 
+def decode_arg(a):
+	if is_unicode(a):
+		return a
+	try:
+		return unicode(a,preferredencoding)
+	except UnicodeError:
+		return a
+
 def main(argv=None):
 	if argv is None:
 		argv = sys.argv[1:]
@@ -2397,11 +2690,13 @@ def main(argv=None):
 	try:
 		optlist, args = getopt.getopt(argv, 'rRlLTCt:f:mMnNsSp:uUiIvVzZqQh?',
 				['list=', 'list0=', 'fixpaths=', 'strippaths=', 'showpaths=','renameformat=','progress=','unquote=','help','version',
+				'encoding=',
 				'announceurl=','piece_size_pow2=', #torrent options
 				])
 	except getopt.error, a:
 		perror("cfv: %s"%a)
 		printusage(1)
+	args = map(decode_arg, args)
 
 	try:
 		if config.cmdlineglob=='y' or (config.cmdlineglob=='a' and os.name in ('os2', 'nt', 'dos')):
@@ -2418,10 +2713,11 @@ def main(argv=None):
 			args = globbed
 			
 		if config.cmdlinesort:
-			args.sort()
+			safesort(args)
 
 		prevopt=''
 		for o,a in optlist:
+			a = decode_arg(a)
 			if o=='-T':
 				mode=0
 			elif o=='-C':
@@ -2527,6 +2823,8 @@ def main(argv=None):
 				config.setx('fixpaths', a)
 			elif o=='--unquote':
 				config.setx('unquote', a)
+			elif o=='--encoding':
+				config.setx('encoding',a)
 			elif o=='--announceurl':
 				config.setx('announceurl', a)
 			elif o=='--piece_size_pow2':

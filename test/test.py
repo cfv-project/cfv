@@ -36,6 +36,41 @@ except NameError:
 		return map(None, a, b) #not exactly the same, but good enough for us.
 	
 
+import locale
+if hasattr(locale,'getpreferredencoding'):
+	preferredencoding = locale.getpreferredencoding() or 'ascii'
+else:
+	preferredencoding = 'ascii'
+
+def is_unicode(s, _unitype=type(u'')):
+	return type(s) == _unitype
+def is_rawstr(s, _stype=type('')):
+	return type(s) == _stype
+def is_undecodable(s):
+	if is_rawstr(s):
+		try:
+			#this is for python < 2.3, where os.listdir never returns unicode.
+			unicode(s,preferredencoding)
+			return 0
+		except UnicodeError:
+			return 1
+	else:
+		return 0
+def is_encodable(s, enc=preferredencoding):
+	if not is_unicode(s):
+		try:
+			#this is for python < 2.3, where os.listdir never returns unicode.
+			unicode(s,preferredencoding) #note: using preferredencoding not enc, since this assumes the string is coming from os.listdir, and thus we should decode with the system's encoding.
+			return 1
+		except UnicodeError:
+			return 0
+	try:
+		s.encode(enc)
+		return 1
+	except UnicodeError:
+		return 0
+
+
 try:
 	try: import BitTorrent
 	except ImportError: import BitTornado; BitTorrent = BitTornado
@@ -43,19 +78,19 @@ except ImportError: BitTorrent = None
 
 
 fmt_info = {
-	#name: (hascrc, hassize, cancreate, available)
-	'sha1': (1,0,1,1),
-	'md5': (1,0,1,1),
-	'bsdmd5': (1,0,1,1),
-	'sfv': (1,0,1,1),
-	'sfvmd5': (1,0,1,1),
-	'csv': (1,1,1,1),
-	'csv2': (0,1,1,1),
-	'csv4': (1,1,1,1),
-	'crc': (1,1,1,1),
-	'par': (1,1,0,1),
-	'par2': (1,1,0,1),
-	'torrent': (1,1,1,not not BitTorrent),
+	#name: (hascrc, hassize, cancreate, available, istext, preferredencoding)
+	'sha1': (1,0,1,1,1,preferredencoding),
+	'md5': (1,0,1,1,1,preferredencoding),
+	'bsdmd5': (1,0,1,1,1,preferredencoding),
+	'sfv': (1,0,1,1,1,preferredencoding),
+	'sfvmd5': (1,0,1,1,1,preferredencoding),
+	'csv': (1,1,1,1,1,preferredencoding),
+	'csv2': (0,1,1,1,1,preferredencoding),
+	'csv4': (1,1,1,1,1,preferredencoding),
+	'crc': (1,1,1,1,1,preferredencoding),
+	'par': (1,1,0,1,0,'utf-16-le'),
+	'par2': (1,1,0,1,0,preferredencoding),
+	'torrent': (1,1,1,not not BitTorrent,0,'utf-8'),
 }
 def fmt_hascrc(f):
 	return fmt_info[f][0]
@@ -65,8 +100,14 @@ def fmt_cancreate(f):
 	return fmt_info[f][2]
 def fmt_available(f):
 	return fmt_info[f][3]
+def fmt_istext(f):
+	return fmt_info[f][4]
+def fmt_preferredencoding(f):
+	return fmt_info[f][5]
 def allfmts():
 	return fmt_info.keys()
+def allavailablefmts():
+	return filter(fmt_available, allfmts())
 
 
 if hasattr(operator,'gt'):
@@ -398,6 +439,12 @@ def cfv_test(s,o, op=op_gt, opval=0):
 		return 0
 	return 1
 
+def cfv_substatus_test(s,o, unv=0, notfound=0, badcrc=0, badsize=0, cferror=0, ferror=0):
+	expected_status = (badcrc and 2) | (badsize and 4) | (notfound and 8) | (ferror and 16) | (unv and 32) | (cferror and 64)
+	if s & expected_status == expected_status and not s & 1:
+		return 0
+	return 'bad status expected %s got %s'%(expected_status, s)
+
 def cfv_status_test(s,o, unv=0, notfound=0, badcrc=0, badsize=0, cferror=0, ferror=0):
 	expected_status = (badcrc and 2) | (badsize and 4) | (notfound and 8) | (ferror and 16) | (unv and 32) | (cferror and 64)
 	if s==expected_status:
@@ -405,9 +452,6 @@ def cfv_status_test(s,o, unv=0, notfound=0, badcrc=0, badsize=0, cferror=0, ferr
 	return 'bad status expected %s got %s'%(expected_status, s)
 
 def cfv_all_test(s,o, files=-2, ok=0, unv=0, notfound=0, badcrc=0, badsize=0, cferror=0, ferror=0, misnamed=0):
-	sresult = cfv_status_test(s,o,unv=unv,notfound=notfound,badcrc=badcrc,badsize=badsize,cferror=cferror,ferror=ferror)
-	if sresult:
-		return sresult
 	x=re.search(rx_StatusLine,tail(o))
 	if x:
 		if files==-2:
@@ -415,6 +459,9 @@ def cfv_all_test(s,o, files=-2, ok=0, unv=0, notfound=0, badcrc=0, badsize=0, cf
 		expected = [files,ok,badcrc,badsize,notfound,ferror,unv,cferror,misnamed]
 		actual = map(intize, x.groups()[:9])
 		if not filter(icomp, map(None,expected,actual)):
+			sresult = cfv_status_test(s,o,unv=unv,notfound=notfound,badcrc=badcrc,badsize=badsize,cferror=cferror,ferror=ferror)
+			if sresult:
+				return sresult
 			return 0
 		return 'expected %s got %s'%(expected,actual)
 	return 'status line not found in output'
@@ -631,43 +678,168 @@ def C_test(f,extra=None,verify=None,t=None,d='data?'):
 		test_generic("%s -p %s -C -f %s"%(cmd,dir,f),rcurry(cfv_test,op_eq,0))
 	finally:
 		os.rmdir(dir)
-
-def C_funkynames_test(t):
+	
 	d = mkdtemp()
-	d2 = mkdtemp()
 	try:
-		num = 0
-		for i in range(1,256):
-			n = chr(i)
-			if n in (os.sep, os.altsep, '\n', '\r'):
-				continue
-			if t == 'torrent' and n in ('/','\\'): continue # "ValueError: path \ disallowed for security reasons"
-			if t == 'torrent' and n in ('~',): n = 'foo'+n #same
-			if n == os.curdir: n = 'foo'+n # can't create a file of name '.', but 'foo.' is ok.
-			if t in ('sfv','sfvmd5') and n==';': n = 'foo'+n # ';' is comment character in sfv files, filename cannot start with it.
-			if t == 'crc' and n.isspace(): n = n + 'foo' # crc format can't handle trailing whitespace in filenames
-			try:
-				f = open(os.path.join(d,n),'wb')
-				f.write(n)
-				f.close()
-				os.mkdir(os.path.join(d2,n))
-				f = open(os.path.join(d2,n,n),'wb')
-				f.write(n)
-				f.close()
-			except EnvironmentError:
-				continue # stupid filesystem doesn't allow the character we wanted, oh well.
-			num = num + 1
-		cfn = os.path.join(d,'funky.'+t)
-		test_generic(cfvcmd+" -v -C -p %s -t %s -f %s"%(d,t,cfn), rcurry(cfv_all_test,files=num,ok=num))
-		test_generic(cfvcmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=num,ok=num))
-		test_generic(cfvcmd+" -v -u -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=num,ok=num,unv=0))
-		dcfn = os.path.join(d2,'funkydeep.'+t)
-		test_generic(cfvcmd+" -v -rr -C -p %s -t %s -f %s"%(d2,t,dcfn), rcurry(cfv_all_test,files=num,ok=num))
-		test_generic(cfvcmd+" -v -T -p %s -f %s"%(d2,dcfn), rcurry(cfv_all_test,files=num,ok=num))
-		test_generic(cfvcmd+" -v -u -T -p %s -f %s"%(d2,dcfn), rcurry(cfv_all_test,files=num,ok=num,unv=0))
+		open(os.path.join(d,'aoeu'),'w').write('a')
+		open(os.path.join(d,'kakexe'),'w').write('ba')
+		test_generic(cfvcmd+" --encoding=cp500 -v -C -p %s -t %s"%(d,t), rcurry(cfv_all_test,ok=2))
+		test_generic(cfvcmd+" --encoding=cp500 -v -T -p %s"%(d,), rcurry(cfv_all_test,ok=2))
 	finally:
 		shutil.rmtree(d)
-		shutil.rmtree(d2)
+
+	d = mkdtemp()
+	try:
+		open(os.path.join(d,'aoeu'),'w').write('a')
+		open(os.path.join(d,'kakexe'),'w').write('ba')
+		test_generic(cfvcmd+" --encoding=utf-16be -v -C -p %s -t %s"%(d,t), rcurry(cfv_all_test,ok=2))
+		test_generic(cfvcmd+" --encoding=utf-16be -v -T -p %s"%(d,), rcurry(cfv_all_test,ok=2))
+	finally:
+		shutil.rmtree(d)
+
+
+def create_funkynames(t, d, chr, deep):
+	num = 0
+	for i in range(1,256):
+		n = chr(i)
+		if n in (os.sep, os.altsep):
+			continue
+		if fmt_istext(t) and len(('a'+n+'a').splitlines())>1: #if n is a line separator (note that in unicode, this is more than just \r and \n)
+			continue
+		if t == 'torrent' and n in ('/','\\'): continue # "ValueError: path \ disallowed for security reasons"
+		####if t == 'torrent' and n in ('~',): n = 'foo'+n; #same
+		####if n == os.curdir: n = 'foo'+n # can't create a file of name '.', but 'foo.' is ok.
+		####if t in ('sfv','sfvmd5') and n==';': n = 'foo'+n; # ';' is comment character in sfv files, filename cannot start with it.
+		if t == 'crc' and n.isspace(): n = n + 'foo'; # crc format can't handle trailing whitespace in filenames
+		n = '%02x'%i + n
+		try:
+			if deep:
+				os.mkdir(os.path.join(d,n))
+				try:
+					f = open(os.path.join(d,n,n),'wb')
+				except:
+					#if making the dir succeeded but making the file fails, remove the dir so it won't confuse the tests which count the number of items in the top dir.
+					os.rmdir(os.path.join(d,n))
+					raise
+			else:
+				f = open(os.path.join(d,n),'wb')
+			f.write('%02x'%i) #important that all the funky files be two bytes long, since that is the torrent piece size needed in order for the undecodable filenames without raw test to work. (If the piece size doesn't match the file size, then some files that it can find will still be marked bad since it can't find the rest of the piece.)
+			f.close()
+		except (EnvironmentError, UnicodeError):
+			pass # stupid filesystem doesn't allow the character we wanted, oh well.
+		else:
+			num = num + 1
+	return num
+
+def C_funkynames_test(t):
+	def is_fmtencodable(s,enc=fmt_preferredencoding(t)):
+		return is_encodable(s,enc)
+	def is_fmtokfn(s,t=t,enc=fmt_preferredencoding(t)):
+		if fmt_istext(t):
+			if is_rawstr(s):
+				try:
+					#this is for python < 2.3, where os.listdir never returns unicode.
+					s = unicode(s,enc)
+				except UnicodeError:
+					pass
+			return len(('a'+s+'a').splitlines())==1
+		return 1
+	for deep in (0,1):
+		d = mkdtemp()
+		try:
+			num = create_funkynames(t, d, unichr, deep=deep)
+			#numencodable = len(filter(lambda fn: os.path.exists(os.path.join(d,fn)), os.listdir(d)))
+			numencodable = len(filter(is_fmtencodable, os.listdir(unicode(d))))
+			#cfv -C, unencodable filenames on disk, ferror on unencodable filename and ignore it
+			numunencodable = num-numencodable
+			cfn = os.path.join(d,'funky%s.%s'%(deep and 'deep' or '',t))
+			test_generic(cfvcmd+"%s -v -C -p %s -t %s -f %s"%(deep and ' -rr' or '',d,t,cfn), rcurry(cfv_all_test,files=num,ok=numencodable,ferror=numunencodable))
+			test_generic(cfvcmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=numencodable,ok=numencodable))
+			test_generic(cfvcmd+" -v -u -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=numencodable,ok=numencodable,unv=numunencodable))
+
+			os.unlink(cfn)
+			#cfv -C, unencodable filenames on disk, with --encoding=<something else> (eg, utf8), should work.
+			cfn = os.path.join(d,'funky%s.%s'%(deep and 'deep' or '',t))
+			test_generic(cfvcmd+"%s --encoding=utf-8 -v -C -p %s -t %s -f %s"%(deep and ' -rr' or '',d,t,cfn), rcurry(cfv_all_test,files=num,ok=num))
+			test_generic(cfvcmd+" -v --encoding=utf-8 -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=num,ok=num))
+			test_generic(cfvcmd+" -v --encoding=utf-8 -u -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=num,ok=num,unv=0))
+		finally:
+			shutil.rmtree(unicode(d))
+
+		d3 = mkdtemp()
+		try:
+			cnum = create_funkynames(t, d3, chr, deep=deep)
+			ulist=os.listdir(unicode(d3))
+			numundecodable = len(filter(is_undecodable, ulist))
+			okcnum = len(ulist)-numundecodable
+			dcfn = os.path.join(d3,'funky3%s.%s'%(deep and 'deep' or '',t))
+			# cfv -C, undecodable filenames on disk, with --encoding=raw just put everything in like before
+			test_generic(cfvcmd+"%s --encoding=raw -v --piece_size_pow2=1 -C -p %s -t %s -f %s"%(deep and ' -rr' or '',d3,t,dcfn), rcurry(cfv_all_test,files=cnum,ok=cnum))
+			# cfv -T, undecodable filenames on disk and in CF (same names), with --encoding=raw, read CF as raw strings and be happy
+			test_generic(cfvcmd+" --encoding=raw -v -T -p %s -f %s"%(d3,dcfn), rcurry(cfv_all_test,files=cnum,ok=cnum))
+			test_generic(cfvcmd+" --encoding=raw -v -u -T -p %s -f %s"%(d3,dcfn), rcurry(cfv_all_test,files=cnum,ok=cnum,unv=0))
+			# cfv -T, undecodable filenames on disk and in CF (same names), without raw, cferrors
+			test_generic(cfvcmd+" -v -T -p %s -f %s"%(d3,dcfn), rcurry(cfv_substatus_test,cferror=1))# rcurry(cfv_all_test,ok=okcnum,cferror=numundecodable))
+			test_generic(cfvcmd+" -v -u -T -p %s -f %s"%(d3,dcfn), rcurry(cfv_substatus_test,cferror=1,unv=1))# rcurry(cfv_all_test,ok=okcnum,cferror=numundecodable,unv=numundecodable))
+			test_generic(cfvcmd+" -v -m -T -p %s -f %s"%(d3,dcfn), rcurry(cfv_substatus_test,cferror=1))# rcurry(cfv_all_test,ok=okcnum,cferror=numundecodable))
+			test_generic(cfvcmd+" -v -m -u -T -p %s -f %s"%(d3,dcfn), rcurry(cfv_substatus_test,cferror=1,unv=1))# rcurry(cfv_all_test,ok=okcnum,cferror=numundecodable,unv=numundecodable))
+
+			# TODO: needs "deep" -s
+			if not deep:
+				renamelist = []
+				numrenamed = 0
+				for fn in os.listdir(unicode(d3)):
+					if os.path.join(d3,fn) == dcfn:
+						continue
+					newfn = 'ren%3s'%numrenamed
+					renamelist.append((fn,newfn))
+					os.rename(os.path.join(d3,fn), os.path.join(d3,newfn))
+					if deep:
+						os.rename(os.path.join(d3,newfn,fn), os.path.join(d3,newfn,newfn))
+					numrenamed = numrenamed + 1
+				# cfv -T, correct filenames on disk, undecodable filenames in CF: check with -s, with --encoding=raw, read CF as raw strings and be happy
+				if t!='torrent':
+					test_generic(cfvcmd+" --encoding=raw -v -s -T -p %s -f %s"%(d3,dcfn), rcurry(cfv_all_test,ok=cnum,misnamed=numrenamed))
+				if fmt_hassize(t):
+					test_generic(cfvcmd+" --encoding=raw -v -m -s -T -p %s -f %s"%(d3,dcfn), rcurry(cfv_all_test,ok=cnum,misnamed=numrenamed))
+
+				cnum = cnum + 1
+				#okcnum = okcnum + 1
+				ulist=os.listdir(unicode(d3))
+				okcnum = len(filter(is_fmtencodable, ulist))
+				numerr = len(ulist)-okcnum
+				dcfn = os.path.join(d3,'funky3%s2.%s'%(deep and 'deep' or '',t))
+				test_generic(cfvcmd+"%s -v -C -p %s -t %s -f %s"%(deep and ' -rr' or '',d3,t,dcfn), rcurry(cfv_all_test,ok=okcnum,ferror=numerr))
+				for fn, newfn in renamelist:
+					if deep:
+						os.rename(os.path.join(d3,newfn,newfn), os.path.join(d3,newfn,fn))
+					os.rename(os.path.join(d3,newfn), os.path.join(d3,fn))
+				# cfv -T, undecodable filenames on disk, correct filenames in chksum file. want to check with -s, fix with -sn
+				if fmt_hassize(t):
+					test_generic(cfvcmd+" -v -m -s -T -p %s -f %s"%(d3,dcfn), rcurry(cfv_all_test,ok=okcnum,misnamed=numrenamed))
+				if t!='torrent': #needs -s support on torrents
+					test_generic(cfvcmd+" -v -s -T -p %s -f %s"%(d3,dcfn), rcurry(cfv_all_test,ok=okcnum,misnamed=numrenamed))
+					if fmt_hascrc(t):
+						test_generic(cfvcmd+" -v -s -n -T -p %s -f %s"%(d3,dcfn), rcurry(cfv_all_test,ok=okcnum,misnamed=numrenamed))
+						test_generic(cfvcmd+" -v -T -p %s -f %s"%(d3,dcfn), rcurry(cfv_all_test,ok=okcnum))
+		finally:
+			shutil.rmtree(d3)
+
+
+		d3 = mkdtemp()
+		try:
+			cnum = create_funkynames(t, d3, chr, deep=deep)
+			ulist=os.listdir(unicode(d3))
+			okcnum = len(filter(is_fmtokfn, filter(is_fmtencodable, ulist)))
+			numerr = len(ulist)-okcnum
+			dcfn = os.path.join(d3,'funky3%s3.%s'%(deep and 'deep' or '',t))
+			# cfv -C, undecodable(and/or unencodable) filenames on disk: without raw, ferror on undecodable filename and ignore it
+			test_generic(cfvcmd+"%s -v -C -p %s -t %s -f %s"%(deep and ' -rr' or '',d3,t,dcfn), rcurry(cfv_all_test,files=cnum,ok=okcnum,ferror=numerr))
+			test_generic(cfvcmd+" -v -T -p %s -f %s"%(d3,dcfn), rcurry(cfv_all_test,ok=okcnum))
+			test_generic(cfvcmd+" -v -u -T -p %s -f %s"%(d3,dcfn), rcurry(cfv_all_test,ok=okcnum,unv=numerr))
+
+		finally:
+			shutil.rmtree(d3)
 
 def ren_test(f,extra=None,verify=None,t=None):
 	join=os.path.join
@@ -991,12 +1163,14 @@ def deep_unverified_test():
 		for fn in datafns:
 			open(join(dir,fn),'w').close()
 		f = open(join(dir,'deep.md5'),'w')
-		f.write("""d41d8cd98f00b204e9800998ecf8427e *b/DaTa3
-d41d8cd98f00b204e9800998ecf8427e *B/ushAllOw/D/daTa5
-d41d8cd98f00b204e9800998ecf8427e *a/c/DatA4
-d41d8cd98f00b204e9800998ecf8427e *A/dATA2
-d41d8cd98f00b204e9800998ecf8427e *E2/e2S/DAtae
-d41d8cd98f00b204e9800998ecf8427e *daTA1""")
+		s=("d41d8cd98f00b204e9800998ecf8427e *%s\n"*6)%(
+			os.path.join('b','DaTa3'),
+			os.path.join('B','ushAllOw','D','daTa5'),
+			os.path.join('a','c','DatA4'),
+			os.path.join('A','dATA2'),
+			os.path.join('E2','e2S','DAtae'),
+			"daTA1")
+		f.write(s)
 		f.close()
 			
 		def r_test(s,o):
@@ -1061,10 +1235,60 @@ def test_encoding2():
 				pass
 		test_generic(cfvcmd+" -q -m -T -p "+d, rcurry(cfv_status_test,ferror=fnerrs))
 		test_generic(cfvcmd+" -v -m -T -p "+d, rcurry(cfv_all_test,ok=fnok,ferror=fnerrs))
+		test_generic(cfvcmd+" -v -m -u -T -p "+d, rcurry(cfv_all_test,ok=fnok,ferror=fnerrs,unv=0))
 		if not fnerrs:
 			#if some of the files can't be found, checking of remaining files will fail due to missing pieces
 			test_generic(cfvcmd+" -q -T -p "+d, rcurry(cfv_status_test))
 			test_generic(cfvcmd+" -v -T -p "+d, rcurry(cfv_all_test,ok=4))
+			test_generic(cfvcmd+" -v -u -T -p "+d, rcurry(cfv_all_test,ok=4,unv=0))
+
+		raw_fnok=0
+		files_fnok=files_fnerrs=0
+		raw_files_fnok=raw_files_fnerrs=0
+		dirn = filter(lambda s: not s.endswith('torrent'), os.listdir(d))[0]
+		try:
+			files = map(lambda s,dirn=dirn: os.path.join(dirn,s), os.listdir(os.path.join(d,dirn)))
+		except EnvironmentError:
+			files = []
+		else:
+			for fn in files:
+				flag_ok_raw = flag_ok_files = 0
+				for srcfn,destfn in datafns:
+					if os.path.join(u'\u3070\u304B',destfn).encode('utf-8')==fn:
+						raw_fnok=raw_fnok+1
+						flag_ok_raw = 1
+				try:
+					open(os.path.join(d,fn),'rb')
+				except (EnvironmentError,UnicodeError), e:
+					files_fnerrs = files_fnerrs + 1
+				else:
+					files_fnok = files_fnok + 1
+					flag_ok_files = 1
+				if flag_ok_files and flag_ok_raw:
+					raw_files_fnok = raw_files_fnok + 1
+				else:
+					raw_files_fnerrs = raw_files_fnerrs + 1
+		
+
+		raw_fnerrs = len(datafns)-raw_fnok
+		####print len(files),files
+		####print 'raw',raw_fnok,raw_fnerrs
+		####print 'files',files_fnok, files_fnerrs
+		####print 'raw_files',raw_files_fnok, raw_files_fnerrs
+
+		if files:
+			test_generic(cfvcmd+" -v -m -T -p "+d+" "+' '.join(files), rcurry(cfv_all_test,ok=files_fnok,notfound=files_fnerrs))
+			if files_fnok==len(datafns):
+				test_generic(cfvcmd+" -v -T -p "+d+" "+' '.join(files), rcurry(cfv_all_test,ok=files_fnok,notfound=files_fnerrs))
+			test_generic(cfvcmd+" --encoding=raw -v -m -T -p "+d+" "+' '.join(files), rcurry(cfv_all_test,ok=raw_files_fnok))
+			if raw_files_fnok==len(datafns):
+				test_generic(cfvcmd+" --encoding=raw -v -T -p "+d+" "+' '.join(files), rcurry(cfv_all_test,ok=raw_files_fnok))
+
+		test_generic(cfvcmd+" --encoding=raw -m -v -T -p "+d, rcurry(cfv_all_test,ok=raw_fnok,notfound=raw_fnerrs))
+		test_generic(cfvcmd+" --encoding=raw -m -v -u -T -p "+d, rcurry(cfv_all_test,ok=raw_fnok,unv=fnok-raw_fnok,notfound=raw_fnerrs))
+		if raw_fnok == len(datafns):
+			test_generic(cfvcmd+" --encoding=raw -v -T -p "+d, rcurry(cfv_all_test,ok=raw_fnok,notfound=raw_fnerrs))
+			test_generic(cfvcmd+" --encoding=raw -v -u -T -p "+d, rcurry(cfv_all_test,ok=raw_fnok,unv=fnok-raw_fnok,notfound=raw_fnerrs))
 	except:
 		import traceback
 		test_log_results('test_encoding2','foobar',''.join(traceback.format_exception(*sys.exc_info())),'foobar',{}) #yuck.  I really should switch this crap all to unittest ...
@@ -1200,7 +1424,7 @@ if args:
 	cfvexe=args[0]
 
 #set everything to default in case user has different in config file
-cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url'
+cfvcmd='-ZNVRMUI --encoding=auto --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url'
 
 if run_internal:
 	runcfv = runcfv_py
@@ -1342,8 +1566,31 @@ def all_tests():
 	C_test("crc")
 	#test_generic("../cfv -V -T -f test.md5",cfv_test)
 	#test_generic("../cfv -V -tcsv -T -f test.md5",cfv_test)
-	for t in allfmts():
-		if fmt_cancreate(t) and fmt_available(t):
+	for t in allavailablefmts():
+		if fmt_istext(t):
+			test_generic(cfvcmd+" --encoding=cp500 -T -f test."+t, rcurry(cfv_all_test,cferror=1))
+		else:
+			if t=='par':
+				try:
+					open(unicode(u'data1'.encode('utf-16le'),'utf-16be'), 'rb')
+				except UnicodeError:
+					nf=0 ; err=4
+				except:
+					nf=4 ; err=0
+				test_generic(cfvcmd+" --encoding=utf-16be -T -f test."+t, rcurry(cfv_all_test,notfound=nf,ferror=err))
+				test_generic(cfvcmd+" --encoding=cp500 -T -f test."+t, rcurry(cfv_all_test,cferror=4))
+				test_generic(cfvcmd+" --encoding=cp500 -i -T -f test."+t, rcurry(cfv_all_test,cferror=4))
+			else:
+				try:
+					open(unicode('data1','cp500'), 'rb')
+				except UnicodeError:
+					nf=0 ; err=4
+				except:
+					nf=4 ; err=0
+				test_generic(cfvcmd+" --encoding=cp500 -T -f test."+t, rcurry(cfv_all_test,notfound=nf,ferror=err))
+				test_generic(cfvcmd+" --encoding=cp500 -i -T -f test."+t, rcurry(cfv_all_test,notfound=nf,ferror=err))
+		
+		if fmt_cancreate(t):
 			C_funkynames_test(t)
 			manyfiles_test(t)
 	for fn in glob(os.path.join('fifotest','fifo.*')):

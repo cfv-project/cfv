@@ -1,3 +1,9 @@
+2005-xx-xx - v2.x:	
+	* Now fully unicode aware.  Work is done internally in unicode, only translating to encoded form on input/output.  Python >= 2.3 is required for full support.
+	* Added --encoding option.
+	* Specifying --encoding=raw will allow working with broken filenames. (But really, you should just fix them, if possible.)
+	* Torrent files now default to UTF-8 filename encoding, and specify the encoding field in the metainfo.
+
 2005-02-04 - v1.18.1:
 	* Fix TypeError when using progress meter and checksumming stdin.
 	* Fix progress meter spew when checksumming special files(devices, named pipes, etc.)
