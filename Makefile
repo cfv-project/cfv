@@ -31,16 +31,16 @@ foo:
 	@echo "of time will be inconsequential."
 
 
-cfv.pyc: cfv
-	python -c 'import py_compile; py_compile.compile("cfv","cfv.pyc")' 
-
 cfv.wrapper:
 	python -c 'import string,os; py=filter(lambda x: os.path.isfile(x),map(lambda x: os.path.join(x,"python"),string.split(os.environ["PATH"],":"))); py.append(" /usr/bin/env python"); open("cfv.wrapper","w").write("#!%s\nimport cfv\n"%py[0])'
 
-install-wrapper: cfv.wrapper cfv.pyc install_man
-	$(install) -o $(user) -g $(group) -m 0644 cfv.pyc $(DESTDIR)$(pkgdir)
+install-wrapper-only: cfv.wrapper install_man
 	$(install) -o $(user) -g $(group) -m 0644 cfv $(DESTDIR)$(pkgdir)/cfv.py
 	$(install) -o $(user) -g $(group) -m 0755 cfv.wrapper $(DESTDIR)$(bindir)/cfv
+
+install-wrapper: install-wrapper-only
+	python -c "import py_compile; py_compile.compile('$(DESTDIR)$(pkgdir)/cfv.py')" 
+	python -O -c "import py_compile; py_compile.compile('$(DESTDIR)$(pkgdir)/cfv.py')" 
 
 install: install_man
 	$(install) -o $(user) -g $(group) -m 0755 cfv $(DESTDIR)$(bindir)

@@ -111,7 +111,7 @@ class Config:
 	def __init__(self):
 		self.readconfig()
 
-version='1.5'
+version='1.5.1'
 
 
 #---------- md5 ----------

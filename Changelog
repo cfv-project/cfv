@@ -1,3 +1,5 @@
+2000-10-12 - v1.5.1:
+	* Fixed install wrapper stuff to compile _after_ it has been installed into the target dir.
 2000-10-12 - v1.5:
 	* Fixed "illegal argument type" error when creating csv format files.
 	* Added note to manpage about -rr and path seperators.
