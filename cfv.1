@@ -1,8 +1,8 @@
-.TH cfv 1 "10 Jul 2000"
+.TH cfv 1 "11 Aug 2000"
 .SH NAME
 cfv \- Verify file concistency with .sfv, .csv, or md5sum files
 .SH SYNOPSIS
-.B cfv [-v|-V] [-T|-C] [-m|-M] [-t type] [-f file] [files...]
+.B cfv [-v|-V] [-r|-rr|-R] [-T|-C] [-m|-M] [-t type] [-f file] [files...]
 .SH DESCRIPTION
 .B cfv
 verifies that the files you have are the same as those that the were used to create
@@ -13,6 +13,13 @@ the checksum file.
 Enable printing of extra messages.
 .IP "-V"
 Disable printing of extra messages. (default)
+.IP "-r"
+Recursive mode 1.  In create mode, make seperate chksum files for each dir.
+.IP "-rr"
+Recursive mode 2.  In create mode make a single file with deep listing in it.
+Both recursive modes are equivilant for test mode.
+.IP "-R"
+Disable recursive mode (default)
 .IP "-T"
 Set test mode. (default)
 .IP "-C"
@@ -74,6 +81,10 @@ dirsort 1
 #sort command line specified files
 .br
 cmdlinesort 1
+.br
+#don't be recursive (set to 0 for -R,  1 for -r,  2 for -rr)
+.br
+recursive 0
 .SH FILES
 .PP
 .IP "~/.cfvrc"

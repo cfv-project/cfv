@@ -1,3 +1,7 @@
+2000-08-11 - v1.2:
+	* recursive mode (-r and -rr)
+	* only creates checksum file when there is actually something to put in it
+	* if user doesn't specify files on command line, don't print errors about trying to add any directories and such
 2000-07-10 - v1.1:
 	* md5sum support (-t md5)
 	* config file support

@@ -47,12 +47,21 @@ class Config:
 	docrcchecks=1
 	dirsort=1
 	cmdlinesort=1
+	recursive=0
 	defaulttype='sfv'
 	def setdefault(self,type):
 		if type in types.keys():
 			self.defaulttype=type
 		else:
 			raise CFVValueError, "invalid default type '%s'"%type
+	def setintr(self,o,v,min,max):
+		try:
+			x=int(v)
+			if x>max or x<min:
+				raise CFVValueError, "out of range int '%s' for %s"%(v,o)
+			self.__dict__[o]=x
+		except ValueError:
+			raise CFVValueError, "invalid int type '%s' for %s"%(v,o)
 	def setbool(self,o,v):
 		v=string.lower(v)
 		if v in ('yes','on','true','1'):
@@ -67,6 +76,8 @@ class Config:
 			self.setdefault(v)
 		elif o in ("dirsort","cmdlinesort","verbose"):
 			self.setbool(o,v)
+		elif o=="recursive":
+			self.setintr(o,v,0,2)
 		else:
 			raise CFVNameError, "invalid option '%s'"%o
 	def readconfig(self):
@@ -95,7 +106,7 @@ class Config:
 	def __init__(self):
 		self.readconfig()
 
-version=1.1
+version='1.2'
 
 
 #---------- md5 ----------
@@ -105,7 +116,7 @@ def getfilemd5(file):
 	m=md5.new()
 	f=open(file,'rb')
 	while 1:
-		x=f.read(32768)
+		x=f.read(65536)
 		if not len(x):
 			c=""
 			for z in m.digest():
@@ -156,7 +167,7 @@ def getfilecrc(file):
 	f=open(file,'rb')
 	c=zlib.crc32('')
 	while 1:
-		x=f.read(32768)
+		x=f.read(65536)
 		if not len(x):
 			return c
 		stats.bytesread=stats.bytesread+len(x)
@@ -281,23 +292,49 @@ def test(filename,testfiles):
 			return
 	print "I don't recognize the type of %s"%filename
 
-def make(type,filename,testfiles):
+def make(type,ifilename,testfiles):
 	global stats
+	if ifilename:
+		filename=ifilename
+	else:
+		filename=type.make_std_filename(os.path.basename(os.getcwd()))
 	if os.path.exists(filename):
 		print "%s already exists"%filename
 		sys.exit(1)
 	if not testfiles or not len(testfiles):
+		tfauto=1
 		#testfiles=glob.glob('*')
 		testfiles=os.listdir('.')
 		if config.dirsort:
 			testfiles.sort()
-	file=open(filename,'w')
-	type.writeheader(file)
-	dof=type.make_dofile
-
-	for f in testfiles:
+	else:
+		tfauto=0
+	file=None
+	testdirs=[]
+	
+	i=0
+#	for f in testfiles:
+	while i<len(testfiles):
+		f=testfiles[i]
+		i=i+1
+		if not os.path.isfile(f):
+			if config.recursive and os.path.isdir(f):
+				if config.recursive==1:
+					testdirs.append(f)
+				elif config.recursive==2:
+					rfiles=os.listdir(f)
+					if config.dirsort:
+						rfiles.sort()
+					testfiles[i:i]=map(lambda x,p=f: os.path.join(p,x), rfiles)
+				continue
+			if tfauto:#if user isn't specifying files, don't even try to add dirs and stuff, and don't print errors about it.
+				continue
 		stats.num=stats.num+1
 		try:
+			if file==None:
+				file=open(filename,'w')
+				type.writeheader(file)
+				dof=type.make_dofile
 			s=dof(f)
 			file.write(s)
 		except EnvironmentError, a:
@@ -309,8 +346,14 @@ def make(type,filename,testfiles):
 				print '%s : %s'%(f,a[1])
 			continue
 		stats.ok=stats.ok+1
-	file.close()
-		
+	if file!=None:
+		file.close()
+	
+	for f in testdirs:
+		olddir=os.getcwd()
+		os.chdir(f)
+		make(type,ifilename,None)
+		os.chdir(olddir)
 	
 stats=Stats()
 config=Config()
@@ -320,7 +363,10 @@ type='auto'
 starttime=time.time()
 
 def printusage():
-	print 'Usage: cfv [-v] [-T|-C] [-m|-M] [-t type] [-f file] [files...]'
+	print 'Usage: cfv [-v|-V] [-r|-R] [-T|-C] [-m|-M] [-t type] [-f file] [files...]'
+	print '  -r       recursive mode 1 (make seperate chksum files for each dir)'
+	print '  -rr      recursive mode 2 (make a single file with deep listing in it)'
+	print '  -R       not recursive (default)'
 	print '  -T       test mode (default)'
 	print '  -C       create mode'
 	print '  -t <t>   set type to <t> (sfv, csv, md5, or auto(default))'
@@ -335,14 +381,15 @@ def printhelp():
 	printusage()
 
 try:
-	optlist, args = getopt.getopt(sys.argv[1:], 'TCt:f:mMvVh?')
+	optlist, args = getopt.getopt(sys.argv[1:], 'rRTCt:f:mMvVh?')
 except getopt.error, a:
 	print "cfv: %s"%a
 	printusage()
 
 if config.cmdlinesort:
 	args.sort()
-	
+
+prevopt=('','')
 for o in optlist:
 	if o[0]=='-T':
 		mode=0
@@ -378,24 +425,38 @@ for o in optlist:
 		config.docrcchecks=0
 	elif o[0]=='-M':
 		config.docrcchecks=1
+	elif o[0]=='-r':
+		if prevopt[0]=='-r':
+			config.recursive=2
+		else:
+			config.recursive=1
+	elif o[0]=='-R':
+		config.recursive=0
 	elif o[0]=='-v':
 		config.verbose=1
 	elif o[0]=='-V':
 		config.verbose=0
 	elif o[0]=='-h' or o[0]=='-?':
 		printhelp()
+	prevopt=o
 
 if not manual:
 	if mode==0:
 		rem=re.compile(r'md5|\.(csv|sfv)$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
-		for a in os.listdir('.'):
-			if rem.search(a):
-				test(a,args)
+		def autotest(rem):
+			for a in os.listdir('.'):
+				if config.recursive and os.path.isdir(a):
+					olddir=os.getcwd()
+					os.chdir(a)
+					autotest(rem)
+					os.chdir(olddir)
+				if rem.search(a):
+					test(a,args)
+		autotest(rem)
 	else:
-		f=os.path.basename(os.getcwd())
 		if type=='auto':
 			type=config.defaulttype
-		make(types[type],types[type].make_std_filename(f),args)
+		make(types[type],None,args)
 
 sys.stdout.write('%i files'%stats.num)
 sys.stdout.write(', %i OK' %stats.ok)
