@@ -121,6 +121,10 @@ def lchoplen(line, max):
 	if len(line)>max:
 		return '...'+line[-(max-3):]
 	return line
+def rchoplen(line, max):
+	if len(line)>max:
+		return line[:max-3]+'...'
+	return line
 
 try:
 	''.lstrip('a') #str.lstrip(arg) only in python>=2.2
@@ -1065,8 +1069,7 @@ class ChksumType:
 	def do_test_chksumfile_print_testingline(self, file, comment=None):
 		if comment:
 			comment = ', ' + comment
-			if len(comment)>102: #limit the length in case its a really long one.
-				comment = comment[:99]+'...'
+			comment = rchoplen(comment, 102) #limit the length in case its a really long one.
 		else:
 			comment = ''
 		pverbose('testing from %s (%s%s)'%(showfn(file.name), self.__class__.__name__.lower(), comment))
@@ -2106,8 +2109,7 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 		
 		#override the default testing line to show first comment line, if any
 		comment = ', ' + file.peekline().strip()
-		if len(comment)>102: #but limit the length in case its a really long one.
-			comment = comment[:99]+'...'
+		comment = rchoplen(comment, 102) #but limit the length in case its a really long one.
 		pverbose('testing from %s (crc%s)'%(showfn(file.name), comment))
 
 	_commentboundary=re.compile(r'^-+(\s+-+){1,4}\s*$')
