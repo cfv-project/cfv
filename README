@@ -1,4 +1,4 @@
-cfv 1.14  Copyright 2000-2003 Matthew Mueller <donut AT dakotacom.net>
+cfv 1.15  Copyright 2000-2003 Matthew Mueller <donut AT dakotacom.net>
 
 
 Requirements:
@@ -18,10 +18,10 @@ Unix Install:
 4) optional: run tests to verify correct operation: cd test; ./test.py
 
 Windows Install:
-1) move cfv.py to c:\python22\lib\site-packages\
+1) move cfv.py to c:\python23\lib\site-packages\
 2) move cfv.bat to somewhere in the path
 3) Edit the cfv.bat file if your python is installed somewhere other than 
-  c:\python22 (and obviously you'll need to change the path in step 1 too.)
+  c:\python23 (and obviously you'll need to change the path in step 1 too.)
 
 
 Copying:

@@ -1,4 +1,4 @@
-2003-xx-xx - v1.xx:
+2003-08-23 - v1.15:
 	* Add -l/-L options to toggle symlink following.
 	* When following symlinks, don't die on cycles.
 	* Ignore redundant FileDesc packets in PAR2 files.
