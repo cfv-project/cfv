@@ -4,6 +4,7 @@
 	* Make create mode also display seperate stats per checksum file. 
 	* Make create mode be verbose in verbose mode.
 	* Fix exception on error creating/writing a checksum file. (Eg, in a readonly dir, or a full drive.)
+	* Accept files with weird line endings (eg \r\r\n).
 2002-04-08 - v1.11:
 	* Due to architectural changes, unicode requirements(for .par support), etc, cfv now requires python 1.6 or higher.
 	* Add test-only support for PAR files. (python 1.6 or 2.2 recommended for better performance.)

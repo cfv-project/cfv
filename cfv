@@ -435,8 +435,14 @@ class PeekFile:
 			return self.fobj.readline(size)
 		except TypeError:
 			return self.fobj.readline() #hack for broken readline() in older gzip.py versions
+	_splitter = re.compile(r'([^\n\r]*[\n\r]*)([^\n\r].*?)??$',re.DOTALL)
+	def splitline(self):
+		x = self._splitter.match(self.peekbuf) # should never fail to match
+		if x.group(2):
+			return x.groups()
+		return (x.group(1), )
 	def peekline(self, size=-1):
-		lines = self.peekbuf.splitlines(1)
+		lines = self.splitline()
 		if size >= 0 and len(self.peekbuf) >= size:
 			return lines[0][:size]
 		if len(lines) > 1 or '\n' in self.peekbuf or '\r' in self.peekbuf:
@@ -463,7 +469,7 @@ class PeekFile:
 		self.setpoked()
 		return ret + self.read(size - len(ret))
 	def p_readline(self, size=-1): #note that on dos formatted files, this function is not 100% safe, if you peek the exact number of chars to cut the CRLF in half, then the LF will appear to be a empty line after this one... (sigh)
-		lines = self.peekbuf.splitlines(1)
+		lines = self.splitline()
 		if size >= 0 and len(self.peekbuf) >= size:
 			self.peekbuf = lines[0][size:] + ''.join(lines[1:])
 			self.setpoked()
@@ -654,7 +660,7 @@ class MD5(ChksumType, MD5_MixIn):
 		return string.find(filename,'md5')>=0
 	auto_filename_match = staticmethod(auto_filename_match)
 	
-	_md5rem=re.compile(r'([0-9a-fA-F]{32}) ([ *])(.+)$')
+	_md5rem=re.compile(r'([0-9a-fA-F]{32}) ([ *])([^\r\n]+)[\r\n]*$')
 	def do_test_chksumline(self, l):
 		x=self._md5rem.match(chomp(l))
 		if not x: return -1
@@ -684,7 +690,7 @@ class BSDMD5(ChksumType, MD5_MixIn):
 		return string.lower(filename)=='md5' #####hm, make this have priority over md5sum type??
 	auto_filename_match = staticmethod(auto_filename_match)
 	
-	_bsdmd5rem=re.compile(r'MD5 \((.+)\) = ([0-9a-fA-F]{32})$')
+	_bsdmd5rem=re.compile(r'MD5 \((.+)\) = ([0-9a-fA-F]{32})[\r\n]*$')
 	def do_test_chksumline(self, l):
 		x=self._bsdmd5rem.match(chomp(l))
 		if not x: return -1
@@ -820,7 +826,7 @@ class SFV(ChksumType, CRC_MixIn):
 			comment = ''
 		pverbose('testing from %s (sfv%s)'%(file.name, comment))
 
-	_sfvrem=re.compile(r'(.+) ([0-9a-fA-F]+)$')
+	_sfvrem=re.compile(r'(.+) ([0-9a-fA-F]+)[\r\n]*$')
 	def do_test_chksumline(self, l):
 		if l[0]==';': return
 		x=self._sfvrem.match(chomp(l))

@@ -328,6 +328,13 @@ def all_tests():
 	T_test("crlf.csv4")
 	T_test("crlf.sfv")
 	T_test("noheadercrlf.sfv")
+	T_test("crcrlf.md5")
+	T_test("crcrlf.bsdmd5")
+	T_test("crcrlf.csv")
+	T_test("crcrlf.csv2")
+	T_test("crcrlf.csv4")
+	T_test("crcrlf.sfv")
+	T_test("noheadercrcrlf.sfv")
 
 	#test correct handling of args in recursive testmode (disabled since this isn't fixed yet ;)
 	#test_generic(cfvcmd+" -r a",cfv_test)
