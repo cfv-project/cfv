@@ -56,13 +56,13 @@ def _pstd(s,nl='\n',write=sys.stdout.write):
 def _perr(s,nl='\n',write=sys.stderr.write):
 	write(s + nl)
 
-p=_pstd
+_p=_pstd
 def pverbose(s,nl='\n'):
 	if config.verbose>0:
-		p(s,nl)
+		_p(s,nl)
 def pinfo(s,nl='\n'):
 	if config.verbose>=0 or config.verbose==-3:
-		p(s,nl)
+		_p(s,nl)
 def perror(s,nl='\n'):
 	if config.verbose>=-1:
 		_perr(s,nl)
@@ -1507,8 +1507,8 @@ def main(argv):
 				config.listsep = o=='--list0' and '\0' or '\n'
 				if config.list==LISTUNVERIFIED:
 					config.showunverified=1
-				global p
-				p=_perr #redirect all messages to stderr so only the list gets on stdout
+				global _p
+				_p=_perr #redirect all messages to stderr so only the list gets on stdout
 			elif o=='--showpaths':
 				config.setx('showpaths', a)
 			elif o=='--strippaths':
