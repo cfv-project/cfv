@@ -838,7 +838,19 @@ class ChksumType:
 			errfunc(*errargs)
 			return -2
 		alreadyok=None
-		for fn in os.listdir(os.curdir):
+		fpath,filenametail = os.path.split(filename)
+		try:
+			if fpath:
+				if config.ignorecase:
+					fpath = nocase_findfile(fpath, FINDDIR)
+					filename = os.path.join(fpath,filenametail) #fix the dir the orig filename is in, so that the do_f_found can rename it correctly
+			else:
+				fpath = os.curdir
+			ftails = os.listdir(fpath)
+		except EnvironmentError:
+			ftails = []
+		for ftail in ftails:
+			fn = os.path.join(fpath,ftail)
 			try:
 				if filesize>=0:
 					fs=os.path.getsize(fn)
@@ -1751,7 +1763,9 @@ def path_split(filename):
 			break
 	return parts
 
-def nocase_findfile(filename):
+FINDFILE=1
+FINDDIR=0
+def nocase_findfile(filename,find=FINDFILE):
 	cur=os.curdir
 	parts=path_split(filename.lower())
 	#print 'nocase_findfile:',filename,parts,len(parts)
@@ -1760,7 +1774,7 @@ def nocase_findfile(filename):
 		#matches=filter(lambda f,p=p: string.lower(f)==p,dircache.listdir(cur)) #too slooow, even with dircache (though not as slow as without it ;)
 		matches=nocase_dirfiles(cur,p) #nice and speedy :)
 		#print 'i:',i,' cur:',cur,' p:',p,' matches:',matches
-		if i==len(parts)-1:#if we are on the last part of the path, we want to match a file
+		if i==len(parts)-find:#if we are on the last part of the path and using FINDFILE, we want to match a file
 			matches=filter(lambda f,cur=cur: os.path.isfile(os.path.join(cur,f)), matches)
 		else:#otherwise, we want to match a dir
 			matches=filter(lambda f,cur=cur: os.path.isdir(os.path.join(cur,f)), matches)
@@ -1772,6 +1786,10 @@ def nocase_findfile(filename):
 			cur=matches[0] #don't put the ./ on the front of the name
 		else:
 			cur=os.path.join(cur,matches[0])
+	return cur
+
+def nocase_findfile_updstats(filename):
+	cur = nocase_findfile(filename)
 	if filename != cur:
 		stats.diffcase = stats.diffcase + 1
 	return cur
@@ -1814,11 +1832,11 @@ def find_local_filename(l_filename):
 		#we need to find the correct filename if using showunverified, even if the filename we are given works, since on FAT/etc filesystems the incorrect case will still return true from os.path.exists, but it could be the incorrect case to remove from the unverified files list.
 		if config.showunverified or not os.path.exists(l_filename):
 			try:
-				l_filename=nocase_findfile(l_filename)
+				l_filename=nocase_findfile_updstats(l_filename)
 			except IOError, e:
 				if e[0]==errno.ENOENT and l_filename[0]=='"' and l_filename[-1]=='"':
 					stats.quoted = stats.quoted + 1
-					l_filename=nocase_findfile(l_filename[1:-1])
+					l_filename=nocase_findfile_updstats(l_filename[1:-1])
 				else:
 					raise
 	elif l_filename[0]=='"' and l_filename[-1]=='"' and not os.path.exists(l_filename):

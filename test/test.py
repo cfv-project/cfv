@@ -40,23 +40,25 @@ except ImportError: BitTorrent = None
 
 
 fmt_info = {
-	#name: (hascrc, hassize)
-	'md5': (1,0),
-	'bsdmd5': (1,0),
-	'sfv': (1,0),
-	'sfvmd5': (1,0),
-	'csv': (1,1),
-	'csv2': (0,1),
-	'csv4': (1,1),
-	'crc': (1,1),
-	'par': (1,1),
-	'par2': (1,1),
-	'torrent': (1,1),
+	#name: (hascrc, hassize, cancreate)
+	'md5': (1,0,1),
+	'bsdmd5': (1,0,1),
+	'sfv': (1,0,1),
+	'sfvmd5': (1,0,1),
+	'csv': (1,1,1),
+	'csv2': (0,1,1),
+	'csv4': (1,1,1),
+	'crc': (1,1,1),
+	'par': (1,1,0),
+	'par2': (1,1,0),
+	'torrent': (1,1,0),
 }
 def fmt_hascrc(f):
 	return fmt_info[f][0]
 def fmt_hassize(f):
 	return fmt_info[f][1]
+def fmt_cancreate(f):
+	return fmt_info[f][2]
 
 
 if hasattr(operator,'gt'):
@@ -610,6 +612,32 @@ def search_test(t):
 		test_generic(cfvcmd+" -v -uu -s -n -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=0,notfound=2,unv=1,**experrs))
 	finally:
 		shutil.rmtree(d)
+
+	if fmt_cancreate(t):
+		#test deep handling
+		d = mkdtemp()
+		try:
+			dcfn = os.path.join(d,'deep.'+t)
+			os.mkdir(os.path.join(d, "aOeU.AoEu"))
+			os.mkdir(os.path.join(d, "aOeU.AoEu", "boO.FaRr"))
+			shutil.copyfile('data1', os.path.join(d, "aOeU.AoEu", "boO.FaRr", "DaTa1"))
+			test_generic(cfvcmd+" -v -rr -C -p %s -t %s -f %s"%(d,t,dcfn), rcurry(cfv_all_test,files=1,ok=1))
+			os.rename(os.path.join(d, "aOeU.AoEu", "boO.FaRr", "DaTa1"), os.path.join(d, "aOeU.AoEu", "boO.FaRr", "Foo1"))
+			shutil.copyfile('data4', os.path.join(d, "aOeU.AoEu", "boO.FaRr", "DaTa1"))
+			test_generic(cfvcmd+" -v -s -T -p %s -f %s"%(d,dcfn), rcurry(cfv_all_test,files=1,ok=1,misnamed=1))
+			shutil.rmtree(os.path.join(d, "aOeU.AoEu"))
+			os.mkdir(os.path.join(d, "AoEu.aOeU"))
+			os.mkdir(os.path.join(d, "AoEu.aOeU", "BOo.fArR"))
+			shutil.copyfile('data4', os.path.join(d, "AoEu.aOeU", "BOo.fArR","dAtA1"))
+			shutil.copyfile('data1', os.path.join(d, "AoEu.aOeU", "BOo.fArR","Foo1"))
+			test_generic(cfvcmd+" -i -v -s -T -p %s -f %s"%(d,dcfn), rcurry(cfv_all_test,files=1,ok=1,misnamed=1))
+			if fmt_hassize(t): experrs={'badsize':1}
+			else:              experrs={'badcrc':1}
+			test_generic(cfvcmd+" -i -v -T -p %s -f %s"%(d,dcfn), rcurry(cfv_all_test,files=1,ok=0,**experrs))
+			test_generic(cfvcmd+" -i -v -s -n -T -p %s -f %s"%(d,dcfn), rcurry(cfv_all_test,files=1,ok=1,misnamed=1))
+			test_generic(cfvcmd+" -i -v -T -p %s -f %s"%(d,dcfn), rcurry(cfv_all_test,files=1,ok=1))
+		finally:
+			shutil.rmtree(d)
 
 def symlink_test():
 	dir='s.test'
