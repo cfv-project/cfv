@@ -1524,18 +1524,30 @@ register_cftype('sfvmd5', SFVMD5)
 
 #---------- csv ----------
 
+_csvstrautore=r'(?:".*"|[^,]*),'
+_csvstrre=r'(?:"(.*)"|([^,]*)),'
+_csvfnautore=_csvstrautore.replace('*','+')
+_csvfnre=_csvstrre.replace('*','+')
+def csvquote(s):
+	if ',' in s or '"' in s: return '"%s"'%(s.replace('"','""'))
+	return s
+def csvunquote(g1,g2):
+	if g1 is not None:
+		return g1.replace('""','"')
+	return g2
+
 class CSV(ChksumType, CRC_MixIn):
-	def auto_chksumfile_match(file, _autorem=re.compile('[^,]+,[0-9]+,[0-9a-fA-F]{8},[\n\r]*$')):
+	def auto_chksumfile_match(file, _autorem=re.compile(_csvfnautore+'[0-9]+,[0-9a-fA-F]{8},[\n\r]*$')):
 		return _autorem.match(file.peekline(4096)) is not None
 	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	auto_filename_match = 'csv$'
 	
-	_csvrem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]{8}),')
+	_csvrem=re.compile(_csvfnre+r'([0-9]+),([0-9a-fA-F]{8}),')
 	def do_test_chksumline(self, l):
 		x=self._csvrem.match(l)
 		if not x: return -1
-		self.test_file(x.group(1),unhexlify(x.group(3)),int(x.group(2)))
+		self.test_file(csvunquote(x.group(1),x.group(2)), unhexlify(x.group(4)), int(x.group(3)))
 	
 	def make_std_filename(filename):
 		return filename+'.csv'
@@ -1544,7 +1556,7 @@ class CSV(ChksumType, CRC_MixIn):
 	def make_addfile(self, filename):
 		c,s=getfilecrc(filename)
 		c = hexlify(c)
-		return (c,s), '%s,%i,%s,\n'%(filename,s,c)
+		return (c,s), '%s,%i,%s,\n'%(csvquote(filename),s,c)
 
 register_cftype('csv', CSV)
 
@@ -1553,27 +1565,17 @@ register_cftype('csv', CSV)
 
 class CSV4(ChksumType, CRC_MixIn):
 	
-	def auto_chksumfile_match(file, _autorem=re.compile(r'[^,]+,[0-9]+,[0-9a-fA-F]{8},[^,]*,[\n\r]*$')):
+	def auto_chksumfile_match(file, _autorem=re.compile(r'%s[0-9]+,[0-9a-fA-F]{8},%s[\n\r]*$'%(_csvfnautore,_csvstrautore))):
 		return _autorem.match(file.peekline(4096)) is not None
 	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
-	_csv4rem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]{8}),([^,]*),')
+	_csv4rem=re.compile(r'%s([0-9]+),([0-9a-fA-F]{8}),%s'%(_csvfnre,_csvstrre))
 	def do_test_chksumline(self, l):
 		x=self._csv4rem.match(l)
 		if not x: return -1
-		# quick hacks to handle quoted paths and file names.  The check in test_file won't work for this, since the path.join will embed the quotes inside the path.  This doesn't do the nifty checking like test_file does to see whether the quotes might really be part of the filename, but I don't think that ever actually happens and implementing it for this case would just be way too bloaty.
-		q = -1
-		path = x.group(4)
-		if len(path)>1 and path[0]=='"' and path[-1]=='"':
-			path = path[1:-1]
-			q = stats.quoted
-		name = x.group(1)
-		if len(name)>1 and name[0]=='"' and name[-1]=='"' and path: #if path is empty, then the quote checks in test_file will handle it already.
-			name = name[1:-1]
-			q = stats.quoted
-		self.test_file(os.path.join(fixpath(path),name),unhexlify(x.group(3)),int(x.group(2))) #we need to fixpath before path.join since os.path.join looks for path.sep
-		if q>=0 and q == stats.quoted: #ensure that stats.quoted isn't incremented multiple times for a single file.
-			stats.quoted = stats.quoted + 1
+		name = csvunquote(x.group(1),x.group(2))
+		path = csvunquote(x.group(5),x.group(6))
+		self.test_file(os.path.join(fixpath(path),name),unhexlify(x.group(4)),int(x.group(3))) #we need to fixpath before path.join since os.path.join looks for path.sep
 	
 	def make_std_filename(filename):
 		return filename+'.csv'
@@ -1583,7 +1585,7 @@ class CSV4(ChksumType, CRC_MixIn):
 		c,s=getfilecrc(filename)
 		c = hexlify(c)
 		p=os.path.split(filename)
-		return (c,s), '%s,%i,%s,%s,\n'%(p[1],s,c,p[0])
+		return (c,s), '%s,%i,%s,%s,\n'%(csvquote(p[1]),s,c,csvquote(p[0]))
 
 register_cftype('csv4', CSV4)
 
@@ -1591,15 +1593,15 @@ register_cftype('csv4', CSV4)
 #---------- csv with only 2 fields ----------
 
 class CSV2(ChksumType):
-	def auto_chksumfile_match(file, _autorem=re.compile('[^,]+,[0-9]+,[\n\r]*$')):
+	def auto_chksumfile_match(file, _autorem=re.compile(_csvfnautore+'[0-9]+,[\n\r]*$')):
 		return _autorem.match(file.peekline(4096)) is not None
 	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
-	_csv2rem=re.compile(r'([^,]+),([0-9]+),')
+	_csv2rem=re.compile(_csvfnre+r'([0-9]+),')
 	def do_test_chksumline(self, l):
 		x=self._csv2rem.match(l)
 		if not x: return -1
-		self.test_file(x.group(1),None,int(x.group(2)))
+		self.test_file(csvunquote(x.group(1),x.group(2)),None,int(x.group(3)))
 	
 	def make_std_filename(filename):
 		return filename+'.csv'
@@ -1610,7 +1612,7 @@ class CSV2(ChksumType):
 			s=getfilecrc(filename)[1]#no way to get size of stdin other than to read it
 		else:
 			s=os.path.getsize(filename)
-		return (None, s), '%s,%i,\n'%(filename,s)
+		return (None, s), '%s,%i,\n'%(csvquote(filename),s)
 
 register_cftype('csv2', CSV2)
 

@@ -483,7 +483,6 @@ def C_funkynames_test(t):
 				continue
 			if n == os.curdir: n = 'foo'+n # can't create a file of name '.', but 'foo.' is ok.
 			if t in ('sfv','sfvmd5') and n==';': n = 'foo'+n # ';' is comment character in sfv files, filename cannot start with it.
-			if t.startswith('csv') and n==',': continue; # ',' isn't handled properly yet in csv files FIXME
 			if t == 'crc' and n.isspace(): n = n + 'foo' # crc format can't handle trailing whitespace in filenames
 			try:
 				f = open(os.path.join(d,n),'wb')
