@@ -305,7 +305,7 @@ def cfv_all_test(s,o, files=-2, ok=0, unv=0, notfound=0, badcrc=0, badsize=0, cf
 		if not filter(icomp, map(None,expected,actual)):
 			return 0
 		return 'expected %s got %s'%(expected,actual)
-	return 'bad status %s'%(WEXITSTATUS(s))
+	return 'bad status expected %s got %s'%(expected_status, WEXITSTATUS(s))
 
 def cfv_unv_test(s,o,unv=1):
 	x=re.search(rx_Begin+rx_unv+rx_End,tail(o))
