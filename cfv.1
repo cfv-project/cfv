@@ -81,9 +81,10 @@ Change to directory before doing anything.
 Specify the name of the checksum file to test or create.
 If file is -, stdin (for -T) or stdout (for -C) will be used.
 .IP "-t type"
-Specify the type of the file.  Can be sfv, sfvmd5, csv, csv2, csv4, md5, bsdmd5, par, par2, crc, or auto.  The default is auto,
-which will detect the file type for you.  When creating, if type is auto an sfv
-will be made, unless a different default has been set in the config file.
+Specify the type of the file.
+Can be sfv, sfvmd5, csv, csv2, csv4, md5, bsdmd5, par, par2, crc, or auto.  
+The default is auto, which will detect the file type for you.
+When creating, if type is auto an sfv will be made, unless a different default has been set in the config file.
 .IP "--list listset"
 Prints a raw listing of files in the given set (ok, bad, unverified, notfound).  Usually used with -q, but not strictly needed since specifying --list will redirect all other messages to stderr.
 .IP "--list0 listset"
