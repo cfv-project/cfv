@@ -19,7 +19,7 @@
 
 default_ns = globals().copy()
 
-import re,os,sys,string,operator,shutil,getopt,gzip,stat,traceback
+import re,os,sys,string,operator,shutil,getopt,gzip,zlib,stat,traceback
 try: # tempfile.mkdtemp is only in python 2.3+
 	from tempfile import mkdtemp
 except ImportError:
@@ -158,16 +158,67 @@ def test_log_results(cmd,s,o,r,kw):
 		log("\n".join(traceback.format_stack()))
 	log("");
 	
+
+def expand_cmdline(cmd):
+	from glob import glob
+	argv = []
+	for arg in cmd.split(' '): #bad.  shlex.split would be perfect, but its only in python >=2.3
+		arg = arg.replace('"','') # hack so --foo="bar" works.
+		if '*' in arg or '?' in arg or '[' in arg:
+			argv.extend(glob(arg))
+		else:
+			argv.append(arg)
+	return argv
+
 def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None):
-	from commands import getstatusoutput
-	runcmd = cfvenv+cfvexe+' '+cmd
-	if stdin:
-		runcmd = 'cat '+stdin+' | '+runcmd
-	if stdout:
-		runcmd = runcmd + ' > '+stdout
-	if stderr:
-		runcmd = runcmd + ' 2> '+stderr
-	return getstatusoutput(runcmd)
+	try:
+		import subprocess
+	except ImportError:
+		from commands import getstatusoutput
+		runcmd = cfvenv+cfvexe+' '+cmd
+		if stdin:
+			runcmd = 'cat '+stdin+' | '+runcmd
+		if stdout:
+			runcmd = runcmd + ' > '+stdout
+		if stderr:
+			runcmd = runcmd + ' 2> '+stderr
+		s,o = getstatusoutput(runcmd)
+		if os.WIFSIGNALED(s):
+			s = -os.WTERMSIG(s)
+		else:
+			s = os.WEXITSTATUS(s)
+		return s,o
+	else:
+		def open_output(fn):
+			if fn=='/dev/null' and not os.path.exists(fn):
+				fn='nul'
+			return open(fn,'wb')
+		p_stdin = p_stdout = p_stderr = subprocess.PIPE
+		if stdin:
+			p_stdin = open(stdin,'rb')
+		if stdout:
+			p_stdout = open_output(stdout)
+		else:
+			p_stderr = subprocess.STDOUT
+		if stderr:
+			p_stderr = open_output(stderr)
+		argv = [cfvexe]+expand_cmdline(cmd)
+		proc = subprocess.Popen(argv, stdin=p_stdin, stdout=p_stdout, stderr=p_stderr)
+		for f in p_stdin, p_stdout, p_stderr:
+			if f not in (subprocess.PIPE, subprocess.STDOUT, None):
+				f.close()
+		obuf,ebuf = proc.communicate()
+		if ebuf or obuf is None:
+			assert not obuf
+			o = ebuf
+		else:
+			o = obuf
+		s = proc.returncode
+		if o:
+			if o[-2:] == '\r\n': o = o[:-2]
+			elif o[-1:] in '\r\n': o = o[:-1]
+		return s, o
+		
 
 def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
 	if stdin is not None and ver_fchksum:
@@ -181,7 +232,6 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
 		StringIO().write(u'foo') # cStringIO with unicode doesn't work in python 1.6
 	except (ImportError, SystemError):
 		from StringIO import StringIO
-	from glob import glob
 	obuf = StringIO()
 	saved = sys.stdin,sys.stdout,sys.stderr,sys.argv
 	cwd = os.getcwd()
@@ -197,13 +247,7 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
 		else:      sys.stdin = StringIO()
 		sys.stdout = open_output(stdout)
 		sys.stderr = open_output(stderr)
-		sys.argv = [cfvexe]
-		for arg in cmd.split(' '): #bad.  shlex.split would be perfect, but its only in python >=2.3
-			arg = arg.replace('"','') # hack so --foo="bar" works.
-			if '*' in arg or '?' in arg or '[' in arg:
-				sys.argv.extend(glob(arg))
-			else:
-				sys.argv.append(arg)
+		sys.argv = [cfvexe] + expand_cmdline(cmd)
 		cfv_ns = default_ns.copy()
 		try:
 			exec cfv_compiled in cfv_ns
@@ -265,7 +309,7 @@ def rx_test(pat,str):
 	if re.search(pat,str): return 0
 	return 1
 def status_test(s,o,expected=0):
-	if WEXITSTATUS(s)==expected:
+	if s==expected:
 		return 0
 	return 1
 
@@ -320,7 +364,7 @@ def cfv_test(s,o, op=op_gt, opval=0):
 def cfv_all_test(s,o, files=-2, ok=0, unv=0, notfound=0, badcrc=0, badsize=0, cferror=0, ferror=0, misnamed=0):
 	expected_status = (badcrc and 2) | (badsize and 4) | (notfound and 8) | (ferror and 16) | (unv and 32) | (cferror and 64)
 	x=re.search(rx_StatusLine,tail(o))
-	if WEXITSTATUS(s)==expected_status and x:
+	if s==expected_status and x:
 		if files==-2:
 			files = reduce(operator.add, [ok,badcrc,badsize,notfound,ferror])
 		expected = [files,ok,badcrc,badsize,notfound,ferror,unv,cferror,misnamed]
@@ -328,7 +372,7 @@ def cfv_all_test(s,o, files=-2, ok=0, unv=0, notfound=0, badcrc=0, badsize=0, cf
 		if not filter(icomp, map(None,expected,actual)):
 			return 0
 		return 'expected %s got %s'%(expected,actual)
-	return 'bad status expected %s got %s'%(expected_status, WEXITSTATUS(s))
+	return 'bad status expected %s got %s'%(expected_status, s)
 
 def cfv_unv_test(s,o,unv=1):
 	x=re.search(rx_Begin+rx_unv+rx_End,tail(o))
@@ -388,11 +432,11 @@ def cfv_listdata_abs_test(s,o):
 		return 0
 	return 1
 def cfv_listdata_unv_test(s,o):
-	if WEXITSTATUS(s)==32 and re.search('^test.py\0testfix.csv\0$',o,re.I):
+	if s==32 and re.search('^test.py\0testfix.csv\0$',o,re.I):
 		return 0
 	return 1
 def cfv_listdata_bad_test(s,o):
-	if WEXITSTATUS(s)&6 and not WEXITSTATUS(s)&~6 and re.search('^(d2.)?test4.foo\0test.ext.end\0test2.foo\0test3\0$',o,re.I):
+	if s&6 and not s&~6 and re.search('^(d2.)?test4.foo\0test.ext.end\0test2.foo\0test3\0$',o,re.I):
 		return 0
 	return 1
 
@@ -1041,12 +1085,10 @@ cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-rela
 
 if run_internal:
 	runcfv = runcfv_py
-	WEXITSTATUS = lambda s: s
 	_cfv_code = open(cfvexe,'r').read().replace('\r\n','\n').replace('\r','\n')
 	cfv_compiled = compile(_cfv_code,cfvexe,'exec')
 else:
 	runcfv = runcfv_exe
-	WEXITSTATUS = os.WEXITSTATUS
 
 logfile=open("test.log","w")
 
