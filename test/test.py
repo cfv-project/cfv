@@ -92,8 +92,9 @@ def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None):
 
 def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
 	if stdin is not None and ver_fchksum:
-		#we could reopen stdin, except that fchksum uses stdio, and python has no freopen (which is needed to update STDIN to the new stdin.)
-		return 'error',"cannot test stdin with fchksum in internal mode"
+		fileno =  os.open(stdin, os.O_RDONLY | getattr(os,'O_BINARY', 0))
+		assert fileno >= 0
+		os.dup2(fileno, 0)
 	try:
 		from cStringIO import StringIO
 		StringIO().write(u'foo') # cStringIO with unicode doesn't work in python 1.6
