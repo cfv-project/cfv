@@ -959,6 +959,7 @@ def all_tests():
 		search_test(t)
 		search_test(t,test_nocrc=1)
 	if BitTorrent:
+		search_test('torrent',test_nocrc=1)
 		search_test('torrent',test_nocrc=1,extra="--strip=1")
 	quoted_search_test()
 
@@ -1001,9 +1002,10 @@ def all_tests():
 	T_test("noheadercrcrlf.sfv")
 	T_test("crcrlf.crc")
 	if BitTorrent:
-		T_test(".torrent",extra='--strip=1')
-		T_test("smallpiece.torrent",extra='--strip=1')
-		T_test("encoding.torrent",extra='--strip=1')
+		for strip in (0,1):
+			T_test(".torrent",extra='--strip=%s'%strip)
+			T_test("smallpiece.torrent",extra='--strip=%s'%strip)
+			T_test("encoding.torrent",extra='--strip=%s'%strip)
 		test_encoding2()
 
 	#test handling of directory args in recursive testmode. (Disabled since this isn't implemented, and I'm not sure if it should be.  It would change the meaning of cfv *)
@@ -1081,15 +1083,17 @@ def all_tests():
 
 	if BitTorrent:
 		test_generic(cfvcmd+" -T -f foo.torrent",cfv_test)
-		test_generic(cfvcmd+" -T --strippaths=1 -p foo -f "+os.path.join(os.pardir,"foo.torrent"),rcurry(cfv_all_test,ok=7))
-		test_generic(cfvcmd+" -T --strippaths=1 -p foo2err -f "+os.path.join(os.pardir,"foo.torrent"), rcurry(cfv_all_test,ok=4,badcrc=3))
-		test_generic(cfvcmd+" -T --strippaths=1 -p foo2err -f %s foo1 foo4 "%os.path.join(os.pardir,"foo.torrent"), rcurry(cfv_all_test,ok=0,badcrc=2))
-		test_generic(cfvcmd+" -T --strippaths=1 -p foo2err1 -f "+os.path.join(os.pardir,"foo.torrent"), rcurry(cfv_all_test,ok=6,badcrc=1))
-		test_generic(cfvcmd+" -T --strippaths=1 -p foo2err1 -f %s foo1 foo4 "%os.path.join(os.pardir,"foo.torrent"), rcurry(cfv_all_test,ok=2))
-		test_generic(cfvcmd+" -T --strippaths=1 -p foo2badsize -f "+os.path.join(os.pardir,"foo.torrent"), rcurry(cfv_all_test,ok=5,badsize=1,badcrc=1))
-		test_generic(cfvcmd+" -T --strippaths=1 -p foo2badsize -f %s foo1 foo4 "%os.path.join(os.pardir,"foo.torrent"), rcurry(cfv_all_test,ok=1,badcrc=1))
-		test_generic(cfvcmd+" -T --strippaths=1 -p foo2missing -f "+os.path.join(os.pardir,"foo.torrent"), rcurry(cfv_all_test,ok=4,badcrc=2,notfound=1))
-		test_generic(cfvcmd+" -T --strippaths=1 -p foo2missing -f %s foo1 foo4 "%os.path.join(os.pardir,"foo.torrent"), rcurry(cfv_all_test,ok=0,badcrc=2))
+		test_generic(cfvcmd+" -T --strip=none -p foo -f ../foo.torrent",rcurry(cfv_all_test,notfound=7))
+		for strip in (0,1):
+			test_generic(cfvcmd+" -T --strippaths=%s -p foo -f %s"%(strip,os.path.join(os.pardir,"foo.torrent")),rcurry(cfv_all_test,ok=7))
+			test_generic(cfvcmd+" -T --strippaths=%s -p foo2err -f %s"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=4,badcrc=3))
+			test_generic(cfvcmd+" -T --strippaths=%s -p foo2err -f %s foo1 foo4"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=0,badcrc=2))
+			test_generic(cfvcmd+" -T --strippaths=%s -p foo2err1 -f %s"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=6,badcrc=1))
+			test_generic(cfvcmd+" -T --strippaths=%s -p foo2err1 -f %s foo1 foo4"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=2))
+			test_generic(cfvcmd+" -T --strippaths=%s -p foo2badsize -f %s"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=5,badsize=1,badcrc=1))
+			test_generic(cfvcmd+" -T --strippaths=%s -p foo2badsize -f %s foo1 foo4"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=1,badcrc=1))
+			test_generic(cfvcmd+" -T --strippaths=%s -p foo2missing -f %s"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=4,badcrc=2,notfound=1))
+			test_generic(cfvcmd+" -T --strippaths=%s -p foo2missing -f %s foo1 foo4"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=0,badcrc=2))
 
 	test_generic(cfvcmd+" -h",cfv_version_test)
 

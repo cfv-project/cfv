@@ -1,3 +1,6 @@
+2004-xx-xx - v1.xx:
+	* Added special hack for multi-file .torrents to automatically strip the first path component off if it doesn't exist. (Allows testing .torrent files within their dirs without having to manually do --strip=1)
+
 2004-07-10 - v1.17:
 	* Handle .torrent files that have the creation date encoded as a string.
 	* Handle .torrent files that specify the filename encoding.

@@ -1355,11 +1355,30 @@ class Torrent(ChksumType):
 			total_len = info['length']
 			files = [init_file([info['name']], 0, total_len)]
 		else:
+			dirpart = [info['name']]
+			if config.strippaths==0:
+				dirname = info['name']
+				if encoding:
+					try:
+						dirname = unicode(dirname, encoding)
+					except (LookupError, UnicodeError): #lookup error is raised when specified encoding isn't found.
+						pass
+				dirname = strippath(dirname, 0)
+				if config.ignorecase:
+					try:
+						nocase_findfile(dirname,FINDDIR)
+					except EnvironmentError:
+						dirpart = []
+				else:
+					if not os.path.isdir(dirname):
+						dirpart = []
+				#if not dirpart:
+				#	pinfo("enabling .torrent path strip hack")
 			files = []
 			total_len = 0
 			for finfo in info['files']:
 				flength = finfo['length']
-				files.append(init_file([info['name']]+finfo['path'], total_len, flength))
+				files.append(init_file(dirpart+finfo['path'], total_len, flength))
 				total_len = total_len + flength
 		
 		if not config.docrcchecks:
