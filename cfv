@@ -393,7 +393,7 @@ class PeekFile:
 		self.peekbuf = ''
 		self.setpoked()
 		return ret + self.read(size - len(ret))
-	def p_readline(self, size=-1):
+	def p_readline(self, size=-1): #note that on dos formatted files, this function is not 100% safe, if you peek the exact number of chars to cut the CRLF in half, then the LF will appear to be a empty line after this one... (sigh)
 		lines = self.peekbuf.splitlines(1)
 		if size >= 0 and len(self.peekbuf) >= size:
 			self.peekbuf = lines[0][size:] + ''.join(lines[1:])
@@ -732,9 +732,11 @@ class SFV(ChksumType, CRC_MixIn):
 	
 	def do_test_chksumfile_print_testingline(self, file):
 		#override the default testing line to show first SFV comment line, if any
-		comment = file.peekline(100) #but limit the length in case its a really long one.
+		comment = file.peekline()
 		if comment[0]==';':
 			comment = ', ' + comment[1:].strip()
+			if len(comment)>102: #but limit the length in case its a really long one.
+				comment = comment[:99]+'...'
 		else:
 			comment = ''
 		pverbose('testing from %s (sfv%s)'%(file.name, comment))
