@@ -30,6 +30,10 @@ LISTNOTFOUND=2048
 LISTUNVERIFIED=4096
 LISTARGS={'ok':LISTOK, 'bad':LISTBAD, 'notfound':LISTNOTFOUND, 'unverified':LISTUNVERIFIED}
 
+class Data:
+	def __init__(self, **kw):
+		self.__dict__.update(kw)
+
 def chomp(line):
 	if line[-2:] == '\r\n': return line[:-2]
 	elif line[-1:] in '\r\n': return line[:-1]
@@ -140,9 +144,12 @@ class ProgressMeter:
 	spinnerchars=r'\|/-'
 	def __init__(self, steps=20):
 		self.wantsteps=steps
+		self.needrefresh=1
+		self.filename=None
 
-	def init(self, name, size=None):
+	def init(self, name, size=None, cursize=0):
 		self.steps = self.wantsteps
+		self.filename = name
 		if size is None:
 			if name == '':
 				size = INF
@@ -155,7 +162,7 @@ class ProgressMeter:
 		self.nextstep = self.stepsize
 		self.spinneridx = 0
 		self.needrefresh = 1
-		self.update(0)
+		self.update(cursize)
 	
 	def update(self, cursize):
 		if self.needrefresh:
@@ -202,9 +209,6 @@ class CFVNameError(CFVException):#invalid command in user input
 	pass
 
 class CFVSyntaxError(CFVException):#error in user input
-	pass
-
-class CFVVerifyError(CFVException):#invalid crc/filesize/etc
 	pass
 
 
@@ -769,44 +773,25 @@ class ChksumType:
 			line=line+1
 
 	def test_file(self,filename,filecrc,filesize=-1):
-		if config.fixpaths:
-			filename=fixpath(filename)
-		filename=os.path.normpath(filename)
-		if config.strippaths!='n':
-			filename=strippath(filename, config.strippaths)
+		filename = mangle_filename(filename)
 		if cache.testfiles:
 			if not cache.should_test(filename):
 				return
 		stats.num=stats.num+1
-		l_filename=filename
+		l_filename = filename
 		try:
-			if config.ignorecase:
-				#we need to find the correct filename if using showunverified, even if the filename we are given works, since on FAT/etc filesystems the incorrect case will still return true from os.path.exists, but it could be the incorrect case to remove from the unverified files list.
-				if config.showunverified or not os.path.exists(l_filename):
-					try:
-						l_filename=nocase_findfile(l_filename)
-					except IOError, e:
-						if e[0]==errno.ENOENT and l_filename[0]=='"' and l_filename[-1]=='"':
-							stats.quoted = stats.quoted + 1
-							l_filename=nocase_findfile(l_filename[1:-1])
-						else:
-							raise
-			elif l_filename[0]=='"' and l_filename[-1]=='"' and not os.path.exists(l_filename):
-				l_filename=l_filename[1:-1] #work around buggy sfv encoders that quote filenames
-				stats.quoted = stats.quoted + 1
-			if config.showunverified:
-				cache.set_verified(l_filename)
+			l_filename = find_local_filename(filename)
 			if filesize>=0:
 				fs=os.path.getsize(l_filename)
 				if fs!=filesize:
-					stats.badsize=stats.badsize+1
-					raise CFVVerifyError, 'file size does not match (%s!=%i)'%(filesize,fs)
+					do_f_badsize(l_filename, filesize, fs)
+					return -2
 			if config.docrcchecks and filecrc!=None:
 				c=self.do_test_file(l_filename,filecrc)
 				filecrct = hexlify(filecrc)
 				if c:
-					stats.badcrc=stats.badcrc+1
-					raise CFVVerifyError, 'crc does not match (%s!=%s)'%(filecrct,hexlify(c))
+					do_f_badcrc(l_filename, 'crc does not match (%s!=%s)'%(filecrct,hexlify(c)))
+					return -2
 			else:
 				if not os.path.exists(l_filename):
 					raise EnvironmentError, (errno.ENOENT,"missing")
@@ -814,45 +799,9 @@ class ChksumType:
 					raise EnvironmentError, (errno.ENOENT,"not a file")
 				filecrct="exists" #since we didn't actually test the crc, make verbose mode merely say it exists
 		except EnvironmentError, a:
-			if a[0]==errno.ENOENT:
-				stats.notfound=stats.notfound+1
-				if config.list&LISTNOTFOUND:
-					plistf(l_filename)
-			else:
-				stats.ferror=stats.ferror+1
-			perror('%s : %s'%(perhaps_showpath(l_filename),enverrstr(a)))
+			do_f_enverror(l_filename, a)
 			return -1
-		except CFVVerifyError, a:
-			reninfo=''
-			if config.list&LISTBAD:
-				plistf(l_filename)
-			if config.rename:
-				formatmap=make_rename_formatmap(l_filename) 
-				for count in xrange(0,sys.maxint):
-					formatmap['count']=count
-					newfilename=config.renameformat%formatmap
-					if config.renameformatnocount and count>0:
-						newfilename='%s-%i'%(newfilename,count)
-					if l_filename==newfilename:
-						continue #if the filenames are the same they would cmp the same and be deleted. (ex. when renameformat="%(fullname)s")
-					if os.path.exists(newfilename):
-						if fcmp(l_filename, newfilename):
-							os.unlink(l_filename)
-							reninfo=' (dupe of %s removed)'%newfilename
-							break
-					else:
-						os.rename(l_filename, newfilename)
-						reninfo=' (renamed to %s)'%newfilename
-						break
-			perror('%s : %s%s'%(perhaps_showpath(l_filename),a,reninfo))
-			return -2
-		stats.ok=stats.ok+1
-		if config.list&LISTOK:
-			plistf(filename)
-		if filesize>=0:
-			pverbose('%s : OK (%i,%s)'%(perhaps_showpath(filename),fs,filecrct))
-		else:
-			pverbose('%s : OK (%s)'%(perhaps_showpath(filename),filecrct))
+		do_f_ok(filename, filesize, filecrct)
 	
 	def make_chksumfile(self, file):
 		pass#self.wfile = file
@@ -860,6 +809,58 @@ class ChksumType:
 	def make_chksumfile_finish(self, file):
 		pass
 
+
+def do_f_enverror(l_filename, ex):
+	if ex[0]==errno.ENOENT:
+		stats.notfound=stats.notfound+1
+		if config.list&LISTNOTFOUND:
+			plistf(l_filename)
+	else:
+		stats.ferror=stats.ferror+1
+	perror('%s : %s'%(perhaps_showpath(l_filename),enverrstr(ex)))
+
+def do_f_badsize(l_filename, expected, actual):
+	stats.badsize=stats.badsize+1
+	do_f_verifyerror(l_filename, 'file size does not match (%s!=%i)'%(expected,actual))
+
+def do_f_badcrc(l_filename, msg):
+	stats.badcrc=stats.badcrc+1
+	do_f_verifyerror(l_filename, msg)
+
+def do_f_verifyerror(l_filename, a):
+	reninfo=''
+	if config.list&LISTBAD:
+		plistf(l_filename)
+	if config.rename:
+		formatmap=make_rename_formatmap(l_filename) 
+		for count in xrange(0,sys.maxint):
+			formatmap['count']=count
+			newfilename=config.renameformat%formatmap
+			if config.renameformatnocount and count>0:
+				newfilename='%s-%i'%(newfilename,count)
+			if l_filename==newfilename:
+				continue #if the filenames are the same they would cmp the same and be deleted. (ex. when renameformat="%(fullname)s")
+			if os.path.exists(newfilename):
+				if fcmp(l_filename, newfilename):
+					os.unlink(l_filename)
+					reninfo=' (dupe of %s removed)'%newfilename
+					break
+			else:
+				os.rename(l_filename, newfilename)
+				reninfo=' (renamed to %s)'%newfilename
+				break
+	perror('%s : %s%s'%(perhaps_showpath(l_filename),a,reninfo))
+
+def do_f_ok(filename, filesize, filecrct):
+	stats.ok=stats.ok+1
+	if config.list&LISTOK:
+		plistf(filename)
+	if filesize>=0:
+		pverbose('%s : OK (%i,%s)'%(perhaps_showpath(filename),filesize,filecrct))
+	else:
+		pverbose('%s : OK (%s)'%(perhaps_showpath(filename),filecrct))
+
+	
 #---------- md5 ----------
 
 class MD5_MixIn:
@@ -1102,6 +1103,154 @@ class PAR2(ChksumType, MD5_MixIn):
 	make_std_filename = staticmethod(make_std_filename)
 
 register_cftype('par2', PAR2)
+
+
+#---------- .torrent ----------
+
+class Torrent(ChksumType):
+	def auto_chksumfile_match(file):
+		return file.peek(1)=='d' and file.peek(4096).find('8:announce')>=0
+	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
+
+	def do_test_chksumfile(self, file):
+		try:
+			import BitTorrent.bencode, BitTorrent.btformats, sha
+			metainfo = BitTorrent.bencode.bdecode(file.read())
+			BitTorrent.btformats.check_message(metainfo)
+		except (ImportError,ValueError), e:
+			raise EnvironmentError, str(e) or 'invalid or corrupt torrent'
+
+		comments = []
+		if metainfo.has_key('creation date'):
+			comments.append('created '+time.ctime(metainfo['creation date']))
+		if metainfo.has_key('comment'):
+			comments.append(metainfo['comment'])
+		self.do_test_chksumfile_print_testingline(file, ', '.join(comments))
+		
+		def init_file(filename, ftotpos, filesize):
+			filename = mangle_filename(filename)
+			done = cache.testfiles and not cache.should_test(filename) #if we don't want to test this file, just pretending its done already has the desired effect.
+			if not done:
+				stats.num=stats.num+1
+			fh = None
+			try:
+				l_filename = find_local_filename(filename)
+				if not os.path.exists(l_filename):
+					raise EnvironmentError, (errno.ENOENT,"missing")
+				if not os.path.isfile(l_filename):
+					raise EnvironmentError, (errno.ENOENT,"not a file")
+				if config.docrcchecks:
+					fh = open(l_filename,'rb')
+				fs=os.path.getsize(l_filename)
+				if fs!=filesize:
+					if not done:
+						do_f_badsize(l_filename, filesize, fs)
+						done=1
+			except EnvironmentError, e:
+				if not done:
+					do_f_enverror(filename, e)
+					done=1
+				l_filename = None
+			return Data(totpos=ftotpos, size=filesize, filename=filename, l_filename=l_filename, done=done, fh=fh)
+
+		info = metainfo['info']
+		piecelen = info['piece length']
+		hashes = re.compile('.'*20, re.DOTALL).findall(info['pieces'])
+		if info.has_key('length'):
+			total_len = info['length']
+			files = [init_file(info['name'], 0, total_len)]
+		else:
+			files = []
+			total_len = 0
+			for finfo in info['files']:
+				flength = finfo['length']
+				files.append(init_file(os.path.join(info['name'], *finfo['path']), total_len, flength))
+				total_len = total_len + flength 
+
+		def readfpiece(f, pos, size):
+			if f.l_filename is None:
+				return None
+			try:
+				f.fh.seek(pos)
+				d = f.fh.read(size)
+			except EnvironmentError, e:
+				if not f.done:
+					if stdprogress: progress.cleanup()
+					do_f_enverror(f.l_filename, e)
+					f.done=1
+				return None
+			stats.bytesread=stats.bytesread+len(d)
+			if len(d)<size:
+				return None
+			return d
+
+		if config.docrcchecks:
+			curf = 0
+			curpos = 0
+			for piece in range(0, len(hashes)):
+				if piece < len(hashes) - 1:
+					curend = curpos + piecelen
+				else:
+					curend = total_len
+				piecefiles = []
+				wanttest = 0
+				while curpos < curend:
+					while curpos < files[curf].totpos or curpos >= files[curf].totpos+files[curf].size:
+						curf = curf + 1
+					f=files[curf]
+					fcurpos = curpos-f.totpos
+					fpiecelen = min(curend-curpos, f.size-fcurpos)
+					piecefiles.append((f,fcurpos,fpiecelen))
+					curpos = curpos + fpiecelen
+					if not f.done:
+						wanttest = 1
+				if wanttest:
+					sh = sha.sha()
+					for f,fcurpos,fpiecelen in piecefiles:
+						if stdprogress and f.l_filename and f.l_filename!=progress.filename:
+							progress.cleanup()
+							progress.init(f.l_filename,f.size,fcurpos)
+						d = readfpiece(f, fcurpos, fpiecelen)
+						if d is None:
+							break
+						sh.update(d)
+						if stdprogress and f.l_filename: progress.update(fcurpos+fpiecelen)
+					if d is None:
+						for f,fcurpos,fpiecelen in piecefiles:
+							if not f.done:
+								if stdprogress: progress.cleanup()
+								do_f_badcrc(f.l_filename, 'piece %i missing data'%(piece))
+								f.done=1
+					elif sh.digest()!=hashes[piece]:
+						for f,fcurpos,fpiecelen in piecefiles:
+							if not f.done:
+								if stdprogress: progress.cleanup()
+								do_f_badcrc(f.l_filename, 'piece %i (at %i..%i) crc does not match (%s!=%s)'%(piece,fcurpos,fcurpos+fpiecelen,hexlify(hashes[piece]), sh.hexdigest()))
+								f.done=1
+					else:
+						for f,fcurpos,fpiecelen in piecefiles:
+							if not f.done:
+								if fcurpos+fpiecelen==f.size:
+									if stdprogress: progress.cleanup()
+									do_f_ok(f.filename,f.size,'all pieces ok')
+									f.done=1
+
+			if stdprogress: progress.cleanup()
+
+		for f in files:
+			if not f.done:
+				do_f_ok(f.filename,f.size,config.docrcchecks and 'all pieces ok' or 'exists')
+			if f.fh:
+				f.fh.close()
+			
+	#we don't support .torrent in create mode, but add these methods so that we can get error messages that are probaby more user friendly.
+	auto_filename_match = 'torrent$'
+
+	def make_std_filename(filename):
+		return filename+'.torrent'
+	make_std_filename = staticmethod(make_std_filename)
+
+register_cftype('torrent', Torrent)
 
 
 #---------- sfv ----------
@@ -1493,6 +1642,33 @@ def fixpath(filename):
 		return config.fixpaths.sub(_os_sep_escaped, filename)
 	return filename
 
+def mangle_filename(filename):
+	if config.fixpaths:
+		filename=fixpath(filename)
+	filename=os.path.normpath(filename)
+	if config.strippaths!='n':
+		filename=strippath(filename, config.strippaths)
+	return filename
+
+def find_local_filename(l_filename):
+	if config.ignorecase:
+		#we need to find the correct filename if using showunverified, even if the filename we are given works, since on FAT/etc filesystems the incorrect case will still return true from os.path.exists, but it could be the incorrect case to remove from the unverified files list.
+		if config.showunverified or not os.path.exists(l_filename):
+			try:
+				l_filename=nocase_findfile(l_filename)
+			except IOError, e:
+				if e[0]==errno.ENOENT and l_filename[0]=='"' and l_filename[-1]=='"':
+					stats.quoted = stats.quoted + 1
+					l_filename=nocase_findfile(l_filename[1:-1])
+				else:
+					raise
+	elif l_filename[0]=='"' and l_filename[-1]=='"' and not os.path.exists(l_filename):
+		l_filename=l_filename[1:-1] #work around buggy sfv encoders that quote filenames
+		stats.quoted = stats.quoted + 1
+	if config.showunverified:
+		cache.set_verified(l_filename)
+	return l_filename
+
 
 _visited_dirs = {}
 def visit_dir(name, st=None, noisy=1):
@@ -1735,7 +1911,7 @@ def show_unverified_files(filelist):
 			show_unverified_dir('')
 
 
-atrem=re.compile(r'md5|\.(csv|sfv|par|p[0-9][0-9]|par2|crc)(\.gz)?$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
+atrem=re.compile(r'md5|\.(csv|sfv|par|p[0-9][0-9]|par2|torrent|crc)(\.gz)?$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
 def autotest(typename):
 	for a in os.listdir(os.curdir):
 		if config.recursive and visit_dir(a):

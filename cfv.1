@@ -1,6 +1,6 @@
-.TH cfv 1 "22 Aug 2003"
+.TH cfv 1 "23 Oct 2003"
 .SH NAME
-cfv \- Verify file consistency with .sfv, .csv, .crc, .md5, md5sum, par, or par2 files
+cfv \- Verify file consistency with .sfv, .csv, .crc, .md5, md5sum, .torrent, par, or par2 files
 .SH SYNOPSIS
 .B cfv [-p dir] [-v|-V|-VV] [-r|-rr|-R] [-n|-N] [--renameformat <s>] [-zz|-z|-Z|-ZZ] [-T|-C] [-m|-M] [-i|-I] [-u|-uu|-U] [--fixpaths <s>] [--showpaths <i>] [--list/--list0 <l>] [-t type] [-f file] [files...]
 .SH DESCRIPTION
@@ -97,7 +97,7 @@ Specify the name of the checksum file to test or create.
 If file is -, stdin (for -T) or stdout (for -C) will be used.
 .IP "-t type"
 Specify the type of the file.
-Can be sfv, sfvmd5, csv, csv2, csv4, md5, bsdmd5, par, par2, crc, or auto.  
+Can be sfv, sfvmd5, csv, csv2, csv4, md5, bsdmd5, par, par2, torrent, crc, or auto.  
 The default is auto, which will detect the file type for you.
 When creating, if type is auto an sfv will be made, unless a different default has been set in the config file.
 .IP "--list listset"
@@ -136,6 +136,9 @@ is parchive v1 format file (test-only)
 .B par2
 is parchive v2 format file (test-only)
 .br
+.B torrent
+is a BitTorrent metainfo file (test-only)
+.br
 .B crc
 is a JPEG Sheriff format crc file
 .SH EXIT STATUS
@@ -147,7 +150,7 @@ Otherwise, the exit status will be a bitwise OR of:
 .IP 2
 badcrc (a file had a different checksum than listed in the checksum file)
 .IP 4
-badsize (a file had a different size than listed, only used in csv and csv4)
+badsize (a file had a different size than listed. Not all checksum file formats include file size)
 .IP 8
 notfound (a file that was listed was not found)
 .IP 16

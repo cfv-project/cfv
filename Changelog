@@ -1,5 +1,6 @@
 2003-xx-xx - v1.xx:
 	* Optimize progress meter display when checking lots of small files.
+	* Add .torrent file support (requires BitTorrent.)
 
 2003-08-23 - v1.15:
 	* Add -l/-L options to toggle symlink following.

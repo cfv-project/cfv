@@ -10,6 +10,8 @@ Optional:
   python-fchksum          http://www.dakotacom.net/~donut/programs/fchksum.html
     (may speed up checksumming speed a bit, especially if your python
      wasn't built with the mmap module.)
+  BitTorrent              http://www.bitconjurer.org/BitTorrent/
+    (modules must be in the python search path to allow .torrent checking.)
 
 Unix Install:
 1) run make with no arguments to see possible installation methods

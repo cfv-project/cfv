@@ -21,6 +21,9 @@ default_ns = globals().copy()
 
 import re,os,sys,string,operator,shutil,getopt,gzip
 
+try: import BitTorrent
+except ImportError: BitTorrent = None
+
 if hasattr(operator,'gt'):
 	op_gt=operator.gt
 	op_eq=operator.eq
@@ -30,11 +33,14 @@ else:
 
 
 class rcurry:
-	def __init__(self, func, *args):
+	def __init__(self, func, *args, **kw):
 		self.curry_func = func
-		self.curry_args = args[:]
+		self.curry_args = args
+		self.curry_kw = kw
 	def __call__(self, *_args, **_kwargs):
-		return apply(self.curry_func, (_args+self.curry_args), _kwargs)
+		kw = self.curry_kw.copy()
+		kw.update(_kwargs)
+		return apply(self.curry_func, (_args+self.curry_args), kw)
 
 class NullFile:
 	def isatty(self): return 0
@@ -200,10 +206,23 @@ def status_test(s,o):
 rx_Begin=r'^(?:.* )?(\d+) files, (\d+) OK'
 rx_unv=r', (\d+) unverified'
 rx_notfound=r', (\d)+ not found'
+rx_ferror=r', (\d)+ file errors'
 rx_bad=r', (\d+) bad(crc|size)'
-rx_cferror=r', (\d)+ chksum file errors'
+rx_badcrc=r', (\d+) badcrc'
+rx_badsize=r', (\d+) badsize'
+rx_cferror=r', (\d+) chksum file errors'
 rx_End=r'(, \d+ differing cases)?(, \d+ quoted filenames)?.  [\d.]+ seconds, [\d.]+K(/s)?$'
 rxo_TestingFrom=re.compile(r'^testing from .* \((.+?)\b.*\)$', re.M)
+
+def optionalize(s):
+	return '(?:%s)?'%s
+
+def intize(s):
+	return s and int(s) or 0
+def icomp(foo):
+	exp,act = foo
+	if exp==-1: return 0
+	return exp!=act
 
 def tail(s):
 	return string.split(s,'\n')[-1]
@@ -212,6 +231,19 @@ def cfv_test(s,o, op=op_gt, opval=0):
 	if s==0 and x and x.group(1) == x.group(2) and op(int(x.group(1)),opval):
 		return 0
 	return 1
+
+def cfv_all_test(s,o, files=-2, ok=0, unv=0, notfound=0, badcrc=0, badsize=0, cferror=0, ferror=0):
+	expected_status = (badcrc and 2) | (badsize and 4) | (notfound and 8) | (ferror and 16) | (unv and 32) | (cferror and 64)
+	x=re.search(rx_Begin+''.join(map(optionalize,[rx_badcrc,rx_badsize,rx_notfound,rx_ferror,rx_unv,rx_cferror]))+rx_End,tail(o))
+	if WEXITSTATUS(s)==expected_status and x:
+		if files==-2:
+			files = reduce(operator.add, [ok,badcrc,badsize,notfound,ferror])
+		expected = [files,ok,badcrc,badsize,notfound,ferror,unv,cferror]
+		actual = map(intize, x.groups()[:8])
+		if not filter(icomp, map(None,expected,actual)):
+			return 0
+		return 'expected %s got %s'%(expected,actual)
+	return 'bad status %s'%(WEXITSTATUS(s))
 
 def cfv_unv_test(s,o,unv=1):
 	x=re.search(rx_Begin+rx_unv+rx_End,tail(o))
@@ -246,7 +278,7 @@ def cfv_cferror_test(s,o,bad=1):
 def cfv_bad_test(s,o,bad=-1):
 	x=re.search(rx_Begin+rx_bad+rx_End,tail(o))
 	if s!=0 and x and int(x.group(1))>0 and int(x.group(3))>0:
-		if bad>0 and int(x.group(3))!=unv:
+		if bad>0 and int(x.group(3))!=bad:
 			return 1
 		return 0
 	return 1
@@ -295,22 +327,25 @@ def cfv_version_test(s,o):
 		return 0
 	return 1
 
-def T_test(f):
-	test_generic(cfvcmd+" -T -f test"+f,cfv_test)
-	test_generic(cfvcmd+" -i -T -f test"+f,cfv_test) #all tests should work with -i
-	test_generic(cfvcmd+" -m -T -f test"+f,cfv_test) #all tests should work with -m
+def T_test(f, extra=None):
+	cmd=cfvcmd
+	if extra:
+		cmd=cmd+" "+extra
+	test_generic(cmd+" -T -f test"+f,cfv_test)
+	test_generic(cmd+" -i -T -f test"+f,cfv_test) #all tests should work with -i
+	test_generic(cmd+" -m -T -f test"+f,cfv_test) #all tests should work with -m
 	
-	test_generic(cfvcmd+" -T --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
-	test_generic(cfvcmd+" -T --showpaths=n-r --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
-	test_generic(cfvcmd+" -T --showpaths=n-a --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
-	test_generic(cfvcmd+" -T --showpaths=a-a --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
-	test_generic(cfvcmd+" -T --showpaths=2-a --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
-	test_generic(cfvcmd+" -T --showpaths=y-r --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
-	test_generic(cfvcmd+" -T --showpaths=y-a --list0=ok -f test"+f, cfv_listdata_abs_test, stderr="/dev/null")
-	test_generic(cfvcmd+" -T --showpaths=1-a --list0=ok -f test"+f, cfv_listdata_abs_test, stderr="/dev/null")
+	test_generic(cmd+" -T --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
+	test_generic(cmd+" -T --showpaths=n-r --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
+	test_generic(cmd+" -T --showpaths=n-a --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
+	test_generic(cmd+" -T --showpaths=a-a --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
+	test_generic(cmd+" -T --showpaths=2-a --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
+	test_generic(cmd+" -T --showpaths=y-r --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
+	test_generic(cmd+" -T --showpaths=y-a --list0=ok -f test"+f, cfv_listdata_abs_test, stderr="/dev/null")
+	test_generic(cmd+" -T --showpaths=1-a --list0=ok -f test"+f, cfv_listdata_abs_test, stderr="/dev/null")
 	#ensure all verbose stuff goes to stderr:
-	test_generic(cfvcmd+" -v -T --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
-	test_generic(cfvcmd+" -v -T --list0=unverified -f test"+f+" test.py testfix.csv data1", cfv_listdata_unv_test, stderr="/dev/null")
+	test_generic(cmd+" -v -T --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
+	test_generic(cmd+" -v -T --list0=unverified -f test"+f+" test.py testfix.csv data1", cfv_listdata_unv_test, stderr="/dev/null")
 	#test progress stuff.
 	def progress_test(s,o):
 		if cfv_test(s,o): return 1
@@ -321,11 +356,11 @@ def T_test(f):
 		if o.find('.'*10)>=0: return 2
 		return 0
 	if f.endswith('.csv2'): #csv2 has only filesize, hence checksum never happens, so no progress
-		test_generic(cfvcmd+" -T --progress=yes -f test"+f, noprogress_test)
+		test_generic(cmd+" -T --progress=yes -f test"+f, noprogress_test)
 	else:
-		test_generic(cfvcmd+" -T --progress=yes -f test"+f, progress_test)
-	test_generic(cfvcmd+" -T --progress=auto -f test"+f, noprogress_test)
-	test_generic(cfvcmd+" -T --progress=no -f test"+f, noprogress_test)
+		test_generic(cmd+" -T --progress=yes -f test"+f, progress_test)
+	test_generic(cmd+" -T --progress=auto -f test"+f, noprogress_test)
+	test_generic(cmd+" -T --progress=no -f test"+f, noprogress_test)
 
 
 def gzC_test(f,extra=None,verify=None,t=None,d=None):
@@ -660,6 +695,9 @@ def all_tests():
 	T_test("crcrlf.sfv")
 	T_test("noheadercrcrlf.sfv")
 	T_test("crcrlf.crc")
+	if BitTorrent:
+		T_test(".torrent",extra='--strip=1')
+		T_test("smallpiece.torrent",extra='--strip=1')
 
 	#test handling of directory args in recursive testmode. (Disabled since this isn't implemented, and I'm not sure if it should be.  It would change the meaning of cfv *)
 	#test_generic(cfvcmd+" -r a",cfv_test)
@@ -720,12 +758,25 @@ def all_tests():
 	test_generic(cfvcmd+" -u -t md5 -f test.md5 data* test.py test.md5",cfv_unv_test)
 	test_generic(cfvcmd+" -u -f test.md5 data* test.py",cfv_unv_test)
 	test_generic(cfvcmd+" -u -f test.md5 data* test.py test.md5",cfv_unv_test)
-	test_generic(cfvcmd+r" -i --fixpaths \\/ -Tu",lambda s,o: cfv_unv_test(s,o,None))
+	test_generic(cfvcmd+r" -i -tcsv --fixpaths \\/ -Tu",lambda s,o: cfv_unv_test(s,o,None))
 	test_generic(cfvcmd+" -T -t md5 -f non_existant_file",cfv_cferror_test)
 	test_generic(cfvcmd+" -T -f "+os.path.join("corrupt","missingfiledesc.par2"),cfv_cferror_test)
 	test_generic(cfvcmd+" -T -f "+os.path.join("corrupt","missingmain.par2"),cfv_cferror_test)
 	test_generic(cfvcmd+" -T -m -f "+os.path.join("corrupt","missingfiledesc.par2"),cfv_cferror_test)
 	test_generic(cfvcmd+" -T -m -f "+os.path.join("corrupt","missingmain.par2"),cfv_cferror_test)
+
+	if BitTorrent:
+		test_generic(cfvcmd+" -T -f foo.torrent",cfv_test)
+		test_generic(cfvcmd+" -T --strippaths=1 -p foo -f "+os.path.join(os.pardir,"foo.torrent"),rcurry(cfv_all_test,ok=7))
+		test_generic(cfvcmd+" -T --strippaths=1 -p foo2err -f "+os.path.join(os.pardir,"foo.torrent"), rcurry(cfv_all_test,ok=4,badcrc=3))
+		test_generic(cfvcmd+" -T --strippaths=1 -p foo2err -f %s foo1 foo4 "%os.path.join(os.pardir,"foo.torrent"), rcurry(cfv_all_test,ok=0,badcrc=2))
+		test_generic(cfvcmd+" -T --strippaths=1 -p foo2err1 -f "+os.path.join(os.pardir,"foo.torrent"), rcurry(cfv_all_test,ok=6,badcrc=1))
+		test_generic(cfvcmd+" -T --strippaths=1 -p foo2err1 -f %s foo1 foo4 "%os.path.join(os.pardir,"foo.torrent"), rcurry(cfv_all_test,ok=2))
+		test_generic(cfvcmd+" -T --strippaths=1 -p foo2badsize -f "+os.path.join(os.pardir,"foo.torrent"), rcurry(cfv_all_test,ok=5,badsize=1,badcrc=1))
+		test_generic(cfvcmd+" -T --strippaths=1 -p foo2badsize -f %s foo1 foo4 "%os.path.join(os.pardir,"foo.torrent"), rcurry(cfv_all_test,ok=1,badcrc=1))
+		test_generic(cfvcmd+" -T --strippaths=1 -p foo2missing -f "+os.path.join(os.pardir,"foo.torrent"), rcurry(cfv_all_test,ok=4,badcrc=2,notfound=1))
+		test_generic(cfvcmd+" -T --strippaths=1 -p foo2missing -f %s foo1 foo4 "%os.path.join(os.pardir,"foo.torrent"), rcurry(cfv_all_test,ok=0,badcrc=2))
+
 	test_generic(cfvcmd+" -h",cfv_version_test)
 
 	donestr="tests finished:  ok: %i  failed: %i"%(stats.ok,stats.failed)
