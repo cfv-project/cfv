@@ -721,7 +721,8 @@ def make(type,ifilename,testfiles):
 						rfiles=os.listdir(f)
 						if config.dirsort:
 							rfiles.sort()
-						testfiles[i:i]=map(lambda x,p=f: os.path.join(p,x), rfiles)
+						testfiles[:i]=map(lambda x,p=f: os.path.join(p,x), rfiles)
+						i=0
 					except EnvironmentError, a:
 						perror('%s%s : %s'%(f, os.sep, a[1]))
 						stats.ferror=stats.ferror+1
