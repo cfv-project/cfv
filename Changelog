@@ -1,4 +1,4 @@
-200x-xx-xx - v1.xx:
+2004-07-10 - v1.17:
 	* Handle .torrent files that have the creation date encoded as a string.
 	* Handle .torrent files that specify the filename encoding.
 	* Fix exceptions when trying to print unicode filenames containing non-ascii characters.
