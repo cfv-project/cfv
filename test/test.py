@@ -262,7 +262,7 @@ def cfv_listdata_test(s,o):
 def joincurpath(f):
 	return os.path.join(os.getcwd(), f)
 def cfv_listdata_abs_test(s,o):
-	if s==0 and re.search('^'+'\0'.join(map(joincurpath, ['data1','data2','data3','data4']))+'\0$',o,re.I):
+	if s==0 and re.search('^'+re.escape('\0'.join(map(joincurpath, ['data1','data2','data3','data4'])))+'\0$',o,re.I):
 		return 0
 	return 1
 def cfv_listdata_unv_test(s,o):
@@ -276,13 +276,13 @@ def cfv_listdata_bad_test(s,o):
 
 def cfv_version_test(s,o):
 	x=re.search(r'cfv v([\d.]+) -',o)
-	x2=re.search(r'cfv ([\d.]+) ',open("../README").readline())
-	x3=re.search(r' v([\d.]+):',open("../Changelog").readline())
+	x2=re.search(r'cfv ([\d.]+) ',open(os.path.join(os.pardir,"README")).readline())
+	x3=re.search(r' v([\d.]+):',open(os.path.join(os.pardir,"Changelog")).readline())
 	if x: log('cfv: '+x.group(1))
 	if x2: log('README: '+x2.group(1))
 	if x3: log('Changelog: '+x3.group(1))
-	if os.path.isdir('../debian'):
-		x4=re.search(r'cfv \(([\d.]+)-\d+\) ',open("../debian/changelog").readline())
+	if os.path.isdir(os.path.join(os.pardir,'debian')):
+		x4=re.search(r'cfv \(([\d.]+)-\d+\) ',open(os.path.join(os.pardir,"debian","changelog")).readline())
 		if x4: log('deb changelog: '+x4.group(1))
 		if not x or not x4 or x4.group(1)!=x.group(1):
 			return 1
@@ -550,7 +550,7 @@ d41d8cd98f00b204e9800998ecf8427e *daTA1""")
 	
 
 cfvenv=''
-cfvexe='../cfv'
+cfvexe=os.path.join(os.pardir,'cfv')
 run_internal = 1
 
 def show_help_and_exit(err=None):
@@ -666,10 +666,10 @@ def all_tests():
 	#test_generic(cfvcmd+" -ri A/c",cfv_test)
 
 	#test handling of testfile args in recursive testmode
-	test_generic(cfvcmd+" -r -p a C/foo.bar",cfv_test)
-	test_generic(cfvcmd+" -ri -p a c/fOo.BaR",cfv_test)
-	test_generic(cfvcmd+" -r -u -p a C/foo.bar",cfv_test)
-	test_generic(cfvcmd+" -ri -u -p a c/fOo.BaR",cfv_test)
+	test_generic(cfvcmd+" -r -p a "+os.path.join("C","foo.bar"),cfv_test)
+	test_generic(cfvcmd+" -ri -p a "+os.path.join("c","fOo.BaR"),cfv_test)
+	test_generic(cfvcmd+" -r -u -p a "+os.path.join("C","foo.bar"),cfv_test)
+	test_generic(cfvcmd+" -ri -u -p a "+os.path.join("c","fOo.BaR"),cfv_test)
 	
 	test_generic(cfvcmd+" --strippaths=0 -T -f teststrip0.csv4",cfv_test)
 	test_generic(cfvcmd+" --strippaths=1 -T -f teststrip1.csv4",cfv_test)
@@ -717,10 +717,10 @@ def all_tests():
 	test_generic(cfvcmd+" -u -f test.md5 data* test.py test.md5",cfv_unv_test)
 	test_generic(cfvcmd+r" -i --fixpaths \\/ -Tu",lambda s,o: cfv_unv_test(s,o,None))
 	test_generic(cfvcmd+" -T -t md5 -f non_existant_file",cfv_cferror_test)
-	test_generic(cfvcmd+" -T -f corrupt/missingfiledesc.par2",cfv_cferror_test)
-	test_generic(cfvcmd+" -T -f corrupt/missingmain.par2",cfv_cferror_test)
-	test_generic(cfvcmd+" -T -m -f corrupt/missingfiledesc.par2",cfv_cferror_test)
-	test_generic(cfvcmd+" -T -m -f corrupt/missingmain.par2",cfv_cferror_test)
+	test_generic(cfvcmd+" -T -f "+os.path.join("corrupt","missingfiledesc.par2"),cfv_cferror_test)
+	test_generic(cfvcmd+" -T -f "+os.path.join("corrupt","missingmain.par2"),cfv_cferror_test)
+	test_generic(cfvcmd+" -T -m -f "+os.path.join("corrupt","missingfiledesc.par2"),cfv_cferror_test)
+	test_generic(cfvcmd+" -T -m -f "+os.path.join("corrupt","missingmain.par2"),cfv_cferror_test)
 	test_generic(cfvcmd+" -h",cfv_version_test)
 
 	donestr="tests finished:  ok: %i  failed: %i"%(stats.ok,stats.failed)
