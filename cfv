@@ -880,7 +880,19 @@ class CSV4(ChksumType, CRC_MixIn):
 	def do_test_chksumline(self, l):
 		x=self._csv4rem.match(l)
 		if not x: return -1
-		self.test_file(os.path.join(fixpath(x.group(4)),x.group(1)),x.group(3),int(x.group(2))) #we need to fixpath before path.join since os.path.join looks for path.sep
+		# quick hacks to handle quoted paths and file names.  The check in test_file won't work for this, since the path.join will embed the quotes inside the path.  This doesn't do the nifty checking like test_file does to see whether the quotes might really be part of the filename, but I don't think that ever actually happens and implementing it for this case would just be way too bloaty.
+		q = -1
+		path = x.group(4)
+		if len(path)>1 and path[0]=='"' and path[-1]=='"':
+			path = path[1:-1]
+			q = stats.quoted
+		name = x.group(1)
+		if len(name)>1 and name[0]=='"' and name[-1]=='"' and path: #if path is empty, then the quote checks in test_file will handle it already.
+			name = name[1:-1]
+			q = stats.quoted
+		self.test_file(os.path.join(fixpath(path),name),x.group(3),int(x.group(2))) #we need to fixpath before path.join since os.path.join looks for path.sep
+		if q>=0 and q == stats.quoted: #ensure that stats.quoted isn't incremented multiple times for a single file.
+			stats.quoted = stats.quoted + 1
 	
 	def make_std_filename(filename):
 		return filename+'.csv'

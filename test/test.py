@@ -373,6 +373,7 @@ def all_tests():
 	test_generic(cfvcmd+" -i -T -f testcase.csv",cfv_test)
 	test_generic(cfvcmd+" -T -f testquoted.sfv",cfv_test)
 	test_generic(cfvcmd+" -i -T -f testquotedcase.sfv",cfv_test)
+	test_generic(cfvcmd+" -i -T -f testquoted.csv4",cfv_test)
 	test_generic(cfvcmd+r" --fixpaths \\/ -T -f testfix.csv",cfv_test)
 	test_generic(cfvcmd+r" --fixpaths \\/ -T -f testfix.csv4",cfv_test)
 	test_generic(cfvcmd+r" -i --fixpaths \\/ -T -f testfix.csv4",cfv_test)
