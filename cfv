@@ -72,19 +72,50 @@ class CFVVerifyError(CFVException):#invalid crc/filesize/etc
 	pass
 
 class Stats:
-	num=0
-	ok=0
-	badsize=0
-	badcrc=0
-	notfound=0
-	ferror=0
-	cferror=0
-	bytesread=0L #use long int for size, to avoid possible overflow.
-	unverifiedfiles=[]
-	unverified=0
-	listfiles=[]
-	diffcase=0
-	quoted=0
+	def __init__(self):
+		self.num=0
+		self.ok=0
+		self.badsize=0
+		self.badcrc=0
+		self.notfound=0
+		self.ferror=0
+		self.cferror=0
+		self.bytesread=0L #use long int for size, to avoid possible overflow.
+		self.unverifiedfiles=[]
+		self.unverified=0
+		self.listfiles=[]
+		self.diffcase=0
+		self.quoted=0
+		self.starttime=time.time()
+
+	def print_stats(self):
+		pinfo('%i files'%self.num,'')
+		pinfo(', %i OK' %self.ok,'')
+		if self.badcrc:
+			pinfo(', %i badcrc' %self.badcrc,'')
+		if self.badsize:
+			pinfo(', %i badsize' %self.badsize,'')
+		if self.notfound:
+			pinfo(', %i not found' %self.notfound,'')
+		if self.ferror:
+			pinfo(', %i file errors' %self.ferror,'')
+		if self.unverified:
+			pinfo(', %i unverified' %self.unverified,'')
+		if self.cferror:
+			pinfo(', %i chksum file errors' %self.cferror,'')
+		if self.diffcase:
+			pinfo(', %i differing cases' %self.diffcase,'')
+		if self.quoted:
+			pinfo(', %i quoted filenames' %self.quoted,'')
+
+		elapsed=time.time()-self.starttime
+		pinfo('.  %.3f seconds, '%(elapsed),'')
+		if elapsed==0.0:
+			pinfo('%.1fK'%(self.bytesread/1024.0),'')
+		else:
+			pinfo('%.1fK/s'%(self.bytesread/elapsed/1024.0),'')
+
+		pinfo('\n','')
 
 class Config:
 	verbose=0 # -1=quiet  0=norm  1=noisy
@@ -849,7 +880,6 @@ def main(argv):
 	manual=0
 	mode=0
 	type='auto'
-	starttime=time.time()
 
 	try:
 		optlist, args = getopt.getopt(argv, 'rRTCt:f:mMnNp:uUiIvVzZqh?', ['list=', 'list0=', 'fixpaths=','showpaths=','renameformat=','help','version'])
@@ -983,33 +1013,7 @@ def main(argv):
 				type=config.defaulttype
 			make(types[type],None,args)
 
-	pinfo('%i files'%stats.num,'')
-	pinfo(', %i OK' %stats.ok,'')
-	if stats.badcrc:
-		pinfo(', %i badcrc' %stats.badcrc,'')
-	if stats.badsize:
-		pinfo(', %i badsize' %stats.badsize,'')
-	if stats.notfound:
-		pinfo(', %i not found' %stats.notfound,'')
-	if stats.ferror:
-		pinfo(', %i file errors' %stats.ferror,'')
-	if stats.unverified:
-		pinfo(', %i unverified' %stats.unverified,'')
-	if stats.cferror:
-		pinfo(', %i chksum file errors' %stats.cferror,'')
-	if stats.diffcase:
-		pinfo(', %i differing cases' %stats.diffcase,'')
-	if stats.quoted:
-		pinfo(', %i quoted filenames' %stats.quoted,'')
-
-	elapsed=time.time()-starttime
-	pinfo('.  %.3f seconds, '%(elapsed),'')
-	if elapsed==0.0:
-		pinfo('%.1fK'%(stats.bytesread/1024.0),'')
-	else:
-		pinfo('%.1fK/s'%(stats.bytesread/elapsed/1024.0),'')
-
-	pinfo('\n','')
+	stats.print_stats()
 
 	for f in stats.listfiles:
 		sys.stdout.write(f+config.listsep)
