@@ -1122,7 +1122,10 @@ class Torrent(ChksumType):
 
 		comments = []
 		if metainfo.has_key('creation date'):
-			comments.append('created '+time.ctime(metainfo['creation date']))
+			try:
+				comments.append('created '+time.ctime(metainfo['creation date']))
+			except TypeError:
+				comments.append('created '+repr(metainfo['creation date']))
 		if metainfo.has_key('comment'):
 			comments.append(metainfo['comment'])
 		self.do_test_chksumfile_print_testingline(file, ', '.join(comments))
