@@ -79,6 +79,14 @@ def cfv_unv_test(s,o,unv=1):
 		return 0
 	return 1
 
+def cfv_bad_test(s,o,bad=-1):
+	x=re.search(r'^(\d+) files, (\d+) OK, (\d)+ bad(crc|size).  [\d.]+ seconds, [\d.]+K(/s)?$',o,re.M)
+	if s!=0 and x and int(x.group(1))>0 and int(x.group(3))>0:
+		if bad>0 and int(x.group(3))!=unv:
+			return 1
+		return 0
+	return 1
+
 def cfv_version_test(s,o):
 	x=re.search(r'cfv v([\d.]+) -',o)
 	x2=re.search(r'cfv ([\d.]+) ',open("../README").readline())
@@ -133,8 +141,74 @@ def C_test(f,extra=None,verify=None,t=None,d='data?'):
 	if verify:
 		verify(f)
 	os.unlink(f)
+
+def ren_test(f,extra=None,verify=None,t=None):
+	join=os.path.join
+	dir='n.test'
+	dir2=join('n.test','d2')
+	cmd=cfvcmd+' --renameformat="%(name)s-%(count)i%(ext)s" -r -p '+dir
+	if extra:
+		cmd=cmd+" "+extra
+	try:
+		os.mkdir(dir)
+		os.mkdir(dir2)
+		fls=[join(dir,'test.ext.end'),
+			join(dir,'test2.foo'),
+			join(dir,'test3'),
+			join(dir2,'test4.foo')]
+		flsf=[join(dir,'test.ext-%i.end'),
+			join(dir,'test2-%i.foo'),
+			join(dir,'test3-%i'),
+			join(dir2,'test4-%i.foo')]
+		flsf_1=[join(dir,'test.ext.end-%i'),
+			join(dir,'test2.foo-%i'),
+			join(dir2,'test4.foo-%i')]
+		flsf_2=[join(dir,'test3-%i')]
+		def flsw(t,fls=fls):
+			for fl in fls:
+				open(fl,'wb').write(t)
+		def flscmp(t,n,fls=flsf):
+			for fl in fls:
+				fn= n!=None and fl%n or fl
+				o=open(fn,'rb').read()
+				r=o!=t
+				test_log_results('cmp %s for %s'%(fn,t),r,o,r)
+		flsw('hello')
+		test_generic("%s -C -t %s"%(cmd,f),cfv_test)
+		flsw('1')
+		test_generic("%s -Tn"%(cmd),cfv_bad_test)
+		flsw('11')
+		test_generic("%s -Tn"%(cmd),cfv_bad_test)
+		flsw('123')
+		test_generic("%s -Tn"%(cmd),cfv_bad_test)
+		flsw('63')
+		test_generic(cmd+' --renameformat="%(fullname)s" -Tn',cfv_bad_test) #test for formats without count too
+		flsw('hello')
+		test_generic("%s -Tn"%(cmd),cfv_test)
+		flscmp('1',0)
+		flscmp('11',1)
+		flscmp('123',2)
+		flscmp('63',1,fls=flsf_1)
+		flscmp('63',3,fls=flsf_2)
+		flscmp('hello',None,fls=fls)
+	finally:
+		import glob
+		for d in glob.glob(join(dir2,'*')):
+			os.unlink(d)
+		os.rmdir(dir2)
+		for d in glob.glob(join(dir,'*')):
+			os.unlink(d)
+		os.rmdir(dir)
 	
 logfile=open("test.log","w")
+
+ren_test('md5')
+ren_test('md5',extra='-rr')
+ren_test('sfv')
+ren_test('csv')
+ren_test('csv2')
+ren_test('csv4')
+
 T_test(".md5")
 T_test(".md5.gz")
 T_test(".csv")
