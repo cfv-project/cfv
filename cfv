@@ -1275,7 +1275,7 @@ class ChksumType:
 		return doopen_write(filename)
 
 	def make_chksumfile_finish(self, file):
-		pass
+		file.close()
 	
 	def filename_ok(fn):
 		return 1
@@ -1988,6 +1988,7 @@ class Torrent(ChksumType):
 		#if comment:
 		#	data['comment'] = comment
 		file.write(bencode.bencode(data))
+		file.close()
 		
 
 register_cftype('torrent', Torrent)
@@ -2292,6 +2293,7 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 		file.write(boundary)
 		file.write(os.linesep+'Count of files: %i'%len(self._flist)+os.linesep)
 		file.write('Total of sizes: %s'%commaize(self._ftotal)+os.linesep)
+		TextChksumType.make_chksumfile_finish(self, file)
 	
 	def make_addfile(self, filename):
 		crc,size=getfilecrc(filename)
@@ -2588,7 +2590,6 @@ def make(cftype,ifilename,testfiles):
 	if file and file!=IOError:
 		try:
 			cf.make_chksumfile_finish(file)
-			file.close()
 		except EnvironmentError, a:
 			stats.cferror=stats.cferror+1
 			perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
