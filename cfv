@@ -997,7 +997,7 @@ register_cftype('csv', CSV)
 
 class CSV4(ChksumType, CRC_MixIn):
 	def auto_chksumfile_match(file):
-		return re.match(r'[^,]+,[0-9]+,[0-9a-fA-F]+,[^,]*,', file.peekline(4096)) is not None
+		return re.match(r'[^,]+,[0-9]+,[0-9a-fA-F]+,[^,]*,[\n\r]*$', file.peekline(4096)) is not None
 	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	_csv4rem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]+),([^,]*),')

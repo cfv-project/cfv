@@ -2,6 +2,7 @@
 	* Support md5sum files with comments in them.
 	* Support PAR2 files.
 	* Specifying -t in testmode without -f will cause cfv to only test files it finds if they are of the given type.
+	* Doesn't try to test csv files with more than 4 fields as csv4 files.
 
 2002-12-18 - v1.13:
 	* Fix exception in test mode when specifying -t and -f with a non-existant file.
