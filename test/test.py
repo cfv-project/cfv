@@ -124,11 +124,18 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
 		elif o[-1:] in '\r\n': o = o[:-1]
 	return s, o
 
+def test_external(cmd,test):
+	from commands import getstatusoutput
+	s,o = getstatusoutput(cmd)
+	r=test(s,o)
+	test_log_results(cmd,s,o,r, None)
+
 def test_generic(cmd,test, **kw):
 	#s,o=runcfv(cmd)
 	s,o=apply(runcfv,(cmd,), kw)
 	r=test(s,o)
 	test_log_results(cfvenv+cfvexe+" "+cmd,s,o,r, kw)
+
 class cst_err(Exception): pass
 def cfv_stdin_test(cmd,file):
 	s1=s2=None
@@ -623,13 +630,13 @@ def all_tests():
 
 	C_test("bsdmd5","-t bsdmd5")#,verify=lambda f: test_generic("md5 -c "+f,status_test)) #bsd md5 seems to have no way to check, only create
 	if pathfind('md5sum'): #don't report pointless errors on systems that don't have md5sum
-		md5verify=lambda f: test_generic("md5sum -c "+f,status_test)
+		md5verify=lambda f: test_external("md5sum -c "+f,status_test)
 	else:
 		md5verify=None
 	C_test("md5",verify=md5verify)
 	C_test("csv")
 	if pathfind('cksfv'): #don't report pointless errors on systems that don't have cksfv
-		sfvverify=lambda f: test_generic("cksfv -f "+f,status_test)
+		sfvverify=lambda f: test_external("cksfv -f "+f,status_test)
 	else:
 		sfvverify=None
 	C_test("sfv",verify=sfvverify)
