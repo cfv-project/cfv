@@ -52,4 +52,4 @@ clean:
 	-rm *.pyc cfv.wrapper
 
 distclean: clean
-	-rm *~ 
+	-rm *~ test/test.log test/*~

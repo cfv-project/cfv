@@ -1,3 +1,7 @@
+2000-10-17 - v1.5.2:
+	* Added test suite.
+	* Fixed 'x not in list' error when using -u and checksum file was not among the files to be tested. (First bug found with test suite ;)
+	* Exits with non-zero status if any errors occured.
 2000-10-12 - v1.5.1:
 	* Fixed install wrapper stuff to compile _after_ it has been installed into the target dir.
 2000-10-12 - v1.5:

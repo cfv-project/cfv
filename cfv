@@ -111,7 +111,7 @@ class Config:
 	def __init__(self):
 		self.readconfig()
 
-version='1.5.1'
+version='1.5.2'
 
 
 #---------- md5 ----------
@@ -325,7 +325,7 @@ def test(filename,testfiles):
 	file.seek(0)#go back to start so that type-specific test funcs get whole file
 	for typename,type in types.items():
 		if re.match(type.testmatch[0],l,type.testmatch[1]):
-			if config.showunverified:#we can't except the checksum file itself to be checksummed
+			if config.showunverified and filename in stats.unverifiedfiles[-1]:#we can't except the checksum file itself to be checksummed
 				stats.unverifiedfiles[-1].remove(filename)
 			if config.verbose>0:
 				print 'testing from %s (%s)'%(filename,typename)
@@ -554,3 +554,6 @@ else:
 	sys.stdout.write('%.1fK/s'%(stats.bytesread/elapsed/1024.0))
 
 sys.stdout.write('\n')
+
+if stats.badcrc or stats.badsize or stats.notfound or stats.ferror or stats.unverified:
+	sys.exit(1)
