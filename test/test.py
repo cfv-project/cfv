@@ -67,9 +67,9 @@ def cfv_stdin_test(cmd,file):
 		if s1: raise cst_err, 2
 		s2,o2=commands.getstatusoutput('cat '+file+' | '+cmd+' -')
 		if s2: raise cst_err, 3
-		x=re.search('^(.*)'+re.escape(file)+'(.*)$[\r\n]{0,2}^(\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$',o1,re.M)
+		x=re.search('^(.*)'+re.escape(file)+'(.*)$[\r\n]{0,2}^-: (\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$',o1,re.M)
 		if not x: raise cst_err, 4
-		x2=re.search('^'+re.escape(x.group(1)+x.group(2))+'$[\r\n]{0,2}^(\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$',o2,re.M)
+		x2=re.search('^'+re.escape(x.group(1)+x.group(2))+'$[\r\n]{0,2}^-: (\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$',o2,re.M)
 		if not x2: raise cst_err, 5
 	except cst_err, er:
 		r=er

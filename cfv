@@ -104,12 +104,12 @@ class Stats:
 	def make_sub_stats(self):
 		b = copy.copy(self)
 		b.starttime = time.time()
-		self.subcount = self.subcount + 1
 		return b
 	
 	def sub_stats_end(self, end):
 		for v in 'badcrc', 'badsize', 'bytesread', 'cferror', 'diffcase', 'ferror', 'notfound', 'num', 'ok', 'quoted', 'unverified':
 			setattr(self, v, getattr(end, v) - getattr(self, v))
+		end.subcount = end.subcount + 1
 
 	def print_stats(self):
 		pinfo('%i files'%self.num,'')
@@ -1057,6 +1057,9 @@ def make(cftype,ifilename,testfiles):
 	else:
 		tfauto=0
 	testdirs=[]
+
+	if config.verbose>=0 or config.verbose==-3:
+		cf_stats = stats.make_sub_stats()
 	
 	i=0
 	while i<len(testfiles):
@@ -1101,6 +1104,10 @@ def make(cftype,ifilename,testfiles):
 		stats.ok=stats.ok+1
 	if file and file!=IOError:
 		file.close() #### should this call cf.close or something instead?
+		if config.verbose>=0 or config.verbose==-3:
+			cf_stats.sub_stats_end(stats)
+			pinfo(perhaps_showpath(filename)+': ','')
+			cf_stats.print_stats()
 	
 	for f in testdirs:
 		try:
