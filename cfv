@@ -700,6 +700,15 @@ class PAR(ChksumType, MD5_MixIn):
 			stats.bytesread=stats.bytesread+len(d)
 			control_md5.update(d)
 
+	#we don't support PAR in create mode, but add these methods so that we can get error messages that are probaby more user friendly.
+	def auto_filename_match(filename):
+		return filename[-3:]=='par'
+	auto_filename_match = staticmethod(auto_filename_match)
+
+	def make_std_filename(filename):
+		return filename+'.par'
+	make_std_filename = staticmethod(make_std_filename)
+
 cftypes['par']=PAR
 
 
@@ -935,6 +944,10 @@ def make(cftype,ifilename,testfiles):
 		filename=cftype.make_std_filename(os.path.basename(curdir))
 		if config.gzip==1 and filename[-3:]!='.gz': #if user does -zz, perhaps they want to force the filename to be kept?
 			filename=filename+'.gz'
+	if not hasattr(cftype, "make_addfile"):
+		perror("%s : %s not supported in create mode"%(filename, cftype.__name__.lower()))
+		stats.cferror=stats.cferror+1
+		return
 	if os.path.exists(filename):
 		perror("%s already exists"%perhaps_showpath(filename))
 		stats.cferror=stats.cferror+1
