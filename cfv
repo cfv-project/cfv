@@ -1545,12 +1545,17 @@ def show_unverified_dir(path, unvchild=0):
 	vsub = 0
 	unvsave = stats.unverified
 	unv = 0
+	unv_sub_dirs = []
 	for fn in pathfiles:
 		file = os.path.join(path, fn)
 		try:
 			st = os.stat(file)
 			if S_ISDIR(st[ST_MODE]) and visit_dir(file,st,noisy=0):
-				vsub = vsub + show_unverified_dir(file,not pathcache)
+				dunvsave = stats.unverified
+				dv = show_unverified_dir(file,not pathcache)
+				vsub = vsub + dv
+				if stats.unverified - dunvsave and not dv: #if this directory (and its subdirs) had unverified files and no verified files
+					unv_sub_dirs.append(file)
 			elif pathcache:
 				if not pathcache.get(fn,{}).get('_verified'):
 					if S_ISREG(st[ST_MODE]):
@@ -1565,6 +1570,8 @@ def show_unverified_dir(path, unvchild=0):
 		if vsub: # if sub directories do have verified files
 			if unv: # and this directory does have unverified files
 				print_unverified(os.path.join(path,'*'))
+			for file in unv_sub_dirs: # print sub dirs that had unverified files and no verified files
+				print_unverified(os.path.join(file,'**'))
 		elif not unvchild: # if this is the root of a tree with no verified files
 			if stats.unverified - unvsave: # and there were unverified files in the tree
 				print_unverified(os.path.join(path,'**'))

@@ -473,15 +473,16 @@ def deep_unverified_test():
 		e_es = join(e, 'es')
 		e2 = 'e2'
 		e2_e2s = join(e2, 'e2s')
+		e2_e2u = join(e2, 'e2u')
 		
-		for d in a, a_C, B, B_ushallow, B_ushallow_d, u, u_u2, e, e_es, e2, e2_e2s:
+		for d in a, a_C, B, B_ushallow, B_ushallow_d, u, u_u2, e, e_es, e2, e2_e2s, e2_e2u:
 			os.mkdir(join(dir,d))
 		datafns = ('DATa1', 'UnV1',
 				join(a,'dAta2'), join(a, 'Unv2'), join(a_C,'dATa4'), join(a_C,'unV4'),
 				join(B,'daTA3'), join(B,'uNv3'),
 				join(B_ushallow,'uNvs'), join(B_ushallow_d,'unvP'), join(B_ushallow_d,'datA5'),
 				join(u,'uNVu'), join(u,'UnvY'), join(u_u2,'UNVX'),
-				join(e2_e2s,'DaTaE'),)
+				join(e2_e2s,'DaTaE'),join(e2_e2u,'unVe2'),)
 		lower_datafns = map(string.lower, datafns)
 		for fn in datafns:
 			open(join(dir,fn),'w').close()
@@ -499,14 +500,15 @@ d41d8cd98f00b204e9800998ecf8427e *daTA1""")
 			if string.count(o,'not verified')!=0: return 1
 			return 0
 		def r_unv_test(s,o):
-			if cfv_unvonly_test(s,o,9): return 1
-			if string.count(o,'not verified')!=7: return 1
+			if cfv_unvonly_test(s,o,10): return 1
+			if string.count(o,'not verified')!=8: return 1
 			if string.find(o,os.path.join('e','*'))>=0: return 1
 			if string.find(o,os.path.join('e2','*'))>=0: return 1
 			return 0
 		def r_unv_verbose_test(s,o):
-			if cfv_unvonly_test(s,o,9): return 1
-			if string.count(o,'not verified')!=9: return 1
+			if cfv_unvonly_test(s,o,10): return 1
+			if string.count(o,'not verified')!=10: return 1
+			if string.find(o,'*')>=0: return 1
 			return 0
 		test_generic(cfvcmd+" -i -U -p "+dir, r_test)
 		test_generic(cfvcmd+" -i -u -p "+dir, r_unv_test)
