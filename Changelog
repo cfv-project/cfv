@@ -3,6 +3,7 @@
 	* Added --encoding option.
 	* Specifying --encoding=raw will allow working with broken filenames. (But really, you should just fix them, if possible.)
 	* Torrent files now default to UTF-8 filename encoding, and specify the encoding field in the metainfo.
+	* Python 2.0 is now the minimum supported version.
 
 2005-02-04 - v1.18.1:
 	* Fix TypeError when using progress meter and checksumming stdin.
