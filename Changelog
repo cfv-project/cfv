@@ -8,6 +8,7 @@
 	* -u option will now show dir/* if no files in a dir were verified. (--list=unverified still lists each unverified file.)
 	* -uu can be used to force showing all unverified files.
 	* Fix handling of the [files...] arguments in recursive test mode.
+	* Add .p[0-9][0-9] (par1 recovery files) to the list of checksum file extensions to test automatically.
 
 2003-05-23 - v1.14:
 	* Support md5sum files with comments in them.
