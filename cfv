@@ -17,7 +17,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import getopt, re, os, string, sys, errno, time, copy
+import getopt, re, os, sys, errno, time, copy
 from stat import *
 
 cftypes={}
@@ -262,7 +262,7 @@ class Config:
 		except ValueError:
 			raise CFVValueError, "invalid int type '%s' for %s"%(v,o)
 	def setbool(self,o,v):
-		v=string.lower(v)
+		v = v.lower()
 		if v in ('yes','on','true','1'):
 			x=1
 		elif v in ('no','off','false','0'):
@@ -819,7 +819,7 @@ def ver2str(v):
 	while v or len(vers)<3:
 		vers.insert(0, str(v&0xFF))
 		v = v >> 8
-	return string.join(vers, '.')
+	return '.'.join(vers)
 
 import struct
 try: #support for 64bit ints in struct module was only added in python 2.2
@@ -1295,13 +1295,13 @@ def perhaps_showpath(file):
 
 _nocase_dir_cache = {}
 def nocase_dirfiles(dir,match):
-	"return list of filenames in dir whose string.lower() equals match"
+	"return list of filenames in dir whose lowercase value equals match"
 	dirkey=get_path_key(dir)
 	if not _nocase_dir_cache.has_key(dirkey):
 		d={}
 		_nocase_dir_cache[dirkey]=d
 		for a in os.listdir(dir):
-			l=string.lower(a)
+			l=a.lower()
 			if d.has_key(l):
 				d[l].append(a)
 			else:
@@ -1328,7 +1328,7 @@ def path_split(filename):
 
 def nocase_findfile(filename):
 	cur=os.curdir
-	parts=map(string.lower, path_split(filename))
+	parts=path_split(filename.lower())
 	#print 'nocase_findfile:',filename,parts,len(parts)
 	for i in range(0,len(parts)):
 		p=parts[i]
@@ -1642,7 +1642,7 @@ def printusage(err=0):
 		perror('  -L       don\'t follow symlinks')
 	perror('  -T       test mode (default)')
 	perror('  -C       create mode')
-	perror('  -t <t>   set type to <t> (%s, or auto(default))'%string.join(cftypes.keys(),', ')) #reduce(lambda a,b: a+b+', ',types.keys(),''))
+	perror('  -t <t>   set type to <t> (%s, or auto(default))'%', '.join(cftypes.keys()))
 	perror('  -f <f>   use <f> as list file')
 	perror('  -m       check only for missing files (don\'t compare checksums)')
 	perror('  -M       check checksums (default)')
@@ -1662,7 +1662,7 @@ def printusage(err=0):
 	perror('  -z       make gzipped files in auto create mode')
 	perror('  -Z       don\'t create gzipped files automatically. (default)')
 	perror('  -ZZ      never use gzip, even if file ends in .gz')
-	perror(' --list=<l> raw list files of type <l> (%s)'%string.join(LISTARGS.keys(),', '))
+	perror(' --list=<l> raw list files of type <l> (%s)'%', '.join(LISTARGS.keys()))
 	perror(' --list0=<l> same as list, but seperate files with nulls (useful for xargs -0)')
 	perror(' --fixpaths=<s>  replace any chars in <s> with %s'%os.sep)
 	perror(' --strippaths=VAL  strip leading components from file names.')
