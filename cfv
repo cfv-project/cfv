@@ -404,109 +404,76 @@ except NameError:
 					
 
 class PeekFile:
-	def __init__(self, fileobj, filename=None, doclose=1):
-		self.fobj = fileobj
-		self.peekbuf = ''
-		self.doclose = doclose
+	def __init__(self, fileobj, filename=None):
+		self.fileobj = fileobj
+		self.name = filename or fileobj.name
+	def peek(self, *args):
+		self.fileobj.seek(0)
+		return self.fileobj.read(*args)
+	def peekline(self, *args):
+		self.fileobj.seek(0)
+		return self.fileobj.readline(*args)
+	def peeknextline(self, *args):
+		return self.fileobj.readline(*args)
+	def _done_peeking(self):
+		self.fileobj.seek(0)
+		self.peeknextline = None
+		self.peekline = None
+		self.peek = None
+		self.readline = self.fileobj.readline
+		self.read = self.fileobj.read
+	def readline(self, *args):
+		self._done_peeking()
+		return self.readline(*args)
+	def read(self, *args):
+		self._done_peeking()
+		return self.read(*args)
 
-		self.name=filename or fileobj.name
-		self.setpoked()
-		self.write=self.fobj.write
-		self.flush=self.fobj.flush
-	def close(self):
-		if self.doclose:
-			self.fobj.close()
-		else:
-			self.flush()
-	def setpoked(self):
-		if self.peekbuf:
-			self.read = self.p_read
-			self.readline = self.p_readline
-		else:
-			self.read = self.fobj.read
-			self.readline = self.fobj.readline
-	def peek(self, size):
-		if len(self.peekbuf) < size:
-			self.peekbuf = self.peekbuf + self.fobj.read(size - len(self.peekbuf))
-		self.setpoked()
-		return self.peekbuf[:size]
-	def hackedreadline(self, size=-1):
-		try:
-			return self.fobj.readline(size)
-		except TypeError:
-			return self.fobj.readline() #hack for broken readline() in older gzip.py versions
-	_splitter = re.compile(r'([^\n\r]*[\n\r]*)([^\n\r].*?)??$',re.DOTALL)
-	def splitline(self):
-		x = self._splitter.match(self.peekbuf) # should never fail to match
-		if x.group(2):
-			return x.groups()
-		return (x.group(1), )
-	def peekline(self, size=-1):
-		lines = self.splitline()
-		if size >= 0 and len(self.peekbuf) >= size:
-			return lines[0][:size]
-		if len(lines) > 1 or '\n' in self.peekbuf or '\r' in self.peekbuf:
-			return lines[0]
-		if size >= 0:
-			self.peekbuf = self.peekbuf + self.hackedreadline(size - len(self.peekbuf))
-		else:
-			self.peekbuf = self.peekbuf + self.fobj.readline()
-		self.setpoked()
-		return self.peekbuf
-	def p_read(self, size=-1):
-		if size == -1:
-			ret = self.peekbuf
-			self.peekbuf = ''
-			self.setpoked()
-			return ret + self.read()
-		if size < len(self.peekbuf):
-			ret = self.peekbuf[:size]
-			self.peekbuf = self.peekbuf[size:]
-			self.setpoked()
-			return ret
-		ret = self.peekbuf
-		self.peekbuf = ''
-		self.setpoked()
-		return ret + self.read(size - len(ret))
-	def p_readline(self, size=-1): #note that on dos formatted files, this function is not 100% safe, if you peek the exact number of chars to cut the CRLF in half, then the LF will appear to be a empty line after this one... (sigh)
-		lines = self.splitline()
-		if size >= 0 and len(self.peekbuf) >= size:
-			self.peekbuf = lines[0][size:] + ''.join(lines[1:])
-			self.setpoked()
-			return lines[0][:size]
-		if len(lines) > 1 or '\n' in self.peekbuf or '\r' in self.peekbuf:
-			self.peekbuf = ''.join(lines[1:])
-			self.setpoked()
-			return lines[0]
-		self.peekbuf = ''
-		self.setpoked()
-		if size >=0 :
-			return lines[0] + self.hackedreadline(size - len(self.peekbuf))
-		else:
-			return lines[0] + self.fobj.readline()
+def PeekFileNonseekable(fileobj, filename):
+	import StringIO
+	return PeekFile(StringIO.StringIO(fileobj.read()), filename)
 
-
-def doopen(filename,mode='r'):
-	if mode[0]=='r' and string.find(mode,'b')<0:
-		mode=mode+'b' #read all files in binary mode (since .pars are binary, and we don't always know the filetype when opening, just open everything binary.  The text routines should cope with all types of line endings anyway, so this doesn't hurt us.)
+def PeekFileGzip(filename):
+	import gzip
 	if filename=='-':
-		fileobj=(mode[0]=='r' and sys.stdin or sys.stdout)
-	if config.gzip>=2 or (config.gzip>=0 and string.lower(filename[-3:])=='.gz'):
-		import gzip
-		if string.find(mode,'b')<0:
-			mode=mode+'b' #open gzip files in binary mode
-		if filename=='-':
-			if mode[0]=='r':
-				import StringIO
-				return PeekFile(gzip.GzipFile(mode=mode,fileobj=StringIO.StringIO(fileobj.read())), filename) #lovely hack since gzip.py requires a bunch of seeking.. bleh.
-			return PeekFile(gzip.GzipFile(mode=mode,fileobj=fileobj), filename)
-		return PeekFile(gzip.open(filename,mode), filename)
+		import StringIO
+		f = gzip.GzipFile(mode="rb",fileobj=StringIO.StringIO(sys.stdin.read())) #lovely hack since gzip.py requires a bunch of seeking.. bleh.
+	else:
+		f = gzip.open(filename,"rb")
+	try:
+		f.tell()
+	except (AttributeError, IOError):
+		return PeekFileNonseekable(f, filename) #gzip.py prior to python2.2 doesn't support seeking, and prior to 2.0 doesn't support readline(size)
+	else:
+		return PeekFile(f, filename)
+
+class NoCloseFile:
+	def __init__(self, fileobj):
+		self.write = fileobj.write
+		self.close = fileobj.flush
+
+
+def doopen_read(filename):
+	mode = 'rb' #read all files in binary mode (since .pars are binary, and we don't always know the filetype when opening, just open everything binary.  The text routines should cope with all types of line endings anyway, so this doesn't hurt us.)
+	if config.gzip>=2 or (config.gzip>=0 and filename[-3:].lower()=='.gz'):
+		return PeekFileGzip(filename)
 	else:
 		if filename=='-':
-			#return fileobj
-			#return os.fdopen(fileobj.fileno(),mode) #eek, even worse.
-			return PeekFile(fileobj,doclose=0)
-		return PeekFile(open(filename,mode))
+			return PeekFileNonseekable(sys.stdin, filename)
+		return PeekFile(open(filename, mode))
+
+def doopen_write(filename):
+	mode = 'w'
+	if config.gzip>=2 or (config.gzip>=0 and filename[-3:].lower()=='.gz'):
+		import gzip
+		mode=mode+'b' #open gzip files in binary mode
+		if filename=='-':
+			return gzip.GzipFile(filename=filename, mode=mode, fileobj=sys.stdout)
+		return gzip.open(filename, mode)
+	else:
+		if filename=='-':
+			return NoCloseFile(sys.stdout)
+		return open(filename, mode)
 
 
 class ChksumType:
@@ -524,7 +491,7 @@ class ChksumType:
 			if config.verbose>=0 or config.verbose==-3:
 				cf_stats = stats.make_sub_stats()
 			if not file:
-				file=doopen(filename,'r')
+				file=doopen_read(filename)
 			self.do_test_chksumfile(file)
 			if config.verbose>=0 or config.verbose==-3:
 				cf_stats.sub_stats_end(stats)
@@ -808,26 +775,17 @@ class CRC_MixIn:
 		if string.atol(c,16)!=string.atol(filecrc,16):
 			return c
 		
-class SFV(ChksumType, CRC_MixIn):
-	def auto_chksumfile_match(file):
-		#(r';.*generated (by|using) (.* on|.*sfv|.*crc32)',re.IGNORECASE),
-		return re.match(';|.+ [0-9a-fA-F]{8}[\n\r]*$', file.peekline(4096)) is not None
-	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
-
-	def auto_filename_match(filename):
-		return filename[-3:]=='sfv'
-	auto_filename_match = staticmethod(auto_filename_match)
-	
+class SFV_Base(ChksumType):
 	def do_test_chksumfile_print_testingline(self, file):
 		#override the default testing line to show first SFV comment line, if any
-		comment = file.peekline()
+		comment = file.peekline(128)
 		if comment[0]==';':
 			comment = ', ' + comment[1:].strip()
 			if len(comment)>102: #but limit the length in case its a really long one.
 				comment = comment[:99]+'...'
 		else:
 			comment = ''
-		pverbose('testing from %s (sfv%s)'%(file.name, comment))
+		pverbose('testing from %s (%s%s)'%(file.name, self.__class__.__name__.lower(), comment))
 
 	_sfvrem=re.compile(r'(.+) ([0-9a-fA-F]+)[\r\n]*$')
 	def do_test_chksumline(self, l):
@@ -836,19 +794,57 @@ class SFV(ChksumType, CRC_MixIn):
 		if not x: return -1
 		self.test_file(x.group(1),x.group(2))
 	
-	def make_std_filename(filename):
-		return filename+'.sfv'
-	make_std_filename = staticmethod(make_std_filename)
-	
 	def make_chksumfile(self, file):
 		ChksumType.make_chksumfile(self, file)
 		file.write('; Generated by cfv v%s on %s\n;\n'%(version,time.strftime('%Y-%m-%d at %H:%M.%S',time.gmtime(time.time()))))
+
+
+class SFV(SFV_Base, CRC_MixIn):
+	def auto_chksumfile_match(file):
+		l = file.peekline(4096)
+		while l:
+			if l[0]!=';':
+				return re.match('.+ [0-9a-fA-F]{8}[\n\r]*$', l) is not None
+			l = file.peeknextline(4096)
+	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
+
+	def auto_filename_match(filename):
+		return filename[-3:]=='sfv'
+	auto_filename_match = staticmethod(auto_filename_match)
+	
+	def make_std_filename(filename):
+		return filename+'.sfv'
+	make_std_filename = staticmethod(make_std_filename)
 		
 	def make_addfile(self, filename):
 		crc=getfilecrc(filename)[0]
 		return (crc, -1), '%s %s\n'%(filename,crc)
 
 cftypes['sfv']=SFV
+
+
+class SFVMD5(SFV_Base, MD5_MixIn):
+	def auto_chksumfile_match(file):
+		l = file.peekline(4096)
+		while l:
+			if l[0]!=';':
+				return re.match('.+ [0-9a-fA-F]{32}[\n\r]*$', l) is not None
+			l = file.peeknextline(4096)
+	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
+
+	def auto_filename_match(filename):
+		return 0 #filename[-3:]=='md5' #hm. People are probably used to .md5 making a md5sum format file, so we can't just do this.
+	auto_filename_match = staticmethod(auto_filename_match)
+	
+	def make_std_filename(filename):
+		return filename+'.md5'
+	make_std_filename = staticmethod(make_std_filename)
+		
+	def make_addfile(self, filename):
+		crc=getfilemd5(filename)[0]
+		return (crc, -1), '%s %s\n'%(filename,crc)
+	
+cftypes['sfvmd5']=SFVMD5
 
 
 #---------- csv ----------
@@ -1163,7 +1159,7 @@ def test(filename, typename, testfiles):
 		return
 
 	try:
-		file=doopen(filename,'r')
+		file=doopen_read(filename)
 		for typename,cftype in cftypes.items():
 			if cftype.auto_chksumfile_match(file):
 				cf = cftype(testfiles)
@@ -1232,7 +1228,7 @@ def make(cftype,ifilename,testfiles):
 			continue
 		if file==None:
 			try:
-				file=doopen(filename,'w')
+				file=doopen_write(filename)
 				cf = cftype(None)
 				cf.make_chksumfile(file)
 			except EnvironmentError, a:
