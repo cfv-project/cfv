@@ -134,11 +134,16 @@ class CodecWriter:
 		"""
 		return getattr(self.stream, name)
 
+codec_error_handler = 'backslashreplace'
+try:
+	codecs.lookup_error(codec_error_handler) #backslashreplace is only in python2.3+
+except:
+	codec_error_handler = 'replace'
 
 def setup_output():
 	global stdinfo,stdprogress,stdout,stderr
-	stdout = CodecWriter(getattr(sys.stdout,'encoding',None) or 'ascii', sys.stdout, errors='backslashreplace')
-	stderr = CodecWriter(getattr(sys.stderr,'encoding',None) or getattr(sys.stdout,'encoding',None) or 'ascii', sys.stderr, errors='backslashreplace')
+	stdout = CodecWriter(getattr(sys.stdout,'encoding',None) or 'ascii', sys.stdout, errors=codec_error_handler)
+	stderr = CodecWriter(getattr(sys.stderr,'encoding',None) or getattr(sys.stdout,'encoding',None) or 'ascii', sys.stderr, errors=codec_error_handler)
 	stdinfo = _stdout_special and stderr or stdout
 	# if one of stdinfo (usually stdout) or stderr is a tty, use it.  Otherwise use stdinfo.
 	stdprogress = stdinfo.isatty() and stdinfo or stderr.isatty() and stderr or stdinfo
