@@ -66,7 +66,7 @@ distclean-unixsrc: distclean
 	-rm cfv.bat cfv.txt
 
 cfv.txt: %.txt: %.1
-	man -l $< | sed -e 's/.//g' > $@
+	LANG=C man -l $< | sed -e 's/.//g' > $@
 
 distclean-winsrc: distclean cfv.txt
 	-rm Makefile cfv.1
