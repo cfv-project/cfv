@@ -85,6 +85,7 @@ class Config:
 	ignorecase=0
 	fixpaths=''
 	showpaths=2
+	gzip=0
 	def setdefault(self,type):
 		if type in types.keys():
 			self.defaulttype=type
@@ -114,7 +115,7 @@ class Config:
 			self.setdefault(v)
 		elif o in ("dirsort","cmdlinesort","showunverified","ignorecase"):
 			self.setbool(o,v)
-		elif o in ("verbose",):
+		elif o in ("verbose","gzip"):
 			self.setintr(o,v,-1,1)
 		elif o in ("recursive","showpaths"):
 			self.setintr(o,v,0,2)
@@ -216,11 +217,65 @@ class fv_type:
 		self.writeheader=wh
 		self.make_dofile=mdf
 
+class PeekFile:
+	"a (very) limited file-like class that gets around having to seek back after reading a line"
+	def __init__(self, fileobj, doclose=1):
+		self.fobj=fileobj
+		self.peeked=''
+		self.doclose=doclose
+		#speed up by not even checking peek status normally
+		self.readline=self.fobj.readline #take advantage of the fact that we only use size arg with peekline
+		self.write=self.fobj.write
+		self.flush=self.fobj.flush
+	def close(self):
+		if self.doclose:
+			self.fobj.close()
+		else:
+			self.flush()
+		self.fobj=None
+	def hackedreadline(self, size=-1):
+		try:
+			return self.fobj.readline(size)
+		except TypeError:
+			return self.fobj.readline() #hack for broken readline() in older gzip.py versions
+	def peekline(self, size=-1):
+		if not self.peeked:
+			self.peeked=self.hackedreadline(size)
+			self.readline=self.p_readline #now that we've peeked, we must use the peek-aware readline
+		return self.peeked
+	def p_readline(self, size=-1):
+		r=self.peeked
+		self.peeked=''
+		self.readline=self.fobj.readline #ok, we can go back to the real readline
+		if '\n' in r:
+			return r
+		return r+self.hackedreadline(size)
+
+def doopen(filename,mode='r'):
+	if filename=='-':
+		fileobj=(mode[0]=='r' and sys.stdin or sys.stdout)
+	if config.gzip>=2 or (config.gzip>=0 and string.lower(filename[-3:])=='.gz'):
+		import gzip
+		if string.find(mode,'b')<0:
+			mode=mode+'b' #open gzip files in binary mode
+		if filename=='-':
+			if mode[0]=='r':
+				import StringIO
+				return PeekFile(gzip.GzipFile(mode=mode,fileobj=StringIO.StringIO(fileobj.read()))) #lovely hack since gzip.py requires a bunch of seeking.. bleh.
+			return PeekFile(gzip.GzipFile(mode=mode,fileobj=fileobj))
+		return PeekFile(gzip.open(filename,mode))
+	else:
+		if filename=='-':
+			#return fileobj
+			#return os.fdopen(fileobj.fileno(),mode) #eek, even worse.
+			return PeekFile(fileobj,doclose=0)
+		return PeekFile(open(filename,mode))
+
 def testchecksumfile(type,file,filename,testfiles):
 	line=1
 	try:
 		if not file:
-			file=open(filename,'r')
+			file=doopen(filename,'r')
 		while 1:
 			l=file.readline()
 			if not len(l):
@@ -488,9 +543,8 @@ def testfile(testfiles,crctestfunc,filename,filecrc,filesize=-1):
 
 def test(filename,testfiles):
 	try:
-		file=open(filename,'r')
-		l=file.readline(512)#limit max line length to be read for testing, in case its a binary file or something.
-		file.seek(0)#go back to start so that type-specific test funcs get whole file
+		file=doopen(filename,'r')
+		l=file.peekline(512)#limit max line length to be read for testing, in case its a binary file or something.
 	except EnvironmentError, a:
 		stats.cferror=stats.cferror+1
 		perror('%s : %s (CF)'%(perhaps_showpath(filename),a[1]))
@@ -508,12 +562,12 @@ def test(filename,testfiles):
 def make(type,ifilename,testfiles):
 	global stats
 	file=None
-	if ifilename=='-':
-		filename=''
-	elif ifilename:
+	if ifilename:
 		filename=ifilename
 	else:
 		filename=type.make_std_filename(os.path.basename(curdir))
+		if config.gzip==1 and filename[-3:]!='.gz': #if user does -zz, perhaps they want to force the filename to be kept?
+			filename=filename+'.gz'
 	if os.path.exists(filename):
 		perror("%s already exists"%filename)
 		sys.exit(1)
@@ -546,10 +600,7 @@ def make(type,ifilename,testfiles):
 				continue
 		stats.num=stats.num+1
 		if file==None:
-			if filename:
-				file=open(filename,'w')
-			else:
-				file=sys.stdout
+			file=doopen(filename,'w')
 			type.writeheader(file)
 			dof=type.make_dofile
 		try:
@@ -563,8 +614,7 @@ def make(type,ifilename,testfiles):
 			continue
 		file.write(s)
 		stats.ok=stats.ok+1
-	if file!=None and filename:#don't close if we are writing to stdout
-		file.close()
+	file.close()
 	
 	for f in testdirs:
 		olddir=curdir
@@ -572,7 +622,7 @@ def make(type,ifilename,testfiles):
 		make(type,ifilename,None)
 		chdir(olddir)
 
-def start_test_dir():
+def start_test_dir(args):
 	if not config.showunverified:
 		return
 	global stats;
@@ -594,13 +644,6 @@ def finish_test_dir():
 			perror('%s : not verified'%perhaps_showpath(file,curdir))
 			stats.unverified=stats.unverified+1
 
-stats=Stats()
-config=Config()
-manual=0
-mode=0
-type='auto'
-starttime=time.time()
-
 def printusage(err=0):
 	perror('Usage: cfv [opts] [-T|-C] [-t type] [-f file] [files...]')
 	perror('  -r       recursive mode 1 (make seperate chksum files for each dir)')
@@ -608,7 +651,7 @@ def printusage(err=0):
 	perror('  -R       not recursive (default)')
 	perror('  -T       test mode (default)')
 	perror('  -C       create mode')
-	perror('  -t <t>   set type to <t> (%sor auto(default))'%reduce(lambda a,b: a+b+', ',types.keys(),''))
+	perror('  -t <t>   set type to <t> (%s, or auto(default))'%string.join(types.keys(),', ')) #reduce(lambda a,b: a+b+', ',types.keys(),''))
 	perror('  -f <f>   use <f> as list file')
 	perror('  -m       check only for missing files (don\'t compare checksums)')
 	perror('  -M       check checksums (default)')
@@ -620,6 +663,10 @@ def printusage(err=0):
 	perror('  -V       not verbose (default)')
 	perror('  -VV      don\'t print status line at end either')
 	perror('  -q       quiet mode.  check exit code for success.')
+	perror('  -zz      force making gzipped files, even if not ending in .gz')
+	perror('  -z       make gzipped files in auto create mode')
+	perror('  -Z       don\'t create gzipped files automatically. (default)')
+	perror('  -ZZ      never use gzip, even if file ends in .gz')
 	perror(' --fixpaths=<s>  replace any chars in <s> with %s'%os.sep)
 	perror(' --showpaths=<p> show full paths 0:never, 1:always, 2:in recursive mode(default)')
 	perror(' --help/-h show help')
@@ -629,137 +676,163 @@ def printhelp():
 	perror('cfv v%s - Copyright (C) 2000-2001 Matthew Mueller - GPL license'%version)
 	printusage()
 
-try:
-	optlist, args = getopt.getopt(sys.argv[1:], 'rRTCt:f:mMuUiIvVqh?', ['fixpaths=','showpaths=','help','version'])
-except getopt.error, a:
-	perror("cfv: %s"%a)
-	printusage(1)
+stats=Stats()
+config=Config()
 
-if config.cmdlinesort:
-	args.sort()
 
-prevopt=''
-for o,a in optlist:
-	if o=='-T':
-		mode=0
-	elif o=='-C':
-		mode=1
-	elif o=='-t':
-		if not a in ['auto']+types.keys():
-			perror('type %s not recognized'%a)
-			sys.exit(1)
-		type=a
-	elif o=='-f':
-		manual=1 #filename selected manually, don't try to autodetect
-		filename=a
+def main(argv):
+	manual=0
+	mode=0
+	type='auto'
+	starttime=time.time()
+
+	try:
+		optlist, args = getopt.getopt(argv, 'rRTCt:f:mMuUiIvVzZqh?', ['fixpaths=','showpaths=','help','version'])
+	except getopt.error, a:
+		perror("cfv: %s"%a)
+		printusage(1)
+
+	if config.cmdlinesort:
+		args.sort()
+
+	prevopt=''
+	for o,a in optlist:
+		if o=='-T':
+			mode=0
+		elif o=='-C':
+			mode=1
+		elif o=='-t':
+			if not a in ['auto']+types.keys():
+				perror('type %s not recognized'%a)
+				sys.exit(1)
+			type=a
+		elif o=='-f':
+			manual=1 #filename selected manually, don't try to autodetect
+			filename=a
+			if mode==0:
+				if config.ignorecase:
+					args=map(string.lower,args) #lowercase it all now, so we don't have to keep doing it over and over in the testfile
+				start_test_dir(args)
+				if type=='auto':
+					test(a,args)
+				else:
+					testchecksumfile(types[type],None,filename,args)
+					#types[type].checksumfile(open(a,'r'),args)
+				finish_test_dir()
+			else:
+				if type!='auto':
+					make(types[type],a,args)
+				else:
+					ok=0
+					testa=''
+					if config.gzip>=0 and a[-3:]=='.gz':
+							testa=a[:-3]
+					for type in types.values():
+						if type.automake_filenametest(a) or (testa and type.automake_filenametest(testa)):
+							make(type,a,args)
+							ok=1
+							break;
+					if not ok:
+						perror('specify a filetype with -t, or use standard extension')
+						sys.exit(1)
+		elif o=='-U':
+			config.showunverified=0
+		elif o=='-u':
+			config.showunverified=1
+		elif o=='-I':
+			config.ignorecase=0
+		elif o=='-i':
+			config.ignorecase=1
+		elif o=='-m':
+			config.docrcchecks=0
+		elif o=='-M':
+			config.docrcchecks=1
+		elif o=='-r':
+			if prevopt=='-r':
+				config.recursive=2
+			else:
+				config.recursive=1
+		elif o=='-R':
+			config.recursive=0
+		elif o=='-v':
+			config.verbose=1
+		elif o=='-V':
+			if prevopt=='-V':
+				config.verbose=-1
+			else:
+				config.verbose=0
+		elif o=='-q':
+			config.verbose=-2
+		elif o=='-z':
+			if prevopt=='-z':
+				config.gzip=2
+			else:
+				config.gzip=1
+		elif o=='-Z':
+			if prevopt=='-Z':
+				config.gzip=-1
+			else:
+				config.gzip=0
+		elif o=='--showpaths':
+			config.showpaths=int(a)
+		elif o=='--fixpaths':
+			config.fixpaths=a
+		elif o=='-h' or o=='-?' or o=='--help':
+			printhelp()
+		elif o=='--version':
+			print version
+			sys.exit(0)
+		prevopt=o
+
+	if not manual:
 		if mode==0:
+			rem=re.compile(r'md5|\.(csv|sfv)(\.gz)?$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
 			if config.ignorecase:
 				args=map(string.lower,args) #lowercase it all now, so we don't have to keep doing it over and over in the testfile
-			start_test_dir()
+			def autotest(rem,args):
+				start_test_dir(args)
+				for a in os.listdir('.'):
+					if config.recursive and os.path.isdir(a):
+						olddir=curdir
+						chdir(a)
+						autotest(rem,args)
+						chdir(olddir)
+					if rem.search(a):
+						test(a,args)
+				finish_test_dir()
+			autotest(rem,args)
+		else:
 			if type=='auto':
-				test(a,args)
-			else:
-				testchecksumfile(types[type],None,filename,args)
-				#types[type].checksumfile(open(a,'r'),args)
-			finish_test_dir()
-		else:
-			if type!='auto':
-				make(types[type],a,args)
-			else:
-				ok=0
-				for type in types.values():
-					if type.automake_filenametest(a):
-						make(type,a,args)
-						ok=1
-						break;
-				if not ok:
-					perror('specify a filetype with -t, or use standard extension')
-					sys.exit(1)
-	elif o=='-U':
-		config.showunverified=0
-	elif o=='-u':
-		config.showunverified=1
-	elif o=='-I':
-		config.ignorecase=0
-	elif o=='-i':
-		config.ignorecase=1
-	elif o=='-m':
-		config.docrcchecks=0
-	elif o=='-M':
-		config.docrcchecks=1
-	elif o=='-r':
-		if prevopt=='-r':
-			config.recursive=2
-		else:
-			config.recursive=1
-	elif o=='-R':
-		config.recursive=0
-	elif o=='-v':
-		config.verbose=1
-	elif o=='-V':
-		if prevopt=='-V':
-			config.verbose=-1
-		else:
-			config.verbose=0
-	elif o=='-q':
-		config.verbose=-2
-	elif o=='--showpaths':
-		config.showpaths=int(a)
-	elif o=='--fixpaths':
-		config.fixpaths=a
-	elif o=='-h' or o=='-?' or o=='--help':
-		printhelp()
-	elif o=='--version':
-		print version
-		sys.exit(0)
-	prevopt=o
+				type=config.defaulttype
+			make(types[type],None,args)
 
-if not manual:
-	if mode==0:
-		rem=re.compile(r'md5|\.(csv|sfv)$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
-		if config.ignorecase:
-			args=map(string.lower,args) #lowercase it all now, so we don't have to keep doing it over and over in the testfile
-		def autotest(rem):
-			start_test_dir()
-			for a in os.listdir('.'):
-				if config.recursive and os.path.isdir(a):
-					olddir=curdir
-					chdir(a)
-					autotest(rem)
-					chdir(olddir)
-				if rem.search(a):
-					test(a,args)
-			finish_test_dir()
-		autotest(rem)
+	pinfo('%i files'%stats.num,0)
+	pinfo(', %i OK' %stats.ok,0)
+	if stats.badcrc:
+		pinfo(', %i badcrc' %stats.badcrc,0)
+	if stats.badsize:
+		pinfo(', %i badsize' %stats.badsize,0)
+	if stats.notfound:
+		pinfo(', %i not found' %stats.notfound,0)
+	if stats.ferror:
+		pinfo(', %i file errors' %stats.ferror,0)
+	if stats.unverified:
+		pinfo(', %i unverified' %stats.unverified,0)
+	if stats.cferror:
+		pinfo(', %i chksum file errors' %stats.cferror,0)
+
+	elapsed=time.time()-starttime
+	pinfo('.  %.3f seconds, '%(elapsed),0)
+	if elapsed==0.0:
+		pinfo('%.1fK'%(stats.bytesread/1024.0),0)
 	else:
-		if type=='auto':
-			type=config.defaulttype
-		make(types[type],None,args)
+		pinfo('%.1fK/s'%(stats.bytesread/elapsed/1024.0),0)
 
-pinfo('%i files'%stats.num,0)
-pinfo(', %i OK' %stats.ok,0)
-if stats.badcrc:
-	pinfo(', %i badcrc' %stats.badcrc,0)
-if stats.badsize:
-	pinfo(', %i badsize' %stats.badsize,0)
-if stats.notfound:
-	pinfo(', %i not found' %stats.notfound,0)
-if stats.ferror:
-	pinfo(', %i file errors' %stats.ferror,0)
-if stats.unverified:
-	pinfo(', %i unverified' %stats.unverified,0)
-if stats.cferror:
-	pinfo(', %i chksum file errors' %stats.cferror,0)
-
-elapsed=time.time()-starttime
-pinfo('.  %.3f seconds, '%(elapsed),0)
-if elapsed==0.0:
-	pinfo('%.1fK'%(stats.bytesread/1024.0),0)
-else:
-	pinfo('%.1fK/s'%(stats.bytesread/elapsed/1024.0),0)
-
-pinfo('\n',0)
+	pinfo('\n',0)
 
 #if stats.badcrc or stats.badsize or stats.notfound or stats.ferror or stats.unverified or stats.cferror:
 #	sys.exit(1)
-sys.exit((stats.badcrc and 2) | (stats.badsize and 4) | (stats.notfound and 8) | (stats.ferror and 16) | (stats.unverified and 32) | (stats.cferror and 64))
+	sys.exit((stats.badcrc and 2) | (stats.badsize and 4) | (stats.notfound and 8) | (stats.ferror and 16) | (stats.unverified and 32) | (stats.cferror and 64))
+
+if __name__=='__main__':
+	main(sys.argv[1:])
