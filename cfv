@@ -1237,7 +1237,7 @@ def path_split(filename):
 	return parts
 
 def nocase_findfile(filename):
-	cur="."
+	cur=os.curdir
 	parts=map(string.lower, path_split(filename))
 	#print 'nocase_findfile:',filename,parts,len(parts)
 	for i in range(0,len(parts)):
@@ -1253,7 +1253,7 @@ def nocase_findfile(filename):
 			raise IOError, (errno.ENOENT,os.strerror(errno.ENOENT))
 		if len(matches)>1:
 			raise IOError, (errno.EEXIST,"More than one name matches %s"%os.path.join(cur,p))
-		if cur=='.':
+		if cur==os.curdir:
 			cur=matches[0] #don't put the ./ on the front of the name
 		else:
 			cur=os.path.join(cur,matches[0])
@@ -1345,7 +1345,7 @@ def make(cftype,ifilename,testfiles):
 		file=IOError #just need some special value to indicate a cferror so that recursive mode still continues to work, IOError seems like a good choice ;)
 	if not testfiles or not len(testfiles):
 		tfauto=1
-		testfiles=os.listdir('.')
+		testfiles=os.listdir(os.curdir)
 		if config.dirsort:
 			testfiles.sort()
 	else:
@@ -1442,7 +1442,7 @@ def start_test_dir(args):
 	if len(args):
 		filelist=args[:] #make a copy so we don't modify the args list (teehee)
 	else:
-		filelist=os.listdir('.')
+		filelist=os.listdir(os.curdir)
 	#dir=curdir
 	#stats.unverifiedfiles[dir]=map(lambda d: os.path.join(dir,d),filelist))
 	#stats.unverifiedfiles[dir]=filelist
@@ -1461,7 +1461,7 @@ def finish_test_dir():
 atrem=re.compile(r'md5|\.(csv|sfv|par|par2|crc)(\.gz)?$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
 def autotest(typename, args):
 	start_test_dir(args)
-	for a in os.listdir('.'):
+	for a in os.listdir(os.curdir):
 		if config.recursive and visit_dir(a):
 			try:
 				chdir(a)
