@@ -73,11 +73,12 @@ distclean-winsrc: distclean cfv.txt
 	mv cfv cfv.py
 	todos *.txt COPYING README Changelog cfv.bat cfv.py test/*.py
 
+PY2EXEDIR=/m/c/temp/cfv
 nsis-prepare: cfv.txt
 	#hahaha, ugly hardcodedhackness
-	cp cfv.txt cfv.nsi ~/mnt/tmp/cfv
-	cp Changelog ~/mnt/tmp/cfv/Changelog.txt
-	cp COPYING ~/mnt/tmp/cfv/COPYING.txt
-	cp cfv ~/mnt/tmp/2exe/cfv.py
-	todos ~/mnt/tmp/cfv/*.txt
+	cp cfv.txt cfv.nsi setup*.py $(PY2EXEDIR)
+	cp Changelog $(PY2EXEDIR)/Changelog.txt
+	cp COPYING $(PY2EXEDIR)/COPYING.txt
+	cp cfv $(PY2EXEDIR)/cfv.py
+	todos $(PY2EXEDIR)/*.txt
 
