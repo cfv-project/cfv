@@ -1,3 +1,6 @@
+2000-08-16 - v1.3:
+	* .sfv file recognition loosened a bit (nvCRC32 says generated using instead of by)
+	* uses fchksum module if available. (1.1x-2.0x faster)
 2000-08-11 - v1.2:
 	* recursive mode (-r and -rr)
 	* only creates checksum file when there is actually something to put in it
