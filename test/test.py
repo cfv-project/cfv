@@ -600,7 +600,7 @@ d41d8cd98f00b204e9800998ecf8427e *daTA1""")
 
 def test_encoding2():
 	"""Non-trivial (actual non-ascii characters) encoding test.
-	These tests will probably always fail unless you use a unicode locale."""
+	These tests will probably always fail unless you use a unicode locale and python 2.3+."""
 	d = mkdtemp()
 	try:
 		cfn = os.path.join(d,u'\u3070\u304B.torrent')
@@ -615,8 +615,11 @@ def test_encoding2():
 		shutil.copyfile('data4',os.path.join(bakad,u'\u2600'))
 		test_generic(cfvcmd+" -q -T -p "+d, rcurry(status_test,expected=0))
 		test_generic(cfvcmd+" -v -T -p "+d, rcurry(cfv_all_test,ok=4))
-	finally:
-		shutil.rmtree(d)
+	except:
+		import traceback
+		test_log_results('test_encoding2','foobar',''.join(traceback.format_exception(*sys.exc_info())),'foobar',{}) #yuck.  I really should switch this crap all to unittest ...
+	#finally:
+	shutil.rmtree(d)
 	
 
 cfvenv=''
