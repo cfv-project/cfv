@@ -210,8 +210,12 @@ def ren_test(f,extra=None,verify=None,t=None):
 		def flscmp(t,n,fls=flsf):
 			for fl in fls:
 				fn= n!=None and fl%n or fl
-				o=open(fn,'rb').read()
-				r=o!=t
+				try:
+					o = open(fn,'rb').read()
+					r = o!=t
+				except IOError, e:
+					r = 1
+					o = str(e)
 				test_log_results('cmp %s for %s'%(fn,t),r,o,r)
 		flsw('hello')
 		test_generic("%s -C -t %s"%(cmd,f),cfv_test)
@@ -253,60 +257,76 @@ if len(sys.argv)>1:
 #set everything to default in case user has different in config file
 cfvcmd=cfvcmd+" -ZNVRMUI"
 
-	
+
 logfile=open("test.log","w")
 
-ren_test('md5')
-ren_test('md5',extra='-rr')
-ren_test('bsdmd5')
-ren_test('sfv')
-ren_test('csv')
-ren_test('csv2')
-ren_test('csv4')
+def all_tests():
+	stats.ok = stats.failed = 0
+	ren_test('md5')
+	ren_test('md5',extra='-rr')
+	ren_test('bsdmd5')
+	ren_test('sfv')
+	ren_test('csv')
+	ren_test('csv2')
+	ren_test('csv4')
 
-T_test(".md5")
-T_test(".md5.gz")
-T_test(".bsdmd5")
-T_test(".csv")
-T_test(".sfv")
-T_test(".csv2")
-T_test("crlf.md5")
-T_test("crlf.csv")
-T_test("crlf.sfv")
+	T_test(".md5")
+	T_test(".md5.gz")
+	T_test(".bsdmd5")
+	T_test(".csv")
+	T_test(".sfv")
+	T_test(".csv2")
+	T_test("crlf.md5")
+	T_test("crlf.csv")
+	T_test("crlf.sfv")
 
-#test correct handling of args in recursive testmode (disabled since this isn't fixed yet ;)
-#test_generic(cfvcmd+" -r a",cfv_test)
-#test_generic(cfvcmd+" -ri a",cfv_test)
-#test_generic(cfvcmd+" -ri A",cfv_test)
-#test_generic(cfvcmd+" -rm a",cfv_test)
-#test_generic(cfvcmd+" -rim a",cfv_test)
-#test_generic(cfvcmd+" -r a/C",cfv_test)
-#test_generic(cfvcmd+" -ri A/c",cfv_test)
-#test_generic(cfvcmd+" -r a/C/foo.bar",cfv_test)
+	#test correct handling of args in recursive testmode (disabled since this isn't fixed yet ;)
+	#test_generic(cfvcmd+" -r a",cfv_test)
+	#test_generic(cfvcmd+" -ri a",cfv_test)
+	#test_generic(cfvcmd+" -ri A",cfv_test)
+	#test_generic(cfvcmd+" -rm a",cfv_test)
+	#test_generic(cfvcmd+" -rim a",cfv_test)
+	#test_generic(cfvcmd+" -r a/C",cfv_test)
+	#test_generic(cfvcmd+" -ri A/c",cfv_test)
+	#test_generic(cfvcmd+" -r a/C/foo.bar",cfv_test)
 
-test_generic(cfvcmd+" -i -T -f testcase.csv",cfv_test)
-test_generic(cfvcmd+r" --fixpaths \\/ -T -f testfix.csv",cfv_test)
-test_generic(cfvcmd+r" --fixpaths \\/ -T -f testfix.csv4",cfv_test)
-test_generic(cfvcmd+r" -i --fixpaths \\/ -T -f testfix.csv4",cfv_test)
+	test_generic(cfvcmd+" -i -T -f testcase.csv",cfv_test)
+	test_generic(cfvcmd+r" --fixpaths \\/ -T -f testfix.csv",cfv_test)
+	test_generic(cfvcmd+r" --fixpaths \\/ -T -f testfix.csv4",cfv_test)
+	test_generic(cfvcmd+r" -i --fixpaths \\/ -T -f testfix.csv4",cfv_test)
 
-C_test("bsdmd5","-t bsdmd5")#,verify=lambda f: test_generic("md5 -c "+f,status_test)) #bsd md5 seems to have no way to check, only create
-if pathfind('md5sum'): #don't report pointless errors on systems that don't have md5sum
-	md5verify=lambda f: test_generic("md5sum -c "+f,status_test)
-else:
-	md5verify=None
-C_test("md5",verify=md5verify)
-C_test("csv")
-C_test("sfv")
-C_test("csv2","-t csv2")
-C_test("csv4","-t csv4")
-#test_generic("../cfv -V -T -f test.md5",cfv_test)
-#test_generic("../cfv -V -tcsv -T -f test.md5",cfv_test)
+	C_test("bsdmd5","-t bsdmd5")#,verify=lambda f: test_generic("md5 -c "+f,status_test)) #bsd md5 seems to have no way to check, only create
+	if pathfind('md5sum'): #don't report pointless errors on systems that don't have md5sum
+		md5verify=lambda f: test_generic("md5sum -c "+f,status_test)
+	else:
+		md5verify=None
+	C_test("md5",verify=md5verify)
+	C_test("csv")
+	C_test("sfv")
+	C_test("csv2","-t csv2")
+	C_test("csv4","-t csv4")
+	#test_generic("../cfv -V -T -f test.md5",cfv_test)
+	#test_generic("../cfv -V -tcsv -T -f test.md5",cfv_test)
 
-test_generic(cfvcmd+" -u -f test.md5 data* test.py",cfv_unv_test)
-test_generic(cfvcmd+" -u -f test.md5 data* test.py test.md5",cfv_unv_test)
-test_generic(cfvcmd+r" -i --fixpaths \\/ -Trru",lambda s,o: cfv_unv_test(s,o,None))
-test_generic(cfvcmd+" -h",cfv_version_test)
+	test_generic(cfvcmd+" -u -f test.md5 data* test.py",cfv_unv_test)
+	test_generic(cfvcmd+" -u -f test.md5 data* test.py test.md5",cfv_unv_test)
+	test_generic(cfvcmd+r" -i --fixpaths \\/ -Trru",lambda s,o: cfv_unv_test(s,o,None))
+	test_generic(cfvcmd+" -h",cfv_version_test)
 
-donestr="tests finished:  ok: %i  failed: %i"%(stats.ok,stats.failed)
-log("\n"+donestr)
-print donestr
+	donestr="tests finished:  ok: %i  failed: %i"%(stats.ok,stats.failed)
+	log("\n"+donestr)
+	print donestr
+
+print 'testing...'
+all_tests()
+s,o=commands.getstatusoutput(cfvcmd+" --version")
+if string.find(o,'fchksum')>=0:
+	print 'testing without fchksum...'
+	cfvcmd="CFV_NOFCHKSUM=x "+cfvcmd
+	all_tests()
+s,o=commands.getstatusoutput(cfvcmd+" --version")
+if string.find(o,'+mmap')>=0:
+	print 'testing without mmap...'
+	cfvcmd="CFV_NOMMAP=x "+cfvcmd
+	all_tests()
+
