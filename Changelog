@@ -12,6 +12,7 @@
 	* Fix FutureWarning "%X of negative int ..." on Python 2.3.
 	* Add progress meter for file checksumming. (Can be toggled with the progress option.)
 	* Only the new version 1.7 of fchksum module is supported.
+	* Fix fixpaths option on windows.
 
 2003-05-23 - v1.14:
 	* Support md5sum files with comments in them.

@@ -1476,9 +1476,10 @@ def strippath(filename, num='a', _splitdrivere=re.compile(r"[a-z]:\\",re.I)):
 		return parts[-1]
 	return os.path.join(*parts[num:])
 
+_os_sep_escaped = os.sep.replace('\\','\\\\')
 def fixpath(filename):
 	if config.fixpaths:
-		return config.fixpaths.sub(os.sep, filename)
+		return config.fixpaths.sub(_os_sep_escaped, filename)
 	return filename
 
 
