@@ -1,4 +1,4 @@
-2002-xx-xx - v1.xx:
+2002-09-23 - v1.12:
 	* Fix make install when target directories don't already exist. (Reported by Svend S. Sorensen)
 	* Fix cfv -u -t blah -f foo.blah from reporting foo.blah as unverified.
 	* Make create mode also display seperate stats per checksum file. 
