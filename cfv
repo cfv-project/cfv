@@ -1487,10 +1487,11 @@ class Torrent(ChksumType):
 			piecefiles = []
 			wanttest = 0
 			while curpos < curend:
-				while curpos < files[curf].totpos or curpos >= files[curf].totpos+files[curf].size:
+				while curpos >= files[curf].totpos+files[curf].size:
 					curf = curf + 1
 				f=files[curf]
 				fcurpos = curpos-f.totpos
+				assert fcurpos >= 0
 				fpiecelen = min(curend-curpos, f.size-fcurpos)
 				piecefiles.append((f,fcurpos,fpiecelen))
 				curpos = curpos + fpiecelen
