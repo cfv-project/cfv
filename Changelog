@@ -1,6 +1,6 @@
 2001-12-06 - v1.10:
 	* Fix file.close() exception on -C in empty dir.
-	* Add mmap support for faster checksumming.
+	* Add mmap support for faster checksumming when not using fchksum module.
 	* Add CFV_NOFCHKSUM and CFV_NOMMAP env vars. (Mostly for testing/debugging.)
 	* Handle files made by buggy programs that add quotes to filenames.
 	* Print stats about number of case differences and quoted filenames.
