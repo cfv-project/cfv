@@ -36,6 +36,13 @@ class rcurry:
 	def __call__(self, *_args, **_kwargs):
 		return apply(self.curry_func, (_args+self.curry_args), _kwargs)
 
+class NullFile:
+	def isatty(self): return 0
+	def write(self,s): pass
+	def writelines(self,l): pass
+	def flush(self): pass
+	def close(self): pass
+nullfile = NullFile()
 
 def pathfind(p, path=string.split(os.environ.get('PATH',os.defpath),os.pathsep)):
 	for d in path:
@@ -104,13 +111,18 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
 	obuf = StringIO()
 	saved = sys.stdin,sys.stdout,sys.stderr,sys.argv
 	cwd = os.getcwd()
+	def open_output(file,obuf=obuf):
+		if file:
+			if file=="/dev/null":
+				return nullfile
+			return open(file,'wb')
+		else:
+			return obuf
 	try:
 		if stdin:  sys.stdin = open(stdin,'rb')
 		else:      sys.stdin = StringIO()
-		if stdout: sys.stdout = open(stdout,'wb')
-		else:      sys.stdout = obuf
-		if stderr: sys.stderr = open(stderr,'wb')
-		else:      sys.stderr = obuf
+		sys.stdout = open_output(stdout)
+		sys.stderr = open_output(stderr)
 		sys.argv = [cfvexe]
 		for arg in cmd.split(' '): #bad.  shlex.split would be perfect, but its only in python >=2.3
 			arg = arg.replace('"','') # hack so --foo="bar" works.
