@@ -61,6 +61,8 @@ def fmt_hassize(f):
 	return fmt_info[f][1]
 def fmt_cancreate(f):
 	return fmt_info[f][2]
+def allfmts():
+	return fmt_info.keys()
 
 
 if hasattr(operator,'gt'):
@@ -469,6 +471,42 @@ def C_test(f,extra=None,verify=None,t=None,d='data?'):
 		test_generic("%s -p %s -C -f %s"%(cmd,dir,f),rcurry(cfv_test,op_eq,0))
 	finally:
 		os.rmdir(dir)
+
+def C_funkynames_test(t):
+	d = mkdtemp()
+	d2 = mkdtemp()
+	try:
+		num = 0
+		for i in range(1,256):
+			n = chr(i)
+			if n in (os.sep, os.altsep, '\n', '\r'):
+				continue
+			if n == os.curdir: n = 'foo'+n # can't create a file of name '.', but 'foo.' is ok.
+			if t in ('sfv','sfvmd5') and n==';': n = 'foo'+n # ';' is comment character in sfv files, filename cannot start with it.
+			if t.startswith('csv') and n==',': continue; # ',' isn't handled properly yet in csv files FIXME
+			if t == 'crc' and n.isspace(): n = n + 'foo' # crc format can't handle trailing whitespace in filenames
+			try:
+				f = open(os.path.join(d,n),'wb')
+				f.write(n)
+				f.close()
+				os.mkdir(os.path.join(d2,n))
+				f = open(os.path.join(d2,n,n),'wb')
+				f.write(n)
+				f.close()
+			except EnvironmentError:
+				continue # stupid filesystem doesn't allow the character we wanted, oh well.
+			num = num + 1
+		cfn = os.path.join(d,'funky.'+t)
+		test_generic(cfvcmd+" -v -C -p %s -t %s -f %s"%(d,t,cfn), rcurry(cfv_all_test,files=num,ok=num))
+		test_generic(cfvcmd+" -v -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=num,ok=num))
+		test_generic(cfvcmd+" -v -u -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=num,ok=num,unv=0))
+		dcfn = os.path.join(d2,'funkydeep.'+t)
+		test_generic(cfvcmd+" -v -rr -C -p %s -t %s -f %s"%(d2,t,dcfn), rcurry(cfv_all_test,files=num,ok=num))
+		test_generic(cfvcmd+" -v -T -p %s -f %s"%(d2,dcfn), rcurry(cfv_all_test,files=num,ok=num))
+		test_generic(cfvcmd+" -v -u -T -p %s -f %s"%(d2,dcfn), rcurry(cfv_all_test,files=num,ok=num,unv=0))
+	finally:
+		shutil.rmtree(d)
+		shutil.rmtree(d2)
 
 def ren_test(f,extra=None,verify=None,t=None):
 	join=os.path.join
@@ -979,6 +1017,9 @@ def all_tests():
 	C_test("crc")
 	#test_generic("../cfv -V -T -f test.md5",cfv_test)
 	#test_generic("../cfv -V -tcsv -T -f test.md5",cfv_test)
+	for t in allfmts():
+		if fmt_cancreate(t):
+			C_funkynames_test(t)
 
 	test_generic(cfvcmd+" -m -v -T -t sfv", lambda s,o: cfv_typerestrict_test(s,o,'sfv'))
 	test_generic(cfvcmd+" -m -v -T -t sfvmd5", lambda s,o: cfv_typerestrict_test(s,o,'sfvmd5'))
