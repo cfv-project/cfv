@@ -3,7 +3,6 @@ cfv 1.11  Copyright 2000-2002 Matthew Mueller <donut@azstarnet.com>
 
 Requirements:
   Python >= 1.6           http://www.python.org/
-    (including the zlib module)
 
 Optional:
   Python Imaging Library  http://www.pythonware.com/products/pil/
