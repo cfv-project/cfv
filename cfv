@@ -858,11 +858,9 @@ try:
 except ImportError:
 	import md5
 	try:
-		import zlib
-		_crc32=zlib.crc32
+		from zlib import crc32 as _crc32
 	except ImportError:
-		import binascii
-		_crc32=binascii.crc32
+		from binascii import crc32 as _crc32
 	class CRC32:
 		digest_size = 4
 		def __init__(self, s=''):
