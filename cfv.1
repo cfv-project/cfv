@@ -79,6 +79,7 @@ Examples: --showpaths=y-a always shows absolute paths.  --showpaths=n never show
 Change to directory before doing anything.
 .IP "-f file"
 Specify the name of the checksum file to test or create.
+If file is -, stdin (for -T) or stdout (for -C) will be used.
 .IP "-t type"
 Specify the type of the file.  Can be sfv, csv, csv2, csv4, md5, bsdmd5, par, or auto.  The default is auto,
 which will detect the file type for you.  When creating, if type is auto an sfv
