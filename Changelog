@@ -1,4 +1,4 @@
-2002-01-xx - v1.11:
+2002-04-08 - v1.11:
 	* Due to architectural changes, unicode requirements(for .par support), etc, cfv now requires python 1.6 or higher.
 	* Add test-only support for PAR files. (python 1.6 or 2.2 recommended for better performance.)
 	* Print first SFV comment line in testing from blah.sfv line.  (usually shows creating sfv program/creation time.)
