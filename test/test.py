@@ -107,6 +107,18 @@ def pathjoin_and_mkdir(*components):
 		os.makedirs(path)
 	return result
 
+def writefile_and_reopen(fn,data):
+	"""Write data to file, close, and then reopen readonly, and return the fd.
+
+	This is for the benefit of windows, where you need to close and reopen the
+	file as readonly in order for it to be openable simultaneously.
+	"""
+	f = open(fn,'wb')
+	if data:
+		f.write(data)
+	f.close()
+	f = open(fn,'rb')
+	return f
 
 class stats:
 	ok=0
@@ -689,9 +701,7 @@ def search_test(t,test_nocrc=0,extra=None):
 	d = mkdtemp()
 	ffoo = fdata4 = None
 	try:
-		ffoo=open(os.path.join(d,'foo'),'wb')
-		ffoo.write(open('data4','rb').read())
-		ffoo.flush()
+		ffoo=writefile_and_reopen(os.path.join(d,'foo'), open('data4','rb').read())
 		#note that we leave the file open.  This is because windows allows renaming of files in a readonly dir, but doesn't allow renaming of open files.  So if we do both the test will work on both nix and win.
 		os.chmod(d,stat.S_IRUSR|stat.S_IXUSR)
 		try:
@@ -701,7 +711,7 @@ def search_test(t,test_nocrc=0,extra=None):
 			# if the rename failed, then we're good to go for these tests..
 			test_generic(cmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=1,ferror=1,notfound=3))
 			os.chmod(d,stat.S_IRWXU)
-			fdata4=open(os.path.join(d,'data4'),'wb')
+			fdata4=writefile_and_reopen(os.path.join(d,'data4'),'')
 			os.chmod(d,stat.S_IRUSR|stat.S_IXUSR)
 			test_generic(cmd+" -v -n -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=1,ferror=2,notfound=3))
 	finally:
