@@ -1000,7 +1000,6 @@ class SFV_Base(ChksumType):
 		#override the default testing line to show first SFV comment line, if any
 		ChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(128), ';'))
 
-	_sfvrem=re.compile(r'(.+) ([0-9a-fA-F]+)[\r\n]*$')
 	def do_test_chksumline(self, l):
 		if l[0]==';': return
 		x=self._sfvrem.match(l)
@@ -1022,6 +1021,8 @@ class SFV(SFV_Base, CRC_MixIn):
 	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	auto_filename_match = 'sfv$'
+	
+	_sfvrem=re.compile(r'(.+) ([0-9a-fA-F]{8})[\r\n]*$')
 	
 	def make_std_filename(filename):
 		return filename+'.sfv'
@@ -1046,6 +1047,8 @@ class SFVMD5(SFV_Base, MD5_MixIn):
 
 	#auto_filename_match = 'md5$' #hm. People are probably used to .md5 making a md5sum format file, so we can't just do this.
 	
+	_sfvrem=re.compile(r'(.+) ([0-9a-fA-F]{32})[\r\n]*$')
+	
 	def make_std_filename(filename):
 		return filename+'.md5'
 	make_std_filename = staticmethod(make_std_filename)
@@ -1060,13 +1063,13 @@ register_cftype('sfvmd5', SFVMD5)
 #---------- csv ----------
 
 class CSV(ChksumType, CRC_MixIn):
-	def auto_chksumfile_match(file, _autorem=re.compile('[^,]+,[0-9]+,[0-9a-fA-F]+,[\n\r]*$')):
+	def auto_chksumfile_match(file, _autorem=re.compile('[^,]+,[0-9]+,[0-9a-fA-F]{8},[\n\r]*$')):
 		return _autorem.match(file.peekline(4096)) is not None
 	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	auto_filename_match = 'csv$'
 	
-	_csvrem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]+),')
+	_csvrem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]{8}),')
 	def do_test_chksumline(self, l):
 		x=self._csvrem.match(l)
 		if not x: return -1
@@ -1088,11 +1091,11 @@ register_cftype('csv', CSV)
 
 class CSV4(ChksumType, CRC_MixIn):
 	
-	def auto_chksumfile_match(file, _autorem=re.compile(r'[^,]+,[0-9]+,[0-9a-fA-F]+,[^,]*,[\n\r]*$')):
+	def auto_chksumfile_match(file, _autorem=re.compile(r'[^,]+,[0-9]+,[0-9a-fA-F]{8},[^,]*,[\n\r]*$')):
 		return _autorem.match(file.peekline(4096)) is not None
 	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
-	_csv4rem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]+),([^,]*),')
+	_csv4rem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]{8}),([^,]*),')
 	def do_test_chksumline(self, l):
 		x=self._csv4rem.match(l)
 		if not x: return -1
