@@ -83,6 +83,8 @@ class Stats:
 	unverifiedfiles=[]
 	unverified=0
 	listfiles=[]
+	diffcase=0
+	quoted=0
 
 class Config:
 	verbose=0 # -1=quiet  0=norm  1=noisy
@@ -562,6 +564,8 @@ def nocase_findfile(filename):
 			cur=matches[0] #don't put the ./ on the front of the name
 		else:
 			cur=os.path.join(cur,matches[0])
+	if filename != cur:
+		stats.diffcase = stats.diffcase + 1
 	return cur
 	
 def fixpath(filename):
@@ -591,9 +595,17 @@ def testfile(testfiles,crctestfunc,filename,filecrc,filesize=-1):
 		if config.ignorecase:
 			#we need to find the correct filename if using showunverified, even if the filename we are given works, since on FAT/etc filesystems the incorrect case will still return true from os.path.exists, but it could be the incorrect case to remove from the unverified files list.
 			if config.showunverified or not os.path.exists(l_filename):
-				l_filename=nocase_findfile(l_filename)
-		if l_filename[0]=='"' and l_filename[-1]=='"' and not os.path.exists(l_filename):
+				try:
+					l_filename=nocase_findfile(l_filename)
+				except IOError, e:
+					if e[0]==errno.ENOENT and l_filename[0]=='"' and l_filename[-1]=='"':
+						stats.quoted = stats.quoted + 1
+						l_filename=nocase_findfile(l_filename[1:-1])
+					else:
+						raise
+		elif l_filename[0]=='"' and l_filename[-1]=='"' and not os.path.exists(l_filename):
 			l_filename=l_filename[1:-1] #work around buggy sfv encoders that quote filenames
+			stats.quoted = stats.quoted + 1
 		if config.showunverified:
 			try:
 				stats.unverifiedfiles[-1].remove(l_filename)
@@ -966,6 +978,10 @@ def main(argv):
 		pinfo(', %i unverified' %stats.unverified,'')
 	if stats.cferror:
 		pinfo(', %i chksum file errors' %stats.cferror,'')
+	if stats.diffcase:
+		pinfo(', %i differing cases' %stats.diffcase,'')
+	if stats.quoted:
+		pinfo(', %i quoted filenames' %stats.quoted,'')
 
 	elapsed=time.time()-starttime
 	pinfo('.  %.3f seconds, '%(elapsed),'')
