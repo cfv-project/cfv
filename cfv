@@ -735,7 +735,7 @@ def printusage(err=0):
 	perror(' --showpaths=<p> show full paths 0:never, 1:always, 2:in recursive mode(default)')
 	perror(' --renameformat=<f> format string to use with -n option')
 	perror(' --help/-h show help')
-	perror(' --version show version')
+	perror(' --version show cfv and module versions')
 	sys.exit(err)
 def printhelp():
 	perror('cfv v%s - Copyright (C) 2000-2001 Matthew Mueller - GPL license'%version)
@@ -853,7 +853,9 @@ def main(argv):
 		elif o=='-h' or o=='-?' or o=='--help':
 			printhelp()
 		elif o=='--version':
-			print version
+			print 'cfv %s'%version
+			try: print 'fchksum %s'%fchksum.version()
+			except NameError: pass
 			sys.exit(0)
 		prevopt=o
 

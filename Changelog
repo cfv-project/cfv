@@ -4,6 +4,7 @@
 	* Added change to directory first option (-p).
 	* Makefile uses PYTHON var instead of hardcoded "python".
 	* Added configurable renaming of bad files.
+	* Extended --version output.
 2001-02-27 - v1.7.2:
 	* Fixed makefile not finding pkgdir if installing to /usr/local and no site-packages in /usr/local is in python's sys.path.
 	* Added -q option.
