@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-import commands,re,os,sys,string,operator
+import commands,re,os,sys,string,operator,shutil
 
 if hasattr(operator,'gt'):
 	op_gt=operator.gt
@@ -301,6 +301,26 @@ def ren_test(f,extra=None,verify=None,t=None):
 			os.unlink(d)
 		os.rmdir(dir)
 
+def symlink_test():
+	if not hasattr(os, 'symlink'):
+		return
+	
+	dir='s.test'
+	dir1='d1'
+	dir2='d2'
+	try:
+		os.mkdir(dir)
+		os.mkdir(os.path.join(dir, dir1))
+		os.mkdir(os.path.join(dir, dir2))
+		os.symlink(os.path.join(os.pardir, dir2), os.path.join(dir, dir1, 'l2'))
+		os.symlink(os.path.join(os.pardir, dir1), os.path.join(dir, dir2, 'l1'))
+		test_generic(cfvcmd+" -l -r -p "+dir, rcurry(cfv_test,op_eq,0))
+		test_generic(cfvcmd+" -L -r -p "+dir, rcurry(cfv_test,op_eq,0))
+		test_generic(cfvcmd+" -l -r -C -p "+dir, rcurry(cfv_test,op_eq,0))
+		test_generic(cfvcmd+" -L -r -C -p "+dir, rcurry(cfv_test,op_eq,0))
+	finally:
+		shutil.rmtree(dir)
+
 cfvcmd='../cfv'
 
 if len(sys.argv)>1:
@@ -318,6 +338,9 @@ logfile=open("test.log","w")
 
 def all_tests():
 	stats.ok = stats.failed = 0
+
+	symlink_test()
+	
 	ren_test('md5')
 	ren_test('md5',extra='-rr')
 	ren_test('bsdmd5')

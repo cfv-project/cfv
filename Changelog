@@ -1,3 +1,7 @@
+2003-xx-xx - v1.xx:
+	* Add -l/-L options to toggle symlink following.
+	* When following symlinks, don't die on cycles.
+
 2003-05-23 - v1.14:
 	* Support md5sum files with comments in them.
 	* Support PAR2 files.

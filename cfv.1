@@ -1,4 +1,4 @@
-.TH cfv 1 "22 May 2003"
+.TH cfv 1 "14 Jun 2003"
 .SH NAME
 cfv \- Verify file consistency with .sfv, .csv, .crc, .md5, md5sum, par, or par2 files
 .SH SYNOPSIS
@@ -26,6 +26,10 @@ Recursive mode 2.  In create mode make a single file with deep listing in it.
 Both recursive modes are equivilant for test mode.
 .IP "-R"
 Disable recursive mode (default)
+.IP "-l"
+Follow directory symlinks in recursive mode. (default)
+.IP "-L"
+Don't follow directory symlinks in recursive mode.
 .IP "-T"
 Set test mode. (default)
 .IP "-C"
@@ -203,6 +207,10 @@ cmdlineglob auto
 #don't be recursive (set to 0 for -R,  1 for -r,  2 for -rr)
 .br
 recursive 0
+.br
+#follow symbolic links
+.br
+dereference 1
 .br
 #don't show unverified files
 .br

@@ -18,6 +18,7 @@
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import getopt, re, os, string, sys, errno, time, copy
+from stat import *
 
 cftypes={}
 _cf_fn_exts, _cf_fn_matches, _cf_fn_searches = [], [], []
@@ -174,6 +175,7 @@ class Config:
 	list=0
 	listsep='\n'
 	user_cf_fn_regexs=[]
+	dereference=1
 	def setdefault(self,cftype):
 		if cftype in cftypes.keys():
 			self.defaulttype=cftype
@@ -201,7 +203,7 @@ class Config:
 	def setx(self,o,v):
 		if o=="default":
 			self.setdefault(v)
-		elif o in ("dirsort","cmdlinesort","showunverified","ignorecase","rename"):
+		elif o in ("dirsort","cmdlinesort","showunverified","ignorecase","rename","dereference"):
 			self.setbool(o,v)
 		elif o=="cmdlineglob":
 			if 'yes'.startswith(v.lower()):
@@ -317,7 +319,9 @@ def make_rename_formatmap(l_filename):
 	sp=os.path.splitext(l_filename)
 	return {'name':sp[0], 'ext':sp[1], 'fullname':l_filename}
 
-version='1.14'#-pre'+'$Revision$'[11:-2]
+version='1.14.1-pre'+'$Revision$'[11:-2]
+
+_hassymlinks=hasattr(os,'symlink')
 
 try:
 	if os.environ.get('CFV_NOFCHKSUM'): raise ImportError
@@ -1282,6 +1286,25 @@ def fixpath(filename):
 	return filename
 
 
+_visited_dirs = {}
+def visit_dir(name):
+	if not config.dereference and os.path.islink(name):
+		return 0
+	try:
+		st = os.stat(name)
+	except os.error:
+		return 0
+	if S_ISDIR(st[ST_MODE]):
+		#the inode check is kinda a hack, but systems that don't have inode numbers probably don't have symlinks either.
+		if config.dereference and st[ST_INO]:
+			dir_key = (st[ST_DEV],  st[ST_INO])
+			if _visited_dirs.has_key(dir_key):
+				perror("skipping already visited dir %s %s"%(perhaps_showpath(name), dir_key))
+				return 0
+			_visited_dirs[dir_key] = 1
+		return 1
+	return 0
+
 def test(filename, typename, testfiles, restrict_typename='auto'):
 	if typename != 'auto':
 		cf = cftypes[typename](testfiles)
@@ -1339,7 +1362,7 @@ def make(cftype,ifilename,testfiles):
 		if not tfauto and f=='-':
 			f=''
 		elif not os.path.isfile(f):
-			if config.recursive and os.path.isdir(f):
+			if config.recursive and visit_dir(f):
 				if config.recursive==1:
 					testdirs.append(f)
 				elif config.recursive==2:
@@ -1439,7 +1462,7 @@ atrem=re.compile(r'md5|\.(csv|sfv|par|par2|crc)(\.gz)?$',re.IGNORECASE)#md5sum f
 def autotest(typename, args):
 	start_test_dir(args)
 	for a in os.listdir('.'):
-		if config.recursive and os.path.isdir(a):
+		if config.recursive and visit_dir(a):
 			try:
 				chdir(a)
 			except EnvironmentError, e:
@@ -1457,6 +1480,9 @@ def printusage(err=0):
 	perror('  -r       recursive mode 1 (make seperate chksum files for each dir)')
 	perror('  -rr      recursive mode 2 (make a single file with deep listing in it)')
 	perror('  -R       not recursive (default)')
+	if _hassymlinks:
+		perror('  -l       follow symlinks (default)')
+		perror('  -L       don\'t follow symlinks')
 	perror('  -T       test mode (default)')
 	perror('  -C       create mode')
 	perror('  -t <t>   set type to <t> (%s, or auto(default))'%string.join(cftypes.keys(),', ')) #reduce(lambda a,b: a+b+', ',types.keys(),''))
@@ -1502,7 +1528,7 @@ def main(argv):
 	typename='auto'
 
 	try:
-		optlist, args = getopt.getopt(argv, 'rRTCt:f:mMnNp:uUiIvVzZqQh?', ['list=', 'list0=', 'fixpaths=', 'strippaths=', 'showpaths=','renameformat=','help','version'])
+		optlist, args = getopt.getopt(argv, 'rRlLTCt:f:mMnNp:uUiIvVzZqQh?', ['list=', 'list0=', 'fixpaths=', 'strippaths=', 'showpaths=','renameformat=','help','version'])
 	except getopt.error, a:
 		perror("cfv: %s"%a)
 		printusage(1)
@@ -1582,6 +1608,10 @@ def main(argv):
 					config.recursive=1
 			elif o=='-R':
 				config.recursive=0
+			elif o=='-l':
+				config.dereference=1
+			elif o=='-L':
+				config.dereference=0
 			elif o=='-v':
 				config.setx('verbose', 'v')
 			elif o=='-V':
