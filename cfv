@@ -17,7 +17,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import getopt, re, os, string, sys, errno, time
+import getopt, re, os, string, sys, errno, time, copy
 
 types={}
 
@@ -90,6 +90,17 @@ class Stats:
 		self.diffcase=0
 		self.quoted=0
 		self.starttime=time.time()
+		self.subcount=0
+
+	def make_sub_stats(self):
+		b = copy.copy(self)
+		b.starttime = time.time()
+		self.subcount = self.subcount + 1
+		return b
+	
+	def sub_stats_end(self, end):
+		for v in 'badcrc', 'badsize', 'bytesread', 'cferror', 'diffcase', 'ferror', 'notfound', 'num', 'ok', 'quoted', 'unverified':
+			setattr(self, v, getattr(end, v) - getattr(self, v))
 
 	def print_stats(self):
 		pinfo('%i files'%self.num,'')
@@ -383,16 +394,22 @@ def doopen(filename,mode='r'):
 def testchecksumfile(type,file,filename,testfiles):
 	line=1
 	try:
+		if config.verbose>=0:
+			cf_stats = stats.make_sub_stats()
 		if not file:
 			file=doopen(filename,'r')
 		while 1:
 			l=file.readline()
 			if not len(l):
-				return
+				break
 			if type.dochecksumfileline(l,testfiles):
 				stats.cferror=stats.cferror+1
 				perror('%s : unrecognized line %i (CF)'%(perhaps_showpath(filename),line))
 			line=line+1
+		if config.verbose>=0:
+			cf_stats.sub_stats_end(stats)
+			pinfo(perhaps_showpath(filename)+': ','')
+			cf_stats.print_stats()
 	except EnvironmentError, a:
 		stats.cferror=stats.cferror+1
 		perror('%s : %s (CF)'%(perhaps_showpath(filename),a[1]))
@@ -1015,8 +1032,10 @@ def main(argv):
 			if type=='auto':
 				type=config.defaulttype
 			make(types[type],None,args)
-
-	stats.print_stats()
+	
+	#only print total stats if more than one checksum file has been checked.
+	if stats.subcount > 1:
+		stats.print_stats()
 
 	sys.exit((stats.badcrc and 2) | (stats.badsize and 4) | (stats.notfound and 8) | (stats.ferror and 16) | (stats.unverified and 32) | (stats.cferror and 64))
 
