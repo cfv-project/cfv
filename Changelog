@@ -1,6 +1,7 @@
 2002-01-xx - v1.11:
 	* Due to architectural changes, unicode requirements(for .par support), etc, cfv now requires python 1.6 or higher.
 	* Add test-only support for PAR files. (python 1.6 or 2.2 recommended for better performance.)
+	* Print first SFV comment line in testing from blah.sfv line.  (usually shows creating sfv program/creation time.)
 2001-12-06 - v1.10:
 	* Fix file.close() exception on -C in empty dir.
 	* Add mmap support for faster checksumming when not using fchksum module.

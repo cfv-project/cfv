@@ -455,8 +455,11 @@ class ChksumType:
 			stats.cferror=stats.cferror+1
 			perror('%s : %s (CF)'%(perhaps_showpath(file.name),a[1]))
 
-	def do_test_chksumfile(self, file):
+	def do_test_chksumfile_print_testingline(self, file):
 		pverbose('testing from %s (%s)'%(file.name, string.lower(self.__class__.__name__)))
+
+	def do_test_chksumfile(self, file):
+		self.do_test_chksumfile_print_testingline(file)
 		line=1
 		while 1:
 			l=file.readline()
@@ -718,6 +721,15 @@ class SFV(ChksumType, CRC_MixIn):
 		return filename[-3:]=='sfv'
 	auto_filename_match = staticmethod(auto_filename_match)
 	
+	def do_test_chksumfile_print_testingline(self, file):
+		#override the default testing line to show first SFV comment line, if any
+		comment = file.peekline(100) #but limit the length in case its a really long one.
+		if comment[0]==';':
+			comment = ', ' + comment[1:].strip()
+		else:
+			comment = ''
+		pverbose('testing from %s (sfv%s)'%(file.name, comment))
+
 	_sfvrem=re.compile(r'(.+) ([0-9a-fA-F]+)$')
 	def do_test_chksumline(self, l):
 		if l[0]==';': return
