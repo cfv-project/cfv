@@ -1,6 +1,8 @@
 #! /usr/bin/env python
 
-import commands,re,os,sys,string,operator,shutil
+default_ns = globals().copy()
+
+import re,os,sys,string,operator,shutil,getopt,gzip
 
 if hasattr(operator,'gt'):
 	op_gt=operator.gt
@@ -33,14 +35,20 @@ def logr(text):
 def log(text):
 	logr(text+"\n");
 
-def test_log_results(cmd,s,o,r):
+def get_version_flags():
+	global ver_fchksum, ver_mmap
+	s,o=runcfv(cfvcmd+" --version")
+	ver_fchksum = string.find(o,'fchksum')>=0
+	ver_mmap = string.find(o,'mmap')>=0
+
+def test_log_results(cmd,s,o,r,kw):
 	"""
 	cmd=command being tested (info only)
 	s=return status
 	o=output
 	r=result (false=ok, anything else=fail (anything other than 1 will be printed))
 	"""
-	log("*** testing "+cmd);
+	log("*** testing "+cmd + (kw and ' '+str(kw) or ''));
 	log(o);
 	if r:
 		stats.failed=stats.failed+1
@@ -53,19 +61,79 @@ def test_log_results(cmd,s,o,r):
 		result="OK";
 	log("%s (%s)"%(result,s));
 	log("");
-def test_generic(cmd,test):
-	s,o=commands.getstatusoutput(cmd)
+	
+def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None):
+	from commands import getstatusoutput
+	runcmd = cfvenv+cfvexe+' '+cmd
+	if stdin:
+		runcmd = 'cat '+stdin+' | '+runcmd
+	if stdout:
+		runcmd = runcmd + ' > '+stdout
+	if stderr:
+		runcmd = runcmd + ' 2> '+stderr
+	return getstatusoutput(runcmd)
+
+def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
+	if stdin is not None and ver_fchksum:
+		#we could reopen stdin, except that fchksum uses stdio, and python has no freopen (which is needed to update STDIN to the new stdin.)
+		return 'error',"cannot test stdin with fchksum in internal mode"
+	from cStringIO import StringIO
+	from glob import glob
+	obuf = StringIO()
+	saved = sys.stdin,sys.stdout,sys.stderr,sys.argv
+	cwd = os.getcwd()
+	try:
+		if stdin:  sys.stdin = open(stdin,'rb')
+		else:      sys.stdin = StringIO()
+		if stdout: sys.stdout = open(stdout,'wb')
+		else:      sys.stdout = obuf
+		if stderr: sys.stderr = open(stderr,'wb')
+		else:      sys.stderr = obuf
+		sys.argv = [cfvexe]
+		for arg in cmd.split(' '): #bad.  shlex.split would be perfect, but its only in python >=2.3
+			arg = arg.replace('"','') # hack so --foo="bar" works.
+			if '*' in arg or '?' in arg or '[' in arg:
+				sys.argv.extend(glob(arg))
+			else:
+				sys.argv.append(arg)
+		cfv_ns = default_ns.copy()
+		try:
+			exec cfv_compiled in cfv_ns
+			s = 'no exit?'
+		except SystemExit, e:
+			s = e.code
+			if stdin:  sys.stdin.close()
+			if stdout: sys.stdout.close()
+			if stderr: sys.stderr.close()
+		except KeyboardInterrupt:
+			raise
+		except:
+			import traceback
+			traceback.print_exc(file=obuf)
+			s = 1
+	finally:
+		sys.stdin,sys.stdout,sys.stderr,sys.argv = saved
+		os.chdir(cwd)
+	o = obuf.getvalue()
+	if o:
+		if o[-2:] == '\r\n': o = o[:-2]
+		elif o[-1:] in '\r\n': o = o[:-1]
+	return s, o
+
+def test_generic(cmd,test, **kw):
+	#s,o=runcfv(cmd)
+	s,o=apply(runcfv,(cmd,), kw)
 	r=test(s,o)
-	test_log_results(cmd,s,o,r)
+	test_log_results(cfvenv+cfvexe+" "+cmd,s,o,r, kw)
 class cst_err(Exception): pass
 def cfv_stdin_test(cmd,file):
 	s1=s2=None
 	o1=o2=''
 	r=0
 	try:
-		s1,o1=commands.getstatusoutput(cmd+' '+file)
+		s1,o1=runcfv(cmd+' '+file)
 		if s1: raise cst_err, 2
-		s2,o2=commands.getstatusoutput('cat '+file+' | '+cmd+' -')
+		s2,o2=runcfv(cmd+' -', stdin=file)
 		if s2: raise cst_err, 3
 		x=re.search('^([^\r\n]*)'+re.escape(file)+'(.*)$[\r\n]{0,2}^-: (\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$',o1,re.M|re.DOTALL)
 		if not x: raise cst_err, 4
@@ -73,7 +141,7 @@ def cfv_stdin_test(cmd,file):
 		if not x2: raise cst_err, 5
 	except cst_err, er:
 		r=er
-	test_log_results('stdin/out of '+cmd+' with file '+file,(s1,s2),o1+'\n'+o2,r)
+	test_log_results('stdin/out of '+cmd+' with file '+file,(s1,s2),o1+'\n'+o2,r, None)
 
 def rx_test(pat,str):
 	if re.search(pat,str): return 0
@@ -157,11 +225,11 @@ def cfv_listdata_abs_test(s,o):
 		return 0
 	return 1
 def cfv_listdata_unv_test(s,o):
-	if os.WEXITSTATUS(s)==32 and re.search('^test.py\0testfix.csv\0$',o,re.I):
+	if WEXITSTATUS(s)==32 and re.search('^test.py\0testfix.csv\0$',o,re.I):
 		return 0
 	return 1
 def cfv_listdata_bad_test(s,o):
-	if os.WEXITSTATUS(s)&6 and not os.WEXITSTATUS(s)&~6 and re.search('^(d2.)?test4.foo\0test.ext.end\0test2.foo\0test3\0$',o,re.I):
+	if WEXITSTATUS(s)&6 and not WEXITSTATUS(s)&~6 and re.search('^(d2.)?test4.foo\0test.ext.end\0test2.foo\0test3\0$',o,re.I):
 		return 0
 	return 1
 
@@ -186,17 +254,17 @@ def T_test(f):
 	test_generic(cfvcmd+" -i -T -f test"+f,cfv_test) #all tests should work with -i
 	test_generic(cfvcmd+" -m -T -f test"+f,cfv_test) #all tests should work with -m
 	
-	test_generic(cfvcmd+" -T --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_test)
-	test_generic(cfvcmd+" -T --showpaths=n-r --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_test)
-	test_generic(cfvcmd+" -T --showpaths=n-a --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_test)
-	test_generic(cfvcmd+" -T --showpaths=a-a --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_test)
-	test_generic(cfvcmd+" -T --showpaths=2-a --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_test)
-	test_generic(cfvcmd+" -T --showpaths=y-r --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_test)
-	test_generic(cfvcmd+" -T --showpaths=y-a --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_abs_test)
-	test_generic(cfvcmd+" -T --showpaths=1-a --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_abs_test)
+	test_generic(cfvcmd+" -T --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
+	test_generic(cfvcmd+" -T --showpaths=n-r --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
+	test_generic(cfvcmd+" -T --showpaths=n-a --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
+	test_generic(cfvcmd+" -T --showpaths=a-a --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
+	test_generic(cfvcmd+" -T --showpaths=2-a --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
+	test_generic(cfvcmd+" -T --showpaths=y-r --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
+	test_generic(cfvcmd+" -T --showpaths=y-a --list0=ok -f test"+f, cfv_listdata_abs_test, stderr="/dev/null")
+	test_generic(cfvcmd+" -T --showpaths=1-a --list0=ok -f test"+f, cfv_listdata_abs_test, stderr="/dev/null")
 	#ensure all verbose stuff goes to stderr:
-	test_generic(cfvcmd+" -v -T --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_test)
-	test_generic(cfvcmd+" -v -T --list0=unverified -f test"+f+" test.py testfix.csv data1 2> /dev/null",cfv_listdata_unv_test)
+	test_generic(cfvcmd+" -v -T --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
+	test_generic(cfvcmd+" -v -T --list0=unverified -f test"+f+" test.py testfix.csv data1", cfv_listdata_unv_test, stderr="/dev/null")
 
 def gzC_test(f,extra=None,verify=None,t=None,d=None):
 	cmd=cfvcmd
@@ -206,15 +274,28 @@ def gzC_test(f,extra=None,verify=None,t=None,d=None):
 	f='test.C.'+f+'.gz'
 	if extra:
 		cmd=cmd+" "+extra
-	test_generic("%s -q -C -t %s -zz -f - %s > %s "%(cmd,t,d,f2),status_test)
+	test_generic("%s -q -C -t %s -zz -f - %s"%(cmd,t,d), status_test, stdout=f2)
 	test_generic("%s -C -f %s %s"%(cmd,f,d),cfv_test)
-	if t in ('sfv', 'sfvmd5', 'crc'):
-		#test_generic("zdiff --ignore-matching-lines='^; Generated by .* on .*' %s %s "%(f,f2),status_test) # -I ignores .sfv generated on date ... line
-		pass #unfortunatly, zdiff seems to mangle its args or something.. blah.
+
+	if1 = gzip.open(f).read()
+	if2 = gzip.open(f2).read()
+	if t in ('sfv', 'sfvmd5'):
+		commentre=re.compile("^; Generated by .* on .*$",re.M|re.I)
+		if1 = commentre.sub('',if1,1)
+		if2 = commentre.sub('',if2,1)
+	elif t=='crc':
+		commentre=re.compile("^Generated at: .*$",re.M|re.I)
+		if1 = commentre.sub('',if1,1)
+		if2 = commentre.sub('',if2,1)
+	r = if1 != if2
+	if r:
+		o = "FILE1 %s:\n%s\nFILE2 %s:\n%s\n"%(f,if1,f2,if2)
 	else:
-		test_generic("zdiff %s %s "%(f,f2),status_test)
+		o = ''
+	test_log_results('zcompare %s %s'%(f,f2),r,o,r, None)
+
 	test_generic("%s -T -f %s"%(cmd,f),cfv_test)
-	test_generic("cat %s|%s -zz -T -f -"%(f,cmd),cfv_test)
+	test_generic("%s -zz -T -f -"%(cmd),cfv_test,stdin=f)
 	if verify:
 		verify(f)
 	os.unlink(f)
@@ -226,15 +307,22 @@ def C_test(f,extra=None,verify=None,t=None,d='data?'):
 		t=f
 	cfv_stdin_test(cmd+" -t"+f+" -C -f-","data4")
 	f='test.C.'+f
-	if extra:
-		cmd=cmd+" "+extra
-	test_generic("%s -C -f %s %s"%(cmd,f,d),cfv_test)
-	test_generic("%s -T -f %s"%(cmd,f),cfv_test)
-	test_generic("cat %s|%s -T -f -"%(f,cmd),cfv_test)
-	test_generic("gzip -c %s|%s -zz -t%s -T -f -"%(f,cmd,t),cfv_test)
-	if verify:
-		verify(f)
-	os.unlink(f)
+	fgz=f+'.gz'
+	try:
+		if extra:
+			cmd=cmd+" "+extra
+		test_generic("%s -C -f %s %s"%(cmd,f,d),cfv_test)
+		test_generic("%s -T -f %s"%(cmd,f),cfv_test)
+		test_generic("%s -T -f -"%(cmd),cfv_test,stdin=f)
+		of = gzip.open(fgz,mode='wb')
+		of.write(open(f,'rb').read())
+		of.close()
+		test_generic("%s -zz -t%s -T -f -"%(cmd,t), cfv_test, stdin=fgz)
+		if verify:
+			verify(f)
+	finally:
+		os.unlink(f)
+		os.unlink(fgz)
 
 	dir='Ce.test'
 	try:
@@ -278,11 +366,12 @@ def ren_test(f,extra=None,verify=None,t=None):
 				except IOError, e:
 					r = 1
 					o = str(e)
-				test_log_results('cmp %s for %s'%(fn,t),r,o,r)
+				test_log_results('cmp %s for %s'%(fn,t),r,o,r, None)
 		flsw('hello')
 		test_generic("%s -C -t %s"%(cmd,f),cfv_test)
 		flsw('1')
-		test_generic(basecmd+" --showpaths=0 -v -T --list0=bad 2> /dev/null",cfv_listdata_bad_test)
+		test_generic(basecmd+" --showpaths=0 -v -T --list0=bad",cfv_listdata_bad_test,stderr="/dev/null")
+		test_generic(basecmd+" --showpaths=0 -q -T --list0=bad",cfv_listdata_bad_test)
 		test_generic("%s -Tn"%(cmd),cfv_bad_test)
 		flsw('11')
 		test_generic("%s -Tn"%(cmd),cfv_bad_test)
@@ -396,18 +485,55 @@ d41d8cd98f00b204e9800998ecf8427e *daTA1""")
 		shutil.rmtree(dir)
 	
 
-cfvcmd='../cfv'
+cfvenv=''
+cfvexe='../cfv'
+run_internal = 1
 
-if len(sys.argv)>1:
-	if '--help' in sys.argv:
-		print 'usage: test.py [cfv]'
-		print 'default [cfv] is:',cfvcmd
-		sys.exit(1)
-	cfvcmd=sys.argv[1]
+def show_help_and_exit(err=None):
+	if err:
+		print 'error:',err
+		print
+	print 'usage: test.py [-i|-e] [cfv]'
+	print ' -i      run tests internally'
+	print ' -e      launch seperate cfv process for each test'
+	print ' --help  show this help'
+	print
+	print 'default [cfv] is:', cfvexe
+	print 'default run mode is:', run_internal and 'internal' or 'external'
+	sys.exit(1)
+
+try:
+	optlist, args = getopt.getopt(sys.argv[1:], 'ie',['help'])
+except getopt.error, e:
+	show_help_and_exit(e)
+
+if len(args)>1:
+	show_help_and_exit("too many arguments")
+
+for o,a in optlist:
+	if o=='--help':
+		show_help_and_exit()
+	elif o=='-i':
+		run_internal = 1
+	elif o=='-e':
+		run_internal = 0
+	else:
+		show_help_and_exit("bad opt %r"%o)
+
+if args:
+	cfvexe=args[0]
 
 #set everything to default in case user has different in config file
-cfvcmd=cfvcmd+' -ZNVRMUI --fixpaths="" --strippaths=0 --showpaths=auto-relative'
+cfvcmd='-ZNVRMUI --fixpaths="" --strippaths=0 --showpaths=auto-relative'
 
+if run_internal:
+	runcfv = runcfv_py
+	WEXITSTATUS = lambda s: s
+	_cfv_code = open(cfvexe,'r').read().replace('\r\n','\n').replace('\r','\n')
+	cfv_compiled = compile(_cfv_code,cfvexe,'exec')
+else:
+	runcfv = runcfv_exe
+	WEXITSTATUS = os.WEXITSTATUS
 
 logfile=open("test.log","w")
 
@@ -538,15 +664,18 @@ def all_tests():
 	print donestr
 
 print 'testing...'
+get_version_flags()
 all_tests()
-s,o=commands.getstatusoutput(cfvcmd+" --version")
-if string.find(o,'fchksum')>=0:
+if ver_fchksum:
 	print 'testing without fchksum...'
-	cfvcmd="CFV_NOFCHKSUM=x "+cfvcmd
+	cfvenv="CFV_NOFCHKSUM=x "+cfvenv
+	os.environ["CFV_NOFCHKSUM"]="x"
+	get_version_flags()
 	all_tests()
-s,o=commands.getstatusoutput(cfvcmd+" --version")
-if string.find(o,'+mmap')>=0:
+if ver_mmap:
 	print 'testing without mmap...'
-	cfvcmd="CFV_NOMMAP=x "+cfvcmd
+	cfvenv="CFV_NOMMAP=x "+cfvenv
+	os.environ["CFV_NOMMAP"]="x"
+	get_version_flags()
 	all_tests()
 
