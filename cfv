@@ -79,7 +79,8 @@ def codecs_getwriter(e):
 def codec_supports_readline(e):
 	"""Figure out whether the given codec's StreamReader supports readline.
 
-	Some (utf-16) raise NotImplementedError, others (cp500) are just broken.
+	Some (utf-16) raise NotImplementedError(py2.3) or UnicodeError(py<2.3),
+	others (cp500) are just broken.
 	With recent versions of python (cvs as of 20050203), readline seems to
 	work on all codecs.  Yay.
 	"""
@@ -89,7 +90,7 @@ def codec_supports_readline(e):
 	r=codecs_getreader(e)(StringIO(test.encode(e)))
 	try:
 		return r.readline()==testa and r.readline()==testb
-	except NotImplementedError:
+	except (NotImplementedError, UnicodeError):
 		return 0
 
 cftypes={}
