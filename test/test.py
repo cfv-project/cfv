@@ -83,19 +83,21 @@ def status_test(s,o):
 		return 0
 	return 1
 
-rx_Begin=r'^(\d+) files, (\d+) OK'
+rx_Begin=r'^(?:.* )?(\d+) files, (\d+) OK'
 rx_unv=r', (\d)+ unverified'
 rx_bad=r', (\d)+ bad(crc|size)'
 rx_End=r'(, \d+ differing cases)?(, \d+ quoted filenames)?.  [\d.]+ seconds, [\d.]+K(/s)?$'
 
+def tail(s):
+	return string.split(s,'\n')[-1]
 def cfv_test(s,o, op=op_gt, opval=0):
-	x=re.search(rx_Begin+rx_End,o)
+	x=re.search(rx_Begin+rx_End,tail(o))
 	if s==0 and x and x.group(1) == x.group(2) and op(int(x.group(1)),opval):
 		return 0
 	return 1
 
 def cfv_unv_test(s,o,unv=1):
-	x=re.search(rx_Begin+rx_unv+rx_End,o,re.M)
+	x=re.search(rx_Begin+rx_unv+rx_End,tail(o))
 	if s!=0 and x and x.group(1) == x.group(2) and int(x.group(1))>0:
 		if unv and int(x.group(3))!=unv:
 			return 1
@@ -103,7 +105,7 @@ def cfv_unv_test(s,o,unv=1):
 	return 1
 
 def cfv_bad_test(s,o,bad=-1):
-	x=re.search(rx_Begin+rx_bad+rx_End,o,re.M)
+	x=re.search(rx_Begin+rx_bad+rx_End,tail(o))
 	if s!=0 and x and int(x.group(1))>0 and int(x.group(3))>0:
 		if bad>0 and int(x.group(3))!=unv:
 			return 1
