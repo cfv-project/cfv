@@ -315,7 +315,13 @@ try:
 		stats.bytesread=stats.bytesread+s
 		return c,s
 except ImportError:
-	import md5,zlib
+	import md5
+	try:
+		import zlib
+		_crc32=zlib.crc32
+	except ImportError:
+		import binascii
+		_crc32=binascii.crc32
 	try:
 		if os.environ.get('CFV_NOMMAP'): raise ImportError
 		import mmap
@@ -364,7 +370,7 @@ except ImportError:
 		else:
 			f=open(file,'rb')
 		if f==sys.stdin or nommap:
-			c=zlib.crc32('')
+			c=_crc32('')
 			s=0L
 			while 1:
 				x=f.read(65536)
@@ -372,10 +378,10 @@ except ImportError:
 					stats.bytesread=stats.bytesread+s
 					return "%08X"%c,s
 				s=s+len(x)
-				c=zlib.crc32(x,c)
+				c=_crc32(x,c)
 		else:
 			s = os.path.getsize(file)
-			c = zlib.crc32(dommap(f.fileno(), s))
+			c = _crc32(dommap(f.fileno(), s))
 			stats.bytesread = stats.bytesread+s
 			return "%08X"%c,s
 
