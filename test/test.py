@@ -19,7 +19,16 @@
 
 default_ns = globals().copy()
 
-import re,os,sys,string,operator,shutil,getopt,gzip,tempfile
+import re,os,sys,string,operator,shutil,getopt,gzip
+try: # tempfile.mkdtemp is only in python 2.3+
+	from tempfile import mkdtemp
+except ImportError:
+	import tempfile
+	def mkdtemp():
+		d = tempfile.mktemp()
+		os.mkdir(d)
+		return d
+	
 
 try: import BitTorrent
 except ImportError: BitTorrent = None
@@ -592,7 +601,7 @@ d41d8cd98f00b204e9800998ecf8427e *daTA1""")
 def test_encoding2():
 	"""Non-trivial (actual non-ascii characters) encoding test.
 	These tests will probably always fail unless you use a unicode locale."""
-	d = tempfile.mkdtemp()
+	d = mkdtemp()
 	try:
 		cfn = os.path.join(d,u'\u3070\u304B.torrent')
 		shutil.copyfile('testencoding2.torrent.foo', cfn)
