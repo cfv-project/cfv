@@ -84,9 +84,9 @@ def status_test(s,o):
 	return 1
 
 rx_Begin=r'^(?:.* )?(\d+) files, (\d+) OK'
-rx_unv=r', (\d)+ unverified'
+rx_unv=r', (\d+) unverified'
 rx_notfound=r', (\d)+ not found'
-rx_bad=r', (\d)+ bad(crc|size)'
+rx_bad=r', (\d+) bad(crc|size)'
 rx_cferror=r', (\d)+ chksum file errors'
 rx_End=r'(, \d+ differing cases)?(, \d+ quoted filenames)?.  [\d.]+ seconds, [\d.]+K(/s)?$'
 rxo_TestingFrom=re.compile(r'^testing from .* \((.+?)\b.*\)$', re.M)
@@ -104,6 +104,12 @@ def cfv_unv_test(s,o,unv=1):
 	if s!=0 and x and x.group(1) == x.group(2) and int(x.group(1))>0:
 		if unv and int(x.group(3))!=unv:
 			return 1
+		return 0
+	return 1
+
+def cfv_unvonly_test(s,o,unv=1):
+	x=re.search(rx_Begin+rx_unv+rx_End,tail(o))
+	if s!=0 and x and int(x.group(3))==unv:
 		return 0
 	return 1
 
@@ -302,9 +308,6 @@ def ren_test(f,extra=None,verify=None,t=None):
 		os.rmdir(dir)
 
 def symlink_test():
-	if not hasattr(os, 'symlink'):
-		return
-	
 	dir='s.test'
 	dir1='d1'
 	dir2='d2'
@@ -312,14 +315,86 @@ def symlink_test():
 		os.mkdir(dir)
 		os.mkdir(os.path.join(dir, dir1))
 		os.mkdir(os.path.join(dir, dir2))
-		os.symlink(os.path.join(os.pardir, dir2), os.path.join(dir, dir1, 'l2'))
-		os.symlink(os.path.join(os.pardir, dir1), os.path.join(dir, dir2, 'l1'))
-		test_generic(cfvcmd+" -l -r -p "+dir, rcurry(cfv_test,op_eq,0))
-		test_generic(cfvcmd+" -L -r -p "+dir, rcurry(cfv_test,op_eq,0))
-		test_generic(cfvcmd+" -l -r -C -p "+dir, rcurry(cfv_test,op_eq,0))
-		test_generic(cfvcmd+" -L -r -C -p "+dir, rcurry(cfv_test,op_eq,0))
+		if hasattr(os, 'symlink'):
+			os.symlink(os.path.join(os.pardir, dir2), os.path.join(dir, dir1, 'l2'))
+			os.symlink(os.path.join(os.pardir, dir1), os.path.join(dir, dir2, 'l1'))
+			test_generic(cfvcmd+" -l -r -p "+dir, rcurry(cfv_test,op_eq,0))
+			test_generic(cfvcmd+" -L -r -p "+dir, rcurry(cfv_test,op_eq,0))
+			test_generic(cfvcmd+" -l -r -C -p "+dir, rcurry(cfv_test,op_eq,0))
+			test_generic(cfvcmd+" -L -r -C -p "+dir, rcurry(cfv_test,op_eq,0))
+
+		open(os.path.join(dir,dir1,'foo'),'w').close()
+		open(os.path.join(dir,dir2,'bar'),'w').close()
+		def r_unv_test(s,o):
+			if cfv_unvonly_test(s,o,2): return 1
+			if string.count(o,'not verified')!=1: return 1
+			return 0
+		test_generic(cfvcmd+" -l -r -u -p "+dir, r_unv_test)
+		test_generic(cfvcmd+" -L -r -u -p "+dir, r_unv_test)
+		test_generic(cfvcmd+" -l -u -p "+dir, r_unv_test)
+		test_generic(cfvcmd+" -L -u -p "+dir, r_unv_test)
+		def r_unv_verbose_test(s,o):
+			if cfv_unvonly_test(s,o,2): return 1
+			if string.count(o,'not verified')!=2: return 1
+			return 0
+		test_generic(cfvcmd+" -l -uu -p "+dir, r_unv_verbose_test)
+		test_generic(cfvcmd+" -L -uu -p "+dir, r_unv_verbose_test)
+		test_generic(cfvcmd+" -l -r -uu -p "+dir, r_unv_verbose_test)
+		test_generic(cfvcmd+" -L -r -uu -p "+dir, r_unv_verbose_test)
 	finally:
 		shutil.rmtree(dir)
+
+def deep_unverified_test():
+	dir='dunv.test'
+	try:
+		join = os.path.join
+		os.mkdir(dir)
+		a = 'a'
+		a_C = join(a, 'C')
+		B = 'B'
+		B_ushallow = join(B,'ushallow')
+		B_ushallow_d = join(B_ushallow, 'd')
+		u = 'u'
+		u_u2 = join(u, 'u2')
+		for d in a, a_C, B, B_ushallow, B_ushallow_d, u, u_u2:
+			os.mkdir(join(dir,d))
+		datafns = ('DATa1', 'UnV1',
+				join(a,'dAta2'), join(a, 'Unv2'), join(a_C,'dATa4'), join(a_C,'unV4'),
+				join(B,'daTA3'), join(B,'uNv3'),
+				join(B_ushallow,'uNvs'), join(B_ushallow_d,'unvP'), join(B_ushallow_d,'datA5'),
+				join(u,'uNVu'), join(u,'UnvY'), join(u_u2,'UNVX'),)
+		lower_datafns = map(string.lower, datafns)
+		for fn in datafns:
+			open(join(dir,fn),'w').close()
+		f = open(join(dir,'deep.md5'),'w')
+		f.write("""d41d8cd98f00b204e9800998ecf8427e *b/DaTa3
+d41d8cd98f00b204e9800998ecf8427e *B/ushAllOw/D/daTa5
+d41d8cd98f00b204e9800998ecf8427e *a/c/DatA4
+d41d8cd98f00b204e9800998ecf8427e *A/dATA2
+d41d8cd98f00b204e9800998ecf8427e *daTA1""")
+		f.close()
+			
+		def r_test(s,o):
+			if cfv_test(s,o,op_eq,5): return 1
+			if string.count(o,'not verified')!=0: return 1
+			return 0
+		def r_unv_test(s,o):
+			if cfv_unvonly_test(s,o,9): return 1
+			if string.count(o,'not verified')!=7: return 1
+			return 0
+		def r_unv_verbose_test(s,o):
+			if cfv_unvonly_test(s,o,9): return 1
+			if string.count(o,'not verified')!=9: return 1
+			return 0
+		test_generic(cfvcmd+" -i -U -p "+dir, r_test)
+		test_generic(cfvcmd+" -i -u -p "+dir, r_unv_test)
+		test_generic(cfvcmd+" -i -uu -p "+dir, r_unv_verbose_test)
+		test_generic(cfvcmd+" -i -U -p "+dir+" "+' '.join(lower_datafns), r_test)
+		test_generic(cfvcmd+" -i -u -p "+dir+" "+' '.join(lower_datafns), r_unv_verbose_test)
+		test_generic(cfvcmd+" -i -uu -p "+dir+" "+' '.join(lower_datafns), r_unv_verbose_test)
+	finally:
+		shutil.rmtree(dir)
+	
 
 cfvcmd='../cfv'
 
@@ -340,6 +415,7 @@ def all_tests():
 	stats.ok = stats.failed = 0
 
 	symlink_test()
+	deep_unverified_test()
 	
 	ren_test('md5')
 	ren_test('md5',extra='-rr')

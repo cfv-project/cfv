@@ -41,19 +41,29 @@ def chompnulls(line):
 	else:     return line[:p]
 
 
+_realpath = getattr(os.path, 'realpath', os.path.abspath) #realpath is only in Python>=2.2
+def get_path_key(path):
+	st = os.stat(path)
+	if st[ST_INO]:
+		return (st[ST_DEV],  st[ST_INO])
+	else:
+		return _realpath(os.path.join(curdir, path))
+	
 curdir=os.getcwd()
+curdir_key=get_path_key(os.curdir)
 reldir=['']
 prevdir=[]
 def chdir(d):
-	global curdir
+	global curdir,curdir_key
 	os.chdir(d)
-	prevdir.append(curdir)
+	prevdir.append((curdir,curdir_key))
 	reldir.append(os.path.join(reldir[-1], d))
 	curdir=os.getcwd()
+	curdir_key=get_path_key(os.curdir)
 def cdup():
-	global curdir
+	global curdir,curdir_key
 	reldir.pop()
-	curdir=prevdir.pop()
+	curdir,curdir_key=prevdir.pop()
 	os.chdir(curdir)
 
 
@@ -95,6 +105,53 @@ class CFVSyntaxError(CFVException):#error in user input
 class CFVVerifyError(CFVException):#invalid crc/filesize/etc
 	pass
 
+
+class FileInfoCache:
+	def __init__(self):
+		self.data = {}
+		self.stdin = {}
+	
+	def set_verified(self, fn):
+		self.getfinfo(fn)['_verified'] = 1
+	
+	def is_verified(self, fn):
+		return self.getfinfo(fn).get('_verified',0)
+	
+	def getpathcache(self, path):
+		if not path: # 99% of the time won't be using deep checksum files, so optimize for getting the current dir's key
+			pathkey = curdir_key
+		else:
+			pathkey = get_path_key(path)
+		pathcache = self.data.get(pathkey)
+		if pathcache is None:
+			self.data[pathkey] = pathcache = {}
+		return pathcache
+	
+	def getfinfo(self, fn):
+		if fn=='':
+			return self.stdin
+		else:
+			fpath,ftail = os.path.split(fn)
+			pathdata = self.getpathcache(fpath)
+			finfo = pathdata.get(ftail)
+			if finfo is None:
+				pathdata[ftail] = finfo = {}
+			return finfo
+
+		
+def getfilemd5(file):
+	finfo = cache.getfinfo(file)
+	if not finfo.has_key('md5'):
+		finfo['md5'],finfo['size'] = _getfilemd5(file)
+	return finfo['md5'],finfo['size']
+
+def getfilecrc(file):
+	finfo = cache.getfinfo(file)
+	if not finfo.has_key('crc'):
+		finfo['crc'],finfo['size'] = _getfilecrc(file)
+	return finfo['crc'],finfo['size']
+	
+
 class Stats:
 	def __init__(self):
 		self.num=0
@@ -105,7 +162,6 @@ class Stats:
 		self.ferror=0
 		self.cferror=0
 		self.bytesread=0L #use long int for size, to avoid possible overflow.
-		self.unverifiedfiles=[]
 		self.unverified=0
 		self.diffcase=0
 		self.quoted=0
@@ -203,7 +259,7 @@ class Config:
 	def setx(self,o,v):
 		if o=="default":
 			self.setdefault(v)
-		elif o in ("dirsort","cmdlinesort","showunverified","ignorecase","rename","dereference"):
+		elif o in ("dirsort","cmdlinesort","ignorecase","rename","dereference"):
 			self.setbool(o,v)
 		elif o=="cmdlineglob":
 			if 'yes'.startswith(v.lower()):
@@ -227,7 +283,7 @@ class Config:
 					raise CFVValueError, "invalid verbose option '%s', must be 'v', 'V', 'VV', 'q', 'Q' or -3 - 1"%v
 		elif o in ("gzip",):
 			self.setintr(o,v,-1,1)
-		elif o in ("recursive",):
+		elif o in ("recursive","showunverified"):
 			self.setintr(o,v,0,2)
 		elif o=="showpaths":
 			p=0
@@ -331,11 +387,11 @@ try:
 	except:
 		_perr("old fchksum version installed, using std python modules. please update.") #can't use perror yet since config hasn't been done..
 		raise ImportError
-	def getfilemd5(file):
+	def _getfilemd5(file):
 		c,s=fchksum.fmd5t(file)
 		stats.bytesread=stats.bytesread+s
 		return c,s
-	def getfilecrc(file):
+	def _getfilecrc(file):
 		c,s=fchksum.fcrc32t(file)
 		stats.bytesread=stats.bytesread+s
 		return c,s
@@ -366,7 +422,7 @@ except ImportError:
 	except ImportError:
 		nommap=1
 
-	def getfilemd5(file):
+	def _getfilemd5(file):
 		if file=='':
 			f=sys.stdin
 		else:
@@ -389,7 +445,7 @@ except ImportError:
 			stats.bytesread = stats.bytesread+s
 			return c,s
 			
-	def getfilecrc(file):
+	def _getfilecrc(file):
 		if file=='':
 			f=sys.stdin
 		else:
@@ -539,8 +595,8 @@ class ChksumType:
 		self.testfiles = testfiles
 	
 	def test_chksumfile(self,file,filename):
-		if config.showunverified and filename in stats.unverifiedfiles[-1]:#we can't expect the checksum file itself to be checksummed
-			stats.unverifiedfiles[-1].remove(filename)
+		if config.showunverified: #we can't expect the checksum file itself to be checksummed
+			cache.set_verified(filename)
 		try:
 			if config.verbose>=0 or config.verbose==-3:
 				cf_stats = stats.make_sub_stats()
@@ -606,10 +662,7 @@ class ChksumType:
 				l_filename=l_filename[1:-1] #work around buggy sfv encoders that quote filenames
 				stats.quoted = stats.quoted + 1
 			if config.showunverified:
-				try:
-					stats.unverifiedfiles[-1].remove(l_filename)
-				except ValueError:
-					pass #don't error if file has already been removed.
+				cache.set_verified(l_filename)
 			if filesize>=0:
 				fs=os.path.getsize(l_filename)
 				if fs!=filesize:
@@ -1304,19 +1357,21 @@ def fixpath(filename):
 
 
 _visited_dirs = {}
-def visit_dir(name):
+def visit_dir(name, st=None, noisy=1):
 	if not config.dereference and os.path.islink(name):
 		return 0
-	try:
-		st = os.stat(name)
-	except os.error:
-		return 0
+	if st is None:
+		try:
+			st = os.stat(name)
+		except os.error:
+			return 0
 	if S_ISDIR(st[ST_MODE]):
 		#the inode check is kinda a hack, but systems that don't have inode numbers probably don't have symlinks either.
 		if config.dereference and st[ST_INO]:
 			dir_key = (st[ST_DEV],  st[ST_INO])
 			if _visited_dirs.has_key(dir_key):
-				perror("skipping already visited dir %s %s"%(perhaps_showpath(name), dir_key))
+				if noisy:
+					perror("skipping already visited dir %s %s"%(perhaps_showpath(name), dir_key))
 				return 0
 			_visited_dirs[dir_key] = 1
 		return 1
@@ -1453,31 +1508,85 @@ def make(cftype,ifilename,testfiles):
 			make(cftype,ifilename,None)
 			cdup()
 
-def start_test_dir(args):
+
+def print_unverified(file):
+	perror('%s : not verified'%perhaps_showpath(file))
+
+def show_unverified_file(file):
+	unverified_file(file)
+	print_unverified(file)
+	
+def unverified_file(file):
+	if config.list&LISTUNVERIFIED:
+		plistf(file)
+	stats.unverified=stats.unverified+1
+
+def show_unverified_dir(path, unvchild=0):
+	pathcache = cache.getpathcache(path)
+	pathfiles = os.listdir(path or os.curdir)
+	vsub = 0
+	for fn in pathfiles:
+		file = os.path.join(path, fn)
+		try:
+			st = os.stat(file)
+			if S_ISDIR(st[ST_MODE]) and visit_dir(file,st,noisy=0):
+				vsub = vsub + show_unverified_dir(file,not pathcache)
+			elif pathcache:
+				if not pathcache.get(fn,{}).get('_verified'):
+					if S_ISREG(st[ST_MODE]):
+						show_unverified_file(file)
+			else:
+				if S_ISREG(st[ST_MODE]):
+					unverified_file(file)
+		except OSError:
+			pass
+	if not pathcache and pathfiles:
+		if vsub:
+			print_unverified(os.path.join(path,'*'))
+		elif not unvchild:
+			print_unverified(os.path.join(path,'**'))
+	return vsub + (not not pathcache)
+			
+def show_unverified_dir_verbose(path):
+	pathcache = cache.getpathcache(path)
+	pathfiles = os.listdir(path or os.curdir)
+	for fn in pathfiles:
+		file = os.path.join(path, fn)
+		try:
+			st = os.stat(file)
+			if S_ISDIR(st[ST_MODE]) and visit_dir(file,st,noisy=0):
+				show_unverified_dir_verbose(file)
+			elif not pathcache.get(fn,{}).get('_verified'):
+				if S_ISREG(st[ST_MODE]):
+					show_unverified_file(file)
+		except OSError,e:
+			pass
+	
+def show_unverified_files(filelist):
 	if not config.showunverified:
 		return
-	if len(args):
-		filelist=args[:] #make a copy so we don't modify the args list (teehee)
+	if filelist:
+		for file in filelist:
+			if config.ignorecase:
+				try:
+					file = nocase_findfile(file)
+				except IOError:
+					continue
+			else:
+				if not os.path.isfile(file):
+					continue
+			if not cache.is_verified(file):
+				show_unverified_file(file)
 	else:
-		filelist=os.listdir(os.curdir)
-	#dir=curdir
-	#stats.unverifiedfiles[dir]=map(lambda d: os.path.join(dir,d),filelist))
-	#stats.unverifiedfiles[dir]=filelist
-	stats.unverifiedfiles.append(filelist)
-def finish_test_dir():
-	if not config.showunverified:
-		return
-	unverified=stats.unverifiedfiles.pop()
-	for file in unverified:
-		if os.path.isfile(file):
-			if config.list&LISTUNVERIFIED:
-				plistf(file)
-			perror('%s : not verified'%perhaps_showpath(file))
-			stats.unverified=stats.unverified+1
+		_visited_dirs.clear()
+		if config.showunverified==2:
+			show_unverified_dir_verbose('')
+		else:
+			show_unverified_dir('')
+
 
 atrem=re.compile(r'md5|\.(csv|sfv|par|par2|crc)(\.gz)?$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
 def autotest(typename, args):
-	start_test_dir(args)
 	for a in os.listdir(os.curdir):
 		if config.recursive and visit_dir(a):
 			try:
@@ -1490,7 +1599,6 @@ def autotest(typename, args):
 				cdup()
 		if atrem.search(a):
 			test(a, 'auto', args, typename)
-	finish_test_dir()
 
 def printusage(err=0):
 	perror('Usage: cfv [opts] [-p dir] [-T|-C] [-t type] [-f file] [files...]')
@@ -1537,6 +1645,7 @@ def printhelp():
 
 stats=Stats()
 config=Config()
+cache=FileInfoCache()
 
 
 def main(argv=None):
@@ -1585,9 +1694,7 @@ def main(argv=None):
 				if mode==0:
 					if config.ignorecase:
 						args=map(string.lower,args) #lowercase it all now, so we don't have to keep doing it over and over in the testfile
-					start_test_dir(args)
 					test(a, typename, args)
-					finish_test_dir()
 				else:
 					if typename!='auto':
 						make(cftypes[typename],a,args)
@@ -1603,7 +1710,10 @@ def main(argv=None):
 			elif o=='-U':
 				config.showunverified=0
 			elif o=='-u':
-				config.showunverified=1
+				if prevopt=='-u':
+					config.showunverified=2
+				else:
+					config.showunverified=1
 			elif o=='-I':
 				config.ignorecase=0
 			elif o=='-i':
@@ -1693,6 +1803,9 @@ def main(argv=None):
 				typename=config.defaulttype
 			make(cftypes[typename],None,args)
 	
+	if mode==0:
+		show_unverified_files(args)
+
 	#only print total stats if more than one checksum file has been checked. (or if none have)
 	#We must also print stats here if there are unverified files or checksum file errors, since those conditions occur outside of the cf_stats section.
 	if stats.subcount != 1 or stats.unverified or stats.cferror:

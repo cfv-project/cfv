@@ -3,6 +3,10 @@
 	* When following symlinks, don't die on cycles.
 	* Ignore redundant FileDesc packets in PAR2 files.
 	* Check that PAR2 files have FileDesc packets for every file listed in the Main packet.
+	* Cache file checksums in memory in case they are verified by multiple checksum files.
+	* -u now works correctly with deep checksum files.
+	* -u option will now show dir/* if no files in a dir were verified. (--list=unverified still lists each unverified file.)
+	* -uu can be used to force showing all unverified files.
 
 2003-05-23 - v1.14:
 	* Support md5sum files with comments in them.

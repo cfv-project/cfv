@@ -1,8 +1,8 @@
-.TH cfv 1 "14 Jun 2003"
+.TH cfv 1 "03 Aug 2003"
 .SH NAME
 cfv \- Verify file consistency with .sfv, .csv, .crc, .md5, md5sum, par, or par2 files
 .SH SYNOPSIS
-.B cfv [-p dir] [-v|-V|-VV] [-r|-rr|-R] [-n|-N] [--renameformat <s>] [-zz|-z|-Z|-ZZ] [-T|-C] [-m|-M] [-i|-I] [-u|-U] [--fixpaths <s>] [--showpaths <i>] [--list/--list0 <l>] [-t type] [-f file] [files...]
+.B cfv [-p dir] [-v|-V|-VV] [-r|-rr|-R] [-n|-N] [--renameformat <s>] [-zz|-z|-Z|-ZZ] [-T|-C] [-m|-M] [-i|-I] [-u|-uu|-U] [--fixpaths <s>] [--showpaths <i>] [--list/--list0 <l>] [-t type] [-f file] [files...]
 .SH DESCRIPTION
 .B cfv
 verifies that the files you have are the same as those that the were used to create
@@ -55,7 +55,13 @@ Ignore case.  Currently has no effect in create mode.
 .IP "-I"
 Don't ignore case (default)
 .IP "-u"
-Show unverified files.  Currently has no effect in create mode.
+Show unverified files.
+If no files in a directory are verified, shows dir/*.
+If no files in a directory or its subdirs are verified, shows dir/**.
+Has no effect in create mode.
+.IP "-uu"
+Show each unverified file individually, no special directory handling.
+Has no effect in create mode.
 .IP "-U"
 Don't show unverified files (default)
 .IP "-zz"
@@ -212,7 +218,7 @@ recursive 0
 .br
 dereference 1
 .br
-#don't show unverified files
+#don't show unverified files (set to 0 for -U, 1 for -u, 2 for -uu)
 .br
 showunverified 0
 .br
