@@ -1,4 +1,4 @@
-cfv 1.13  Copyright 2000-2002 Matthew Mueller <donut@azstarnet.com>
+cfv 1.14  Copyright 2000-2003 Matthew Mueller <donut AT dakotacom.net>
 
 
 Requirements:
@@ -7,7 +7,7 @@ Requirements:
 Optional:
   Python Imaging Library  http://www.pythonware.com/products/pil/
     (only needed if you want to create the dimensions column of .crc files)
-  python-fchksum          http://www.azstarnet.com/~donut/programs/fchksum.html
+  python-fchksum          http://www.dakotacom.net/~donut/programs/fchksum.html
     (may speed up checksumming speed a bit, especially if your python
      wasn't built with the mmap module.)
 
@@ -30,6 +30,6 @@ to me for possible inclusion in the main source.
 You can get the latest version at 
 http://cfv.sourceforge.net/
 or
-http://www.azstarnet.com/~donut/programs/cfv.html
+http://www.dakotacom.net/~donut/programs/cfv.html
 or
 (ftp|http)://sunsite.unc.edu/pub/Linux/utils/file/
