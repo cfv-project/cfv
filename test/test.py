@@ -1100,6 +1100,14 @@ def all_tests():
 			test_generic(cfvcmd+" -T --strippaths=%s -p foo2badsize -f %s foo1 foo4"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=1,badcrc=1))
 			test_generic(cfvcmd+" -T --strippaths=%s -p foo2missing -f %s"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=4,badcrc=2,notfound=1))
 			test_generic(cfvcmd+" -T --strippaths=%s -p foo2missing -f %s foo1 foo4"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=0,badcrc=2))
+		d = mkdtemp()
+		try:
+			open(os.path.join(d,'foo'),'w').close()
+			cmd = cfvcmd.replace(' --announceurl=url','')
+			test_generic(cmd+" -C -p %s -f foo.torrent"%d,rcurry(cfv_all_test,files=1,cferror=1))
+			test_log_results("non-creation of empty torrent on missing announceurl?",'',repr(os.listdir(d)),len(os.listdir(d))>1,{})
+		finally:
+			shutil.rmtree(d)
 
 	test_generic(cfvcmd+" -h",cfv_version_test)
 
