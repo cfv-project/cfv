@@ -1,0 +1,21 @@
+cfv 1.0  Copyright 2000 Matt Mueller <donut@azstarnet.com>
+
+Install:
+1) make sure you have python installed (including the python-zlib module)
+2) make install (or manually put cfv and cfv.1 where you want)
+3) read man page, cfv -h, etc.  have fun.
+
+Copying:
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version. 
+See the file 'COPYING' for more information.
+
+I would appreciate it if you make modifications if you would send them
+to me for possible inclusion in the main source.
+
+You can get the latest version at 
+http://www.azstarnet.com/~donut/programs/cfv.html
+or
+(ftp|http)://sunsite.unc.edu/pub/Linux/utils/file/

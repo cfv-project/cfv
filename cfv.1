@@ -1,0 +1,54 @@
+.TH cfv 1 "21 Jun 2000"
+.SH NAME
+cfv \- Verify file concistency with .sfv or .csv files
+.SH SYNOPSIS
+.B cfv [-v] [-T|-C] [-t type] [-f file] [files...]
+.SH DESCRIPTION
+.B cfv
+verifies that the files you have are the same as those that the were used to create
+the checksum file.
+.SH OPTIONS
+.PP
+.IP "-v"
+Enable printing of extra messages.
+.IP "-T"
+Set test mode. (default)
+.IP "-C"
+Set create mode.
+.IP "-f file"
+Specify the name of the checksum file to test or create.
+.IP "-t type"
+Specify the type of the file.  Can be sfv, csv, or auto.  The default is auto,
+which will detect the file type for you.  When creating, if type is auto, an sfv
+will be made.
+.SH EXAMPLES
+If no options are specified, the default will be -T -t auto, and it will search the current directory for any sfv or csv files.
+.br
+.B
+cfv
+.P
+Force the file to test:
+.br
+.B
+cfv -f funny.name
+.P
+Test only the files you have, (avoid file not found errors):
+.br
+.B
+cfv *
+.P
+Create a csv file for all the files in the current dir:
+.br
+.B
+cfv -C -tcsv
+.P
+Create a csv file for only the zip files in the current dir, and specify the filename:
+.br
+.B
+cfv -C -tcsv -fsomezips.csv *.zip
+.SH AUTHOR
+Matt Mueller <donut@azstarnet.com>
+.P
+The latest version, and other programs I have written, are available from:
+.br
+http://www.azstarnet.com/~donut/programs/cfv.html
