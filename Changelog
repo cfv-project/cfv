@@ -1,6 +1,7 @@
 200x-xx-xx - v1.xx:
 	* Handle .torrent files that have the creation date encoded as a string.
 	* Handle .torrent files that specify the filename encoding.
+	* Fix exceptions when trying to print unicode filenames encoded with non-ascii characters.
 
 2003-11-20 - v1.16:
 	* Optimize progress meter display when checking lots of small files.

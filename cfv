@@ -17,7 +17,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import getopt, re, os, sys, errno, time, copy, struct
+import getopt, re, os, sys, errno, time, copy, struct, codecs
 from stat import *
 
 cftypes={}
@@ -99,17 +99,49 @@ def getscrwidth():
 	return os.environ.get('COLUMNS',80)
 scrwidth = getscrwidth()
 
+stdout = sys.stdout
+stderr = sys.stderr
+_stdout_special = 0
 stdinfo = sys.stdout
 stdprogress = None
 def set_stdout_special():
 	"""If stdout is being used for special purposes, redirect informational messages to stderr."""
-	global stdinfo
-	stdinfo = sys.stderr
+	global stdinfo, _stdout_special
+	_stdout_special = 1
+	stdinfo = stderr
+
+class CodecWriter:
+	"""Similar to codecs.StreamWriter, but str objects are passed through directly to the output stream.
+	This is necessary as some codecs barf on trying to encode even ascii strings.
+	Also, filenames read from disk will not be unicode, but rather strings encoded in the filesystemencoding, which will make any StreamWriter barf.
+	But printing them directly should (hopefully) work fine.
+	"""
+	#Another approach could be to convert str objects to unicode and then pass them to encode, but that would be extra work.
+	def __init__(self, encoding, stream, errors='strict'):
+		self.stream = stream
+		self.errors = errors
+		self.encode = codecs.getencoder(encoding)
+	def write(self, object):
+		if type(object)==type(''):
+			self.stream.write(object)
+		else:
+			data, consumed = self.encode(object, self.errors)
+			self.stream.write(data)
+	def writelines(self, list):
+		self.write(''.join(list))
+	def __getattr__(self, name, getattr=getattr):
+		""" Inherit all other methods from the underlying stream.
+		"""
+		return getattr(self.stream, name)
+
 
 def setup_output():
-	global stdprogress
+	global stdinfo,stdprogress,stdout,stderr
+	stdout = CodecWriter(getattr(sys.stdout,'encoding',None) or 'ascii', sys.stdout, errors='backslashreplace')
+	stderr = CodecWriter(getattr(sys.stderr,'encoding',None) or getattr(sys.stdout,'encoding',None) or 'ascii', sys.stderr, errors='backslashreplace')
+	stdinfo = _stdout_special and stderr or stdout
 	# if one of stdinfo (usually stdout) or stderr is a tty, use it.  Otherwise use stdinfo.
-	stdprogress = stdinfo.isatty() and stdinfo or sys.stderr.isatty() and sys.stderr or stdinfo
+	stdprogress = stdinfo.isatty() and stdinfo or stderr.isatty() and stderr or stdinfo
 	doprogress = not config.verbose==-2 and (
 			config.progress=='y' or (
 				config.progress=='a' and stdprogress.isatty()
@@ -126,11 +158,11 @@ def pinfo(s,nl='\n'):
 		stdinfo.write(s+nl)
 def perror(s,nl='\n'):
 	if config.verbose>=-1:
-		sys.stdout.flush() # avoid inconsistent screen state if stdout has unflushed data
-		sys.stderr.write(s+nl)
+		stdout.flush() # avoid inconsistent screen state if stdout has unflushed data
+		stderr.write(s+nl)
 
 def plistf(filename):
-	sys.stdout.write(perhaps_showpath(filename)+config.listsep)
+	stdout.write(perhaps_showpath(filename)+config.listsep)
 
 class INF:
 	"""object that is always larger than what it is compared to"""
@@ -197,7 +229,7 @@ class TimedProgressMeter(ProgressMeter):
 
 
 def enverrstr(e):
-	return e.strerror or str(e)
+	return getattr(e,'strerror',None) or str(e)
 
 class CFVException(Exception):
 	pass
@@ -512,7 +544,7 @@ try:
 	try:
 		if fchksum.version()<4:raise ImportError
 	except:
-		sys.stderr.write("old fchksum version installed, using std python modules. please update.\n") #can't use perror yet since config hasn't been done..
+		stderr.write("old fchksum version installed, using std python modules. please update.\n") #can't use perror yet since config hasn't been done..
 		raise ImportError
 	def _getfilemd5(file):
 		if stdprogress: progress.init(file)
@@ -798,7 +830,7 @@ class ChksumType:
 				if not os.path.isfile(l_filename):
 					raise EnvironmentError, (errno.ENOENT,"not a file")
 				filecrct="exists" #since we didn't actually test the crc, make verbose mode merely say it exists
-		except EnvironmentError, a:
+		except (EnvironmentError, UnicodeError), a: #UnicodeError can occur if python can't map the filename to the filesystem's encoding
 			do_f_enverror(l_filename, a)
 			return -1
 		do_f_ok(filename, filesize, filecrct)
@@ -1162,7 +1194,7 @@ class Torrent(ChksumType):
 					if not done:
 						do_f_badsize(l_filename, filesize, fs)
 						done=1
-			except EnvironmentError, e:
+			except (EnvironmentError, UnicodeError), e: #UnicodeError can occur if python can't map the filename to the filesystem's encoding
 				if not done:
 					do_f_enverror(filename, e)
 					done=1

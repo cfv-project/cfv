@@ -19,7 +19,7 @@
 
 default_ns = globals().copy()
 
-import re,os,sys,string,operator,shutil,getopt,gzip
+import re,os,sys,string,operator,shutil,getopt,gzip,tempfile
 
 try: import BitTorrent
 except ImportError: BitTorrent = None
@@ -198,8 +198,8 @@ def cfv_stdin_test(cmd,file):
 def rx_test(pat,str):
 	if re.search(pat,str): return 0
 	return 1
-def status_test(s,o):
-	if s==0:
+def status_test(s,o,expected=0):
+	if s==expected:
 		return 0
 	return 1
 
@@ -587,6 +587,27 @@ d41d8cd98f00b204e9800998ecf8427e *daTA1""")
 		test_generic(cfvcmd+" -i -uu -p "+dir+" "+' '.join(lower_datafns), r_unv_verbose_test)
 	finally:
 		shutil.rmtree(dir)
+
+
+def test_encoding2():
+	"""Non-trivial (actual non-ascii characters) encoding test.
+	These tests will probably always fail unless you use a unicode locale."""
+	d = tempfile.mkdtemp()
+	try:
+		cfn = os.path.join(d,u'\u3070\u304B.torrent')
+		shutil.copyfile('testencoding2.torrent.foo', cfn)
+		test_generic(cfvcmd+" -q -T -p "+d, rcurry(status_test,expected=8))
+		test_generic(cfvcmd+" -v -T -p "+d, rcurry(cfv_all_test,ok=0,notfound=4))
+		bakad = os.path.join(d,u'\u3070\u304B')
+		os.mkdir(bakad)
+		shutil.copyfile('data1',os.path.join(bakad,u'\u2605'))
+		shutil.copyfile('data2',os.path.join(bakad,u'\u2606'))
+		shutil.copyfile('data3',os.path.join(bakad,u'\u262E'))
+		shutil.copyfile('data4',os.path.join(bakad,u'\u2600'))
+		test_generic(cfvcmd+" -q -T -p "+d, rcurry(status_test,expected=0))
+		test_generic(cfvcmd+" -v -T -p "+d, rcurry(cfv_all_test,ok=4))
+	finally:
+		shutil.rmtree(d)
 	
 
 cfvenv=''
@@ -699,6 +720,7 @@ def all_tests():
 		T_test(".torrent",extra='--strip=1')
 		T_test("smallpiece.torrent",extra='--strip=1')
 		T_test("encoding.torrent",extra='--strip=1')
+		test_encoding2()
 
 	#test handling of directory args in recursive testmode. (Disabled since this isn't implemented, and I'm not sure if it should be.  It would change the meaning of cfv *)
 	#test_generic(cfvcmd+" -r a",cfv_test)
