@@ -1,7 +1,7 @@
 ; This is a NSIS installer script.  See http://nsis.sourceforge.net/
 
 !define VER 1.18
-!define PYTHONDLL python23.dll
+!define PYTHONDLL python24.dll
 
 Name "cfv"
 
