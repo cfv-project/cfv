@@ -217,6 +217,7 @@ logfile=open("test.log","w")
 
 ren_test('md5')
 ren_test('md5',extra='-rr')
+ren_test('bsdmd5')
 ren_test('sfv')
 ren_test('csv')
 ren_test('csv2')
@@ -224,6 +225,7 @@ ren_test('csv4')
 
 T_test(".md5")
 T_test(".md5.gz")
+T_test(".bsdmd5")
 T_test(".csv")
 T_test(".sfv")
 T_test(".csv2")
@@ -246,6 +248,7 @@ test_generic(cfvcmd+r" --fixpaths \\/ -T -f testfix.csv",cfv_test)
 test_generic(cfvcmd+r" --fixpaths \\/ -T -f testfix.csv4",cfv_test)
 test_generic(cfvcmd+r" -i --fixpaths \\/ -T -f testfix.csv4",cfv_test)
 
+C_test("bsdmd5","-t bsdmd5")#,verify=lambda f: test_generic("md5 -c "+f,status_test)) #bsd md5 seems to have no way to check, only create
 C_test("md5",verify=lambda f: test_generic("md5sum -c "+f,status_test))
 C_test("csv")
 C_test("sfv")

@@ -1,3 +1,5 @@
+2001-0?-?? - v1.9:
+	* Support bsd style md5 files (-t bsdmd5).  (requested by Felix Buenemann)
 2001-05-17 - v1.8:
 	* Fixed ignore case for deep (-rr) checksum files.
 	* Added gzipped checksum file support.
