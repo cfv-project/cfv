@@ -1404,14 +1404,12 @@ class Torrent(ChksumType):
 			done = cache.testfiles and not cache.should_test(filename) #if we don't want to test this file, just pretending its done already has the desired effect.
 			if not done:
 				stats.num=stats.num+1
-			fh = None
 			try:
 				l_filename = find_local_filename(filename)
 				if not os.path.exists(l_filename):
 					raise EnvironmentError, (errno.ENOENT,"missing")
 				if not os.path.isfile(l_filename):
 					raise EnvironmentError, (errno.ENOENT,"not a file")
-				fh = open(l_filename,'rb')
 				fs=os.path.getsize(l_filename)
 				if fs!=filesize:
 					if not done:
@@ -1422,7 +1420,7 @@ class Torrent(ChksumType):
 					do_f_enverror(filename, e)
 					done=1
 				l_filename = None
-			return Data(totpos=ftotpos, size=filesize, filename=filename, l_filename=l_filename, done=done, fh=fh)
+			return Data(totpos=ftotpos, size=filesize, filename=filename, l_filename=l_filename, done=done)
 
 		info = metainfo['info']
 		piecelen = info['piece length']
@@ -1460,12 +1458,18 @@ class Torrent(ChksumType):
 		if not config.docrcchecks:
 			return
 
-		def readfpiece(f, pos, size):
+		curfh = Data(fh=None, f=None)
+		def readfpiece(f, pos, size, curfh=curfh):
 			if f.l_filename is None:
 				return None
 			try:
-				f.fh.seek(pos)
-				d = f.fh.read(size)
+				if not curfh.fh or curfh.f is not f:
+					if curfh.fh:
+						curfh.fh.close()
+					curfh.fh = open(f.l_filename,'rb')
+					curfh.f = f
+				curfh.fh.seek(pos)
+				d = curfh.fh.read(size)
 			except EnvironmentError, e:
 				if not f.done:
 					if stdprogress: progress.cleanup()
@@ -1530,11 +1534,11 @@ class Torrent(ChksumType):
 
 		if stdprogress: progress.cleanup()
 
+		if curfh.fh:
+			curfh.fh.close()
 		for f in files:
 			if not f.done:
 				do_f_ok(f.l_filename,f.size,'all pieces ok')
-			if f.fh:
-				f.fh.close()
 			
 	auto_filename_match = 'torrent$'
 

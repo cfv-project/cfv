@@ -940,6 +940,27 @@ def largefile_test():
 		os.unlink(fn)
 
 
+def manyfiles_test(t):
+	d = mkdtemp()
+	try:
+		max_open = os.sysconf('SC_OPEN_MAX')
+	except (AttributeError, ValueError, OSError):
+		max_open = 1024
+	if not run_long_tests and max_open > 4096:
+		print 'max open files is big (%i)'%max_open,
+		max_open = 4096
+		print 'clipping to %i.  Use --full to try the real value'%max_open
+	num = max_open + 1
+	for i in range(0,num):
+		n = '%04i'%i
+		f = open(os.path.join(d, n), 'w')
+		f.write(n)
+		f.close()
+	cfn = os.path.join(d,'manyfiles.'+t)
+	test_generic(cfvcmd+" -C -p %s -t %s -f %s"%(d,t,cfn), rcurry(cfv_all_test,ok=num))
+	test_generic(cfvcmd+" -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,ok=num))
+
+
 cfvenv=''
 cfvexe=os.path.join(os.pardir,'cfv')
 run_internal = 1
@@ -1130,6 +1151,7 @@ def all_tests():
 	for t in allfmts():
 		if fmt_cancreate(t) and fmt_available(t):
 			C_funkynames_test(t)
+			manyfiles_test(t)
 
 	test_generic(cfvcmd+" -m -v -T -t sfv", lambda s,o: cfv_typerestrict_test(s,o,'sfv'))
 	test_generic(cfvcmd+" -m -v -T -t sfvmd5", lambda s,o: cfv_typerestrict_test(s,o,'sfvmd5'))
