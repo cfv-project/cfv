@@ -1,7 +1,7 @@
-cfv 1.7  Copyright 2000 Matt Mueller <donut@azstarnet.com>
+cfv 1.7.1  Copyright 2000-2001 Matt Mueller <donut@azstarnet.com>
 
 Install:
-1) make sure you have python installed 
+1) make sure you have python installed (v1.5.2 or greater)
 1.5) make sure the python-zlib module and/or the python-fchksum (v1.2 or greater)
 module is installed.  (Preferably, fchksum, as it is faster.
 http://www.azstarnet.com/~donut/programs/fchksum.html)

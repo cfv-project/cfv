@@ -1,3 +1,8 @@
+2001-02-22 - v1.7.1:
+	* Fixed reading md5sum files that had dos eol on non-dos systems.
+	* Loosened .sfv file recognition all the way.
+	* Added --help alias for -h.
+	* Added --version. 
 2000-11-19 - v1.7:
 	* Made ignore case option always search for correct filename if using show unverified files mode.  Fixes problem with incorrectly showing some files as unverified on FAT drives.
 	* Caches dir entries for much faster ignore case operation.

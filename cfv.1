@@ -1,4 +1,4 @@
-.TH cfv 1 "19 Nov 2000"
+.TH cfv 1 "22 Feb 2001"
 .SH NAME
 cfv \- Verify file concistency with .sfv, .csv, or md5sum files
 .SH SYNOPSIS
@@ -48,6 +48,10 @@ Specify the name of the checksum file to test or create.
 Specify the type of the file.  Can be sfv, csv, csv2, csv4, md5, or auto.  The default is auto,
 which will detect the file type for you.  When creating, if type is auto an sfv
 will be made, unless a different default has been set in the config file.
+.IP "-h/--help"
+Print help info.
+.IP "--version"
+Print unadorned version.
 .P
 .B sfv
 is a simply file verify format file
