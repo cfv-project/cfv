@@ -94,20 +94,43 @@ def T_test(f):
 	test_generic(cfvcmd+" -i -T -f test"+f,cfv_test) #all tests should work with -i
 	test_generic(cfvcmd+" -m -T -f test"+f,cfv_test) #all tests should work with -m
 
-def C_test(f,extra=None,verify=None):
+def gzC_test(f,extra=None,verify=None,t=None,d=None):
 	cmd=cfvcmd
+	if not t:
+		t=f
+	f='test.C.'+f+'.gz'
+	f2='test.C.'+f+'.tmp.gz'
+	if extra:
+		cmd=cmd+" "+extra
+	test_generic("%s -q -C -t %s -zz -f - %s > %s "%(cmd,t,d,f2),status_test)
+	test_generic("%s -C -f %s %s"%(cmd,f,d),cfv_test)
+	test_generic("zcmp %s %s "%(f,f2),status_test)
+	test_generic("%s -T -f %s"%(cmd,f),cfv_test)
+	test_generic("cat %s|%s -zz -T -f -"%(f,cmd),cfv_test)
+	if verify:
+		verify(f)
+	os.unlink(f)
+	os.unlink(f2)
+def C_test(f,extra=None,verify=None,t=None,d='data?'):
+	gzC_test(f,extra=extra,t=t,d=d)
+	cmd=cfvcmd
+	if not t:
+		t=f
 	cfv_stdin_test(cmd+" -t"+f+" -C -f-","data4")
 	f='test.C.'+f
 	if extra:
 		cmd=cmd+" "+extra
-	test_generic("%s -C -f %s"%(cmd,f),cfv_test)
+	test_generic("%s -C -f %s %s"%(cmd,f,d),cfv_test)
 	test_generic("%s -T -f %s"%(cmd,f),cfv_test)
+	test_generic("cat %s|%s -T -f -"%(f,cmd),cfv_test)
+	test_generic("gzip -c %s|%s -zz -t%s -T -f -"%(f,cmd,t),cfv_test)
 	if verify:
 		verify(f)
 	os.unlink(f)
 	
 logfile=open("test.log","w")
 T_test(".md5")
+T_test(".md5.gz")
 T_test(".csv")
 T_test(".sfv")
 T_test(".csv2")
