@@ -435,6 +435,10 @@ class PeekFile:
 		self.peek = None
 		self.readline = self.fileobj.readline
 		self.read = self.fileobj.read
+		self.seek = self.fileobj.seek
+	def seek(self, *args):
+		self._done_peeking()
+		return self.seek(*args)
 	def readline(self, *args):
 		self._done_peeking()
 		return self.readline(*args)
@@ -831,8 +835,22 @@ class PAR2(ChksumType, MD5_MixIn):
 		pkt_header_size = struct.calcsize(pkt_header_fmt)
 		file_pkt_fmt = '< 16s 16s 16s Q'
 		file_pkt_size = struct.calcsize(file_pkt_fmt)
+
+		def get_creator(file, pkt_header_fmt=pkt_header_fmt, pkt_header_size=pkt_header_size):#nested scopes not supported until python 2.1
+			if not config.verbose>0:
+				return None #avoid doing the work if we aren't going to use it anyway.
+			while 1:
+				d = file.read(pkt_header_size)
+				if not d:
+					return None
+				magic, pkt_len, pkt_md5, set_id, pkt_type = struct.unpack(pkt_header_fmt, d)
+				if pkt_type == 'PAR 2.0\0Creator\0':
+					return chompnulls(file.read(pkt_len - pkt_header_size))
+				else:
+					file.seek(pkt_len - pkt_header_size, 1)
 				
-		self.do_test_chksumfile_print_testingline(file)#### hrm.  We find the creator packet too late to print it here.  Need to look for it ahead of time or something.
+		self.do_test_chksumfile_print_testingline(file, get_creator(file))
+		file.seek(0) # reset file position after looking for creator packet
 		
 		num_file_pkts = 0
 
@@ -842,27 +860,29 @@ class PAR2(ChksumType, MD5_MixIn):
 				break
 
 			magic, pkt_len, pkt_md5, set_id, pkt_type = struct.unpack(pkt_header_fmt, d)
+
 			if config.docrcchecks:
 				import md5
 				control_md5 = md5.new()
 				control_md5.update(d[0x20:])
 				stats.bytesread=stats.bytesread+len(d)
-				
-			d = file.read(pkt_len - pkt_header_size)
-			if config.docrcchecks:
+				d = file.read(pkt_len - pkt_header_size)
 				control_md5.update(d)
 				stats.bytesread=stats.bytesread+len(d)
 				if control_md5.digest() != pkt_md5:
 					raise EnvironmentError, (errno.EINVAL,"corrupt par2 file - bad packet hash")
 
 			if pkt_type == 'PAR 2.0\0FileDesc':
+				if not config.docrcchecks:
+					d = file.read(pkt_len - pkt_header_size)
 				num_file_pkts = num_file_pkts + 1
 				file_id, file_md5, file_md5_16k, file_size = struct.unpack(file_pkt_fmt, d[:file_pkt_size])
 				filename = chompnulls(d[file_pkt_size:])
 				c = "%02x"*16 % tuple(map(ord, file_md5))
 				self.test_file(filename, c, file_size)
-			elif pkt_type == 'PAR 2.0\0Creator\0':
-				pass #pverbose("par2 creator: "+chompnulls(d)) #### hrm.
+			else:
+				if not config.docrcchecks:
+					file.seek(pkt_len - pkt_header_size, 1)
 
 		if num_file_pkts == 0:
 			raise EnvironmentError, (errno.EINVAL,"corrupt or unsupported par2 file - no file description packets found")
