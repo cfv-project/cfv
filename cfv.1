@@ -1,8 +1,8 @@
-.TH cfv 1 "05 Nov 2000"
+.TH cfv 1 "19 Nov 2000"
 .SH NAME
 cfv \- Verify file concistency with .sfv, .csv, or md5sum files
 .SH SYNOPSIS
-.B cfv [-v|-V] [-r|-rr|-R] [-T|-C] [-m|-M] [-i|-I] [-u|-U] [--fixpaths <s>] [--showpaths <i>] [-t type] [-f file] [files...]
+.B cfv [-v|-V|-VV] [-r|-rr|-R] [-T|-C] [-m|-M] [-i|-I] [-u|-U] [--fixpaths <s>] [--showpaths <i>] [-t type] [-f file] [files...]
 .SH DESCRIPTION
 .B cfv
 verifies that the files you have are the same as those that the were used to create
@@ -13,6 +13,8 @@ the checksum file.
 Enable printing of extra messages.
 .IP "-V"
 Disable printing of extra messages. (default)
+.IP "-VV"
+Like -V, but don't print status line at end either.
 .IP "-r"
 Recursive mode 1.  In create mode, make seperate chksum files for each dir.
 .IP "-rr"
@@ -97,7 +99,7 @@ Empty lines and lines beginning with a # are ignored.
 .SH EXAMPLE CONFIGURATION
 #this is an example .cfvrc that specifies all the default options
 .br
-#don't be verbose
+#don't be verbose (set to 1 for -v, 0 for -V, -1 for -VV)
 .br
 verbose 0
 .br

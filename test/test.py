@@ -11,20 +11,42 @@ def logr(text):
 def log(text):
 	logr(text+"\n");
 
-def test_generic(cmd,test):
+def test_log_results(cmd,s,o,r):
 	global stats
 	log("*** testing "+cmd);
-	s,o=commands.getstatusoutput(cmd)
 	log(o);
-	if test(s,o):
+	if r:
 		stats.failed=stats.failed+1
 		print "failed test:",cmd
 		result="FAILED";
+		if type(r)!=type(1) or r!=1:
+			result=result+" (%s)"%r
 	else:
 		stats.ok=stats.ok+1
 		result="OK";
-	log("%s (%i)"%(result,s));
+	log("%s (%s)"%(result,s));
 	log("");
+def test_generic(cmd,test):
+	s,o=commands.getstatusoutput(cmd)
+	r=test(s,o)
+	test_log_results(cmd,s,o,r)
+class cst_err(Exception): pass
+def cfv_stdin_test(cmd,file):
+	s1=s2=None
+	o1=o2=''
+	r=0
+	try:
+		s1,o1=commands.getstatusoutput(cmd+' '+file)
+		if s1: raise cst_err, 2
+		s2,o2=commands.getstatusoutput('cat '+file+' | '+cmd+' -')
+		if s2: raise cst_err, 3
+		x=re.search('^(.*)'+re.escape(file)+'(.*)$[\r\n]{0,2}^(\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$',o1,re.M)
+		if not x: raise cst_err, 4
+		x2=re.search('^'+re.escape(x.group(1)+x.group(2))+'$[\r\n]{0,2}^(\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$',o2,re.M)
+		if not x2: raise cst_err, 5
+	except cst_err, er:
+		r=er
+	test_log_results('stdin/out of '+cmd+' with file '+file,(s1,s2),o1+'\n'+o2,r)
 
 def rx_test(pat,str):
 	if re.search(pat,str): return 0
@@ -43,9 +65,11 @@ def cfv_test(s,o):
 		return 0
 	return 1
 
-def cfv_unv_test(s,o):
+def cfv_unv_test(s,o,unv=1):
 	x=re.search(r'^(\d+) files, (\d+) OK, (\d)+ unverified.  [\d.]+ seconds, [\d.]+K(/s)?$',o,re.M)
-	if s!=0 and x and x.group(1) == x.group(2) and int(x.group(1))>0 and int(x.group(3))==1:
+	if s!=0 and x and x.group(1) == x.group(2) and int(x.group(1))>0:
+		if unv and int(x.group(3))!=unv:
+			return 1
 		return 0
 	return 1
 
@@ -72,6 +96,7 @@ def T_test(f):
 
 def C_test(f,extra=None,verify=None):
 	cmd=cfvcmd
+	cfv_stdin_test(cmd+" -t"+f+" -C -f-","data4")
 	f='test.C.'+f
 	if extra:
 		cmd=cmd+" "+extra
@@ -95,11 +120,13 @@ C_test("md5",verify=lambda f: test_generic("md5sum -c "+f,status_test))
 C_test("csv")
 C_test("sfv")
 C_test("csv2","-t csv2")
+C_test("csv4","-t csv4")
 #test_generic("../cfv -V -T -f test.md5",cfv_test)
 #test_generic("../cfv -V -tcsv -T -f test.md5",cfv_test)
 
 test_generic(cfvcmd+" -u -f test.md5 data* test.py",cfv_unv_test)
 test_generic(cfvcmd+" -u -f test.md5 data* test.py test.md5",cfv_unv_test)
+test_generic(cfvcmd+r" -i --fixpaths \\/ -Tu",lambda s,o: cfv_unv_test(s,o,None))
 test_generic(cfvcmd+" -h",cfv_version_test)
 
 donestr="tests finished:  ok: %i  failed: %i"%(stats.ok,stats.failed)

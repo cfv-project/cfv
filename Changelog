@@ -1,3 +1,11 @@
+2000-11-19 - v1.7:
+	* Made ignore case option always search for correct filename if using show unverified files mode.  Fixes problem with incorrectly showing some files as unverified on FAT drives.
+	* Caches dir entries for much faster ignore case operation.
+	* Accepts - to represent stdin for data source and/or stdout for destination of checksums.
+	* Added -VV option.
+	* Errors printed to stderr instead of stdout.
+	* Uses class instances instead of imp module for checksum types.
+	* If using fchksum module, you now need at least version 1.2 (due to stdin ability).
 2000-11-08 - v1.6:
 	* Added ignore case option.
 	* Added fix paths option.
