@@ -1,4 +1,4 @@
-.TH cfv 1 "30 Aug 2001"
+.TH cfv 1 "30 Sep 2001"
 .SH NAME
 cfv \- Verify file concistency with .sfv, .csv, or md5sum files
 .SH SYNOPSIS
@@ -207,6 +207,12 @@ renameformat %(name)s.bad-%(count)i%(ext)s
 .PP
 .IP "~/.cfvrc"
 cfv configuration file.  See configuration section.
+.SH ENVIRONMENT
+.PP
+.IP "CFV_NOFCHKSUM"
+Set to a non-empty value to disable usage of python-fchksum module.
+.IP "CFV_NOMMAP"
+Set to a non-empty value to disable usage of mmap.
 .SH BUGS
 Specifying the [files...] arguments when using recursive test mode probably does not do what you want it to.  (Comments or suggestions on desired behavior welcome.)
 .PP

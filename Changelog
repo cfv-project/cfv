@@ -1,6 +1,7 @@
 2001-10-xx - v1.10:
 	* Fix file.close() exception on -C in empty dir.
 	* Add mmap support for faster checksumming.
+	* Add CFV_NOFCHKSUM and CFV_NOMMAP env vars. (Mostly for testing/debugging.)
 2001-09-03 - v1.9:
 	* Support bsd style md5 files (-t bsdmd5).
 	* Make test.py not attempt to verify against md5sum if it is not available (ie, on bsd). (reported by Hannu Liljemark)
