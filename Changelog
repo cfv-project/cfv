@@ -5,6 +5,7 @@
 	* Torrent files now default to UTF-8 filename encoding, and specify the encoding field in the metainfo.
 	* The encoding of text checksum files that start with a Unicode BOM is auto detected.
 	* Python 2.0 is now the minimum supported version.
+	* Print help output to stdout under non-error conditions. (Requested by Simon Howard)
 
 2005-02-04 - v1.18.1:
 	* Fix TypeError when using progress meter and checksumming stdin.

@@ -562,6 +562,13 @@ def cfv_cftypehelp_test(s,o,expected):
 			return 'type %s not found in output'%tname
 	return 0
 
+def cfv_nooutput_test(s,o,expected=0):
+	if s!=expected:
+		return 1
+	if o:
+		return 'output: %s'%(repr(o),)
+	return 0
+
 def T_test(f, extra=None):
 	cmd=cfvcmd
 	if extra:
@@ -1686,10 +1693,13 @@ def all_tests():
 	if run_long_tests:
 		largefile_test()
 	
-	test_generic(cfvcmd+" -t aoeu",rcurry(cfv_cftypehelp_test,1))
-	test_generic(cfvcmd+" -t help",rcurry(cfv_cftypehelp_test,0))
+	test_generic(cfvcmd+" -t aoeu",rcurry(cfv_cftypehelp_test,1),stdout='/dev/null')
+	test_generic(cfvcmd+" -t aoeu",rcurry(cfv_nooutput_test,1),stderr='/dev/null')
+	test_generic(cfvcmd+" -t help",rcurry(cfv_cftypehelp_test,0),stderr='/dev/null')
+	test_generic(cfvcmd+" -t help",rcurry(cfv_nooutput_test,0),stdout='/dev/null')
 
-	test_generic(cfvcmd+" -h",cfv_version_test)
+	test_generic(cfvcmd+" -h",cfv_nooutput_test,stdout='/dev/null')
+	test_generic(cfvcmd+" -h",cfv_version_test,stderr='/dev/null')
 
 	donestr="tests finished:  ok: %i  failed: %i"%(stats.ok,stats.failed)
 	log("\n"+donestr)
