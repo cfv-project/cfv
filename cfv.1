@@ -2,7 +2,7 @@
 .SH NAME
 cfv \- Verify file concistency with .sfv, .csv, or md5sum files
 .SH SYNOPSIS
-.B cfv [-p dir] [-v|-V|-VV] [-r|-rr|-R] [-zz|-z|-Z|-ZZ] [-T|-C] [-m|-M] [-i|-I] [-u|-U] [--fixpaths <s>] [--showpaths <i>] [-t type] [-f file] [files...]
+.B cfv [-p dir] [-v|-V|-VV] [-r|-rr|-R] [-n|-N] [--renameformat <s>] [-zz|-z|-Z|-ZZ] [-T|-C] [-m|-M] [-i|-I] [-u|-U] [--fixpaths <s>] [--showpaths <i>] [-t type] [-f file] [files...]
 .SH DESCRIPTION
 .B cfv
 verifies that the files you have are the same as those that the were used to create
@@ -32,6 +32,18 @@ Set create mode.
 Check only for missing files (don't compare checksums)
 .IP "-M"
 Check checksums (default)
+.IP "-n"
+Rename bad files
+.IP "-N"
+Don't rename bad files (default)
+.IP "--renameformat string"
+Format string to use with -n option.  Simply, put any of the 4 strings %(fullname)s, %(name)s, %(ext)s, and %(count)i in the format string, along with whatever other text you wish.
+.br
+The default is '%(name)s.bad-%(count)i%(ext)s'
+.br
+In detail, this is a standard python format string with mapping that contains
+{'fullname': original filename, 'name': fullname minus extension, 'ext': extension(including .), 'count': rename attempt}.
+If the format string does not contain count, then cfv will append '-%(count)i' to the filename if the first attempt fails.
 .IP "-i"
 Ignore case.  Currently has no effect in create mode.
 .IP "-I"
@@ -176,6 +188,14 @@ showpaths 2
 #access checksum filenames that end with .gz as gzipped files (-1 for never, 0 for with .gz, and 1 to make -C make .gz files automatically)
 .br
 gzip 0
+.br
+#don't rename bad files
+.br
+rename 0
+.br
+#format to use for renaming bad files with -n
+.br
+renameformat %(name)s.bad-%(count)i%(ext)s
 .SH FILES
 .PP
 .IP "~/.cfvrc"
