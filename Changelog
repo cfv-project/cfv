@@ -1,4 +1,4 @@
-2001-10-xx - v1.10:
+2001-12-06 - v1.10:
 	* Fix file.close() exception on -C in empty dir.
 	* Add mmap support for faster checksumming.
 	* Add CFV_NOFCHKSUM and CFV_NOMMAP env vars. (Mostly for testing/debugging.)

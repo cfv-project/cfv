@@ -229,7 +229,7 @@ def make_rename_formatmap(l_filename):
 	sp=os.path.splitext(l_filename)
 	return {'name':sp[0], 'ext':sp[1], 'fullname':l_filename}
 
-version='1.10-pre'+'$Revision$'[11:-2]
+version='1.10'#-pre'+'$Revision$'[11:-2]
 
 try:
 	if os.environ.get('CFV_NOFCHKSUM'): raise ImportError
