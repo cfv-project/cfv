@@ -864,6 +864,8 @@ d41d8cd98f00b204e9800998ecf8427e *daTA1""")
 def test_encoding2():
 	"""Non-trivial (actual non-ascii characters) encoding test.
 	These tests will probably always fail unless you use a unicode locale and python 2.3+."""
+	if not BitTorrent:
+		return
 	d = mkdtemp()
 	try:
 		cfn = os.path.join(d,u'\u3070\u304B.torrent')
@@ -956,7 +958,8 @@ def all_tests():
 	for t in 'md5', 'bsdmd5', 'sfv', 'sfvmd5', 'csv', 'csv2', 'csv4', 'crc', 'par', 'par2':
 		search_test(t)
 		search_test(t,test_nocrc=1)
-	search_test('torrent',test_nocrc=1,extra="--strip=1")
+	if BitTorrent:
+		search_test('torrent',test_nocrc=1,extra="--strip=1")
 	quoted_search_test()
 
 	T_test(".md5")
