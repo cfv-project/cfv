@@ -120,7 +120,7 @@ class CodecWriter:
 	def __init__(self, encoding, stream, errors='strict'):
 		self.stream = stream
 		self.errors = errors
-		self.encode = codecs.getencoder(encoding)
+		self.encode = codecs.lookup(encoding)[0] #codecs.getencoder(encoding) #codecs.getencoder is only in python2.2+, but lookup(...)[0] is equivalent
 	def write(self, object):
 		if type(object)==type(''):
 			self.stream.write(object)
