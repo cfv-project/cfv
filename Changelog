@@ -2,7 +2,8 @@
 	* Fix make install when target directories don't already exist. (Reported by Svend S. Sorensen)
 	* Fix cfv -u -t blah -f foo.blah from reporting foo.blah as unverified.
 	* Make create mode also display seperate stats per checksum file. 
-	* Fix exception on error creating a checksum file. (Eg, in a readonly dir.)
+	* Make create mode be verbose in verbose mode.
+	* Fix exception on error creating/writing a checksum file. (Eg, in a readonly dir, or a full drive.)
 2002-04-08 - v1.11:
 	* Due to architectural changes, unicode requirements(for .par support), etc, cfv now requires python 1.6 or higher.
 	* Add test-only support for PAR files. (python 1.6 or 2.2 recommended for better performance.)
