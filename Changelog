@@ -1,4 +1,4 @@
-2001-0?-?? - v1.9:
+2001-09-03 - v1.9:
 	* Support bsd style md5 files (-t bsdmd5).
 	* Make test.py not attempt to verify against md5sum if it is not available (ie, on bsd). (reported by Hannu Liljemark)
 	* No longer attempt to set user/group in make install.
