@@ -1,3 +1,6 @@
+2005-xx-xx - v1.x:
+	* Print help output to stdout under non-error conditions. (Requested by Simon Howard)
+
 2005-02-04 - v1.18.1:
 	* Fix TypeError when using progress meter and checksumming stdin.
 	* Fix progress meter spew when checksumming special files(devices, named pipes, etc.)
