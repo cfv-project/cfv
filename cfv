@@ -59,7 +59,14 @@ except TypeError:
 			if s[i]!=c:
 				break
 		return s[i:]
-	
+
+try:
+	sorted #sorted(seq) only in python>=2.4
+except NameError:
+	def sorted(seq):
+		l = list(seq)
+		l.sort()
+		return l
 
 _realpath = getattr(os.path, 'realpath', os.path.abspath) #realpath is only in Python>=2.2
 _path_key_cache = {}
@@ -2290,7 +2297,7 @@ def printusage(err=0):
 		perror('  -L       don\'t follow symlinks')
 	perror('  -T       test mode (default)')
 	perror('  -C       create mode')
-	perror('  -t <t>   set type to <t> (%s, or auto(default))'%', '.join(cftypes.keys()))
+	perror('  -t <t>   set type to <t> (%s, or auto(default))'%', '.join(sorted(cftypes.keys())))
 	perror('  -f <f>   use <f> as list file')
 	perror('  -m       check only for missing files (don\'t compare checksums)')
 	perror('  -M       check checksums (default)')
