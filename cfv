@@ -1275,8 +1275,11 @@ class Torrent(ChksumType):
 			import sha
 			try:
 				from BitTorrent import bencode, btformats
-			except ImportError:
-				from BitTornado import bencode; from BitTornado.BT1 import btformats
+			except ImportError, e1:
+				try:
+					from BitTornado import bencode; from BitTornado.BT1 import btformats
+				except ImportError, e2:
+					raise ImportError, '%s and %s'%(e1,e2)
 			metainfo = bencode.bdecode(file.read())
 			btformats.check_message(metainfo)
 		except (ImportError,ValueError), e:
