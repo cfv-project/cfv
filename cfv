@@ -141,6 +141,7 @@ class Config:
 	defaulttype='sfv'
 	ignorecase=0
 	fixpaths=''
+	strippaths=0
 	showpaths=2
 	gzip=0
 	rename=0
@@ -181,6 +182,8 @@ class Config:
 			self.setintr(o,v,-1,1)
 		elif o in ("recursive","showpaths"):
 			self.setintr(o,v,0,2)
+		elif o=="strippaths":
+			self.setintr(o,v,-1,sys.maxint)
 		elif o=="fixpaths":
 			self.setstr(o,v)
 		elif o=="renameformat":
@@ -471,6 +474,8 @@ class ChksumType:
 	def test_file(self,filename,filecrc,filesize=-1):
 		if len(config.fixpaths):
 			filename=fixpath(filename)
+		if config.strippaths:
+			filename=strippath(filename, config.strippaths)
 		filename=normpath(filename)
 		if self.testfiles:
 			if config.ignorecase:
@@ -877,16 +882,16 @@ def path_split(filename):
 	while 1:
 		head,tail=os.path.split(head)
 		if len(tail):
-			parts.insert(0,string.lower(tail))
+			parts.insert(0,tail)
 		else:
 			if len(head):
-				parts.insert(0,string.lower(head))
+				parts.insert(0,head)
 			break
 	return parts
 
 def nocase_findfile(filename):
 	cur="."
-	parts=path_split(filename)
+	parts=map(string.lower, path_split(filename))
 	#print 'nocase_findfile:',filename,parts,len(parts)
 	for i in range(0,len(parts)):
 		p=parts[i]
@@ -909,6 +914,14 @@ def nocase_findfile(filename):
 		stats.diffcase = stats.diffcase + 1
 	return cur
 	
+def strippath(filename, num=-1):
+	if num<0:
+		return os.path.split(filename)[1]
+	parts = path_split(filename)
+	if len(parts) <= num:
+		return parts[-1]
+	return os.path.join(*parts[num:])
+
 def fixpath(filename):
 	return re.sub('['+re.escape(config.fixpaths)+']',os.sep,filename)
 
@@ -1087,6 +1100,7 @@ def printusage(err=0):
 	perror(' --list=<l> raw list files of type <l> (%s)'%string.join(LISTARGS.keys(),', '))
 	perror(' --list0=<l> same as list, but seperate files with nulls (useful for xargs -0)')
 	perror(' --fixpaths=<s>  replace any chars in <s> with %s'%os.sep)
+	perror(' --strippaths=NUM  strip NUM leading components from file names.')
 	perror(' --showpaths=<p> show full paths 0:never, 1:always, 2:in recursive mode(default)')
 	perror(' --renameformat=<f> format string to use with -n option')
 	perror(' --help/-h show help')
@@ -1106,7 +1120,7 @@ def main(argv):
 	typename='auto'
 
 	try:
-		optlist, args = getopt.getopt(argv, 'rRTCt:f:mMnNp:uUiIvVzZqh?', ['list=', 'list0=', 'fixpaths=','showpaths=','renameformat=','help','version'])
+		optlist, args = getopt.getopt(argv, 'rRTCt:f:mMnNp:uUiIvVzZqh?', ['list=', 'list0=', 'fixpaths=', 'strippaths=', 'showpaths=','renameformat=','help','version'])
 	except getopt.error, a:
 		perror("cfv: %s"%a)
 		printusage(1)
@@ -1212,6 +1226,8 @@ def main(argv):
 			p=_perr #redirect all messages to stderr so only the list gets on stdout
 		elif o=='--showpaths':
 			config.showpaths=int(a)
+		elif o=='--strippaths':
+			config.strippaths=int(a)
 		elif o=='--fixpaths':
 			config.fixpaths=a
 		elif o=='-h' or o=='-?' or o=='--help':

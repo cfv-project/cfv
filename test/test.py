@@ -270,7 +270,7 @@ if len(sys.argv)>1:
 	cfvcmd=sys.argv[1]
 
 #set everything to default in case user has different in config file
-cfvcmd=cfvcmd+' -ZNVRMUI --fixpaths=""'
+cfvcmd=cfvcmd+' -ZNVRMUI --fixpaths="" --strippaths=0'
 
 
 logfile=open("test.log","w")
@@ -316,6 +316,11 @@ def all_tests():
 	#test_generic(cfvcmd+" -r a/C",cfv_test)
 	#test_generic(cfvcmd+" -ri A/c",cfv_test)
 	#test_generic(cfvcmd+" -r a/C/foo.bar",cfv_test)
+	
+	test_generic(cfvcmd+" --strippaths=0 -T -f teststrip0.csv4",cfv_test)
+	test_generic(cfvcmd+" --strippaths=1 -T -f teststrip1.csv4",cfv_test)
+	test_generic(cfvcmd+" --strippaths=2 -T -f teststrip2.csv4",cfv_test)
+	test_generic(cfvcmd+" --strippaths=-1 -T -f teststrip-1.csv4",cfv_test)
 
 	test_generic(cfvcmd+" -i -T -f testcase.csv",cfv_test)
 	test_generic(cfvcmd+" -T -f testquoted.sfv",cfv_test)

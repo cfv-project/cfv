@@ -62,6 +62,9 @@ Don't create gzipped files automatically. (default)
 Never use gzip, even if file ends in ".gz".
 .IP "--fixpaths string"
 Convert all occurances of any characters in string to the dir seperator for the current platform.  No effect in create mode. Use an empty string to disable.
+.IP "-strippaths NUM"
+Strip NUM leading components from file names in test mode.  Like the -p/--strip options of patch, except that it defaults to 0.
+A value of -1 strips all path information (like the default in patch.)
 .IP "--showpaths int"
 Show full paths 0:never, 1:always, 2:only in recursive mode(default)
 .IP "-p dir"
@@ -190,6 +193,10 @@ fixpaths
 #A more useful example would be:
 .br
 #fixpaths /\\
+.br
+#don't strip leading directories (-1 to strip all path info, 0+ to strip the first X components)
+.br
+strippaths 0
 .br
 #show full paths in recursive mode (set to 0 for never, 1 for always, 2 for only in recursive mode)
 .br
