@@ -1081,7 +1081,7 @@ def all_tests():
 	test_generic(cfvcmd+" -i -T -f testcase.csv",cfv_test)
 	test_generic(cfvcmd+" -T --unquote=yes -f testquoted.sfv",cfv_test)
 	test_generic(cfvcmd+" -i --unquote=yes -T -f testquotedcase.sfv",cfv_test)
-	test_generic(cfvcmd+" -i --unquote=yes -T -f testquotedcase.sfv a/C/Foo.bar DaTa1",rcurry(cfv_all_test,ok=2))
+	test_generic(cfvcmd+" -i --unquote=yes -T -f testquotedcase.sfv DaTa1 "+os.path.join('a','C','Foo.bar'),rcurry(cfv_all_test,ok=2))
 	test_generic(cfvcmd+" -i -T -f testquoted.csv4",cfv_test)
 	test_generic(cfvcmd+r" --fixpaths \\/ -T -f testfix.csv",cfv_test)
 	test_generic(cfvcmd+r" --fixpaths \\/ -T -f testfix.csv4",cfv_test)
