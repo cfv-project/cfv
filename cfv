@@ -19,7 +19,7 @@
 
 import getopt, re, os, string, sys, errno, time, copy
 
-types={}
+cftypes={}
 
 LISTOK=512
 LISTBAD=1024
@@ -148,11 +148,11 @@ class Config:
 	renameformatnocount=0
 	list=0
 	listsep='\n'
-	def setdefault(self,type):
-		if type in types.keys():
-			self.defaulttype=type
+	def setdefault(self,cftype):
+		if cftype in cftypes.keys():
+			self.defaulttype=cftype
 		else:
-			raise CFVValueError, "invalid default type '%s'"%type
+			raise CFVValueError, "invalid default type '%s'"%cftype
 	def setintr(self,o,v,min,max):
 		try:
 			x=int(v)
@@ -326,25 +326,22 @@ except ImportError:
 		#old cmp module is always shallow, so call its real do_cmp function if the files signatures match.  do_cmp is undocumented but in all the versions of the cmp.py on sourceforge python cvs so I think its safe :)
 		return cmp.cmp(f1, f2) and cmp.do_cmp(f1, f2)
 
-
-class fv_type:
-	def __init__(self,csf,tm,am,msf,wh,mdf):
-#		self.checksumfile=csf
-		self.dochecksumfileline=csf
-		self.testmatch=tm
-		self.automake_filenametest=am
-		self.make_std_filename=msf
-		self.writeheader=wh
-		self.make_dofile=mdf
+try:
+	staticmethod #new in python 2.2
+except NameError:
+	class staticmethod:
+		def __init__(self, anycallable):
+			self.__call__ = anycallable
+					
 
 class PeekFile:
-	"a (very) limited file-like class that gets around having to seek back after reading a line"
-	def __init__(self, fileobj, doclose=1):
-		self.fobj=fileobj
-		self.peeked=''
-		self.doclose=doclose
-		#speed up by not even checking peek status normally
-		self.readline=self.fobj.readline #take advantage of the fact that we only use size arg with peekline
+	def __init__(self, fileobj, filename=None, doclose=1):
+		self.fobj = fileobj
+		self.peekbuf = ''
+		self.doclose = doclose
+
+		self.name=filename or fileobj.name
+		self.setpoked()
 		self.write=self.fobj.write
 		self.flush=self.fobj.flush
 	def close(self):
@@ -352,24 +349,67 @@ class PeekFile:
 			self.fobj.close()
 		else:
 			self.flush()
-		self.fobj=None
+	def setpoked(self):
+		if self.peekbuf:
+			self.read = self.p_read
+			self.readline = self.p_readline
+		else:
+			self.read = self.fobj.read
+			self.readline = self.fobj.readline
+	def peek(self, size):
+		if len(self.peekbuf) < size:
+			self.peekbuf = self.peekbuf + self.fobj.read(size - len(self.peekbuf))
+		self.setpoked()
+		return self.peekbuf[:size]
 	def hackedreadline(self, size=-1):
 		try:
 			return self.fobj.readline(size)
 		except TypeError:
 			return self.fobj.readline() #hack for broken readline() in older gzip.py versions
 	def peekline(self, size=-1):
-		if not self.peeked:
-			self.peeked=self.hackedreadline(size)
-			self.readline=self.p_readline #now that we've peeked, we must use the peek-aware readline
-		return self.peeked
+		lines = self.peekbuf.splitlines(1)
+		if size >= 0 and len(self.peekbuf) >= size:
+			return lines[0][:size]
+		if len(lines) > 1 or '\n' in self.peekbuf or '\r' in self.peekbuf:
+			return lines[0]
+		if size >= 0:
+			self.peekbuf = self.peekbuf + self.hackedreadline(size - len(self.peekbuf))
+		else:
+			self.peekbuf = self.peekbuf + self.fobj.readline()
+		self.setpoked()
+		return self.peekbuf
+	def p_read(self, size=-1):
+		if size == -1:
+			ret = self.peekbuf
+			self.peekbuf = ''
+			self.setpoked()
+			return ret + self.read()
+		if size < len(self.peekbuf):
+			ret = self.peekbuf[:size]
+			self.peekbuf = self.peekbuf[size:]
+			self.setpoked()
+			return ret
+		ret = self.peekbuf
+		self.peekbuf = ''
+		self.setpoked()
+		return ret + self.read(size - len(ret))
 	def p_readline(self, size=-1):
-		r=self.peeked
-		self.peeked=''
-		self.readline=self.fobj.readline #ok, we can go back to the real readline
-		if '\n' in r:
-			return r
-		return r+self.hackedreadline(size)
+		lines = self.peekbuf.splitlines(1)
+		if size >= 0 and len(self.peekbuf) >= size:
+			self.peekbuf = lines[0][size:] + ''.join(lines[1:])
+			self.setpoked()
+			return lines[0][:size]
+		if len(lines) > 1 or '\n' in self.peekbuf or '\r' in self.peekbuf:
+			self.peekbuf = ''.join(lines[1:])
+			self.setpoked()
+			return lines[0]
+		self.peekbuf = ''
+		self.setpoked()
+		if size >=0 :
+			return lines[0] + self.hackedreadline(size - len(self.peekbuf))
+		else:
+			return lines[0] + self.fobj.readline()
+
 
 def doopen(filename,mode='r'):
 	if filename=='-':
@@ -381,9 +421,9 @@ def doopen(filename,mode='r'):
 		if filename=='-':
 			if mode[0]=='r':
 				import StringIO
-				return PeekFile(gzip.GzipFile(mode=mode,fileobj=StringIO.StringIO(fileobj.read()))) #lovely hack since gzip.py requires a bunch of seeking.. bleh.
-			return PeekFile(gzip.GzipFile(mode=mode,fileobj=fileobj))
-		return PeekFile(gzip.open(filename,mode))
+				return PeekFile(gzip.GzipFile(mode=mode,fileobj=StringIO.StringIO(fileobj.read())), filename) #lovely hack since gzip.py requires a bunch of seeking.. bleh.
+			return PeekFile(gzip.GzipFile(mode=mode,fileobj=fileobj), filename)
+		return PeekFile(gzip.open(filename,mode), filename)
 	else:
 		if filename=='-':
 			#return fileobj
@@ -391,169 +431,373 @@ def doopen(filename,mode='r'):
 			return PeekFile(fileobj,doclose=0)
 		return PeekFile(open(filename,mode))
 
-def testchecksumfile(type,file,filename,testfiles):
-	line=1
-	try:
-		if config.verbose>=0:
-			cf_stats = stats.make_sub_stats()
-		if not file:
-			file=doopen(filename,'r')
+
+class ChksumType:
+	def __init__(self, testfiles):
+		self.testfiles = testfiles
+	
+	def auto_filename_match(filename):
+		return 0
+	auto_filename_match = staticmethod(auto_filename_match)
+
+	def test_chksumfile(self,file,filename):
+		try:
+			if config.verbose>=0:
+				cf_stats = stats.make_sub_stats()
+			if not file:
+				file=doopen(filename,'r')
+			self.do_test_chksumfile(file)
+			if config.verbose>=0:
+				cf_stats.sub_stats_end(stats)
+				pinfo(perhaps_showpath(file.name)+': ','')
+				cf_stats.print_stats()
+		except EnvironmentError, a:
+			stats.cferror=stats.cferror+1
+			perror('%s : %s (CF)'%(perhaps_showpath(file.name),a[1]))
+
+	def do_test_chksumfile(self, file):
+		pverbose('testing from %s (%s)'%(file.name, string.lower(self.__class__.__name__)))
+		line=1
 		while 1:
 			l=file.readline()
 			if not len(l):
 				break
-			if type.dochecksumfileline(l,testfiles):
+			if self.do_test_chksumline(l):
 				stats.cferror=stats.cferror+1
-				perror('%s : unrecognized line %i (CF)'%(perhaps_showpath(filename),line))
+				perror('%s : unrecognized line %i (CF)'%(perhaps_showpath(file.name),line))
 			line=line+1
-		if config.verbose>=0:
-			cf_stats.sub_stats_end(stats)
-			pinfo(perhaps_showpath(filename)+': ','')
-			cf_stats.print_stats()
-	except EnvironmentError, a:
-		stats.cferror=stats.cferror+1
-		perror('%s : %s (CF)'%(perhaps_showpath(filename),a[1]))
+
+	def test_file(self,filename,filecrc,filesize=-1):
+		if len(config.fixpaths):
+			filename=fixpath(filename)
+		filename=normpath(filename)
+		if self.testfiles:
+			if config.ignorecase:
+				if string.lower(filename) not in self.testfiles:
+					return
+			elif filename not in self.testfiles:
+				return
+		stats.num=stats.num+1
+		l_filename=filename
+		try:
+			if config.ignorecase:
+				#we need to find the correct filename if using showunverified, even if the filename we are given works, since on FAT/etc filesystems the incorrect case will still return true from os.path.exists, but it could be the incorrect case to remove from the unverified files list.
+				if config.showunverified or not os.path.exists(l_filename):
+					try:
+						l_filename=nocase_findfile(l_filename)
+					except IOError, e:
+						if e[0]==errno.ENOENT and l_filename[0]=='"' and l_filename[-1]=='"':
+							stats.quoted = stats.quoted + 1
+							l_filename=nocase_findfile(l_filename[1:-1])
+						else:
+							raise
+			elif l_filename[0]=='"' and l_filename[-1]=='"' and not os.path.exists(l_filename):
+				l_filename=l_filename[1:-1] #work around buggy sfv encoders that quote filenames
+				stats.quoted = stats.quoted + 1
+			if config.showunverified:
+				try:
+					stats.unverifiedfiles[-1].remove(l_filename)
+				except ValueError:
+					pass #don't error if file has already been removed.
+			if filesize>=0:
+				fs=os.path.getsize(l_filename)
+				if fs!=filesize:
+					stats.badsize=stats.badsize+1
+					raise CFVVerifyError, 'file size does not match (%s!=%i)'%(filesize,fs)
+			if config.docrcchecks and filecrc!=None:
+				c=self.do_test_file(l_filename,filecrc)
+				if c:
+					stats.badcrc=stats.badcrc+1
+					raise CFVVerifyError, 'crc does not match (%s!=%s)'%(filecrc,c)
+			else:
+				if not os.path.exists(l_filename):
+					raise EnvironmentError, (errno.ENOENT,"missing")
+				if not os.path.isfile(l_filename):
+					raise EnvironmentError, (errno.ENOENT,"not a file")
+				filecrc="exists" #since we didn't actually test the crc, make verbose mode merely say it exists
+		except EnvironmentError, a:
+			if a[0]==errno.ENOENT:
+				stats.notfound=stats.notfound+1
+				if config.list&LISTNOTFOUND:
+					plistf(l_filename)
+			else:
+				stats.ferror=stats.ferror+1
+			perror('%s : %s'%(perhaps_showpath(l_filename),a[1]))
+			return -1
+		except CFVVerifyError, a:
+			reninfo=''
+			if config.list&LISTBAD:
+				plistf(l_filename)
+			if config.rename:
+				formatmap=make_rename_formatmap(l_filename) 
+				for count in xrange(0,sys.maxint):
+					formatmap['count']=count
+					newfilename=config.renameformat%formatmap
+					if config.renameformatnocount and count>0:
+						newfilename='%s-%i'%(newfilename,count)
+					if l_filename==newfilename:
+						continue #if the filenames are the same they would cmp the same and be deleted. (ex. when renameformat="%(fullname)s")
+					if os.path.exists(newfilename):
+						if fcmp(l_filename, newfilename):
+							os.unlink(l_filename)
+							reninfo=' (dupe of %s removed)'%newfilename
+							break
+					else:
+						os.rename(l_filename, newfilename)
+						reninfo=' (renamed to %s)'%newfilename
+						break
+			perror('%s : %s%s'%(perhaps_showpath(l_filename),a,reninfo))
+			return -2
+		stats.ok=stats.ok+1
+		if config.list&LISTOK:
+			plistf(filename)
+		if filesize>=0:
+			pverbose('%s : OK (%i,%s)'%(perhaps_showpath(filename),fs,filecrc))
+		else:
+			pverbose('%s : OK (%s)'%(perhaps_showpath(filename),filecrc))
+	
+	def make_chksumfile(self, file):
+		self.wfile = file
 
 #---------- md5 ----------
 
+class MD5_MixIn:
+	def do_test_file(self, filename, filecrc):
+		c=getfilemd5(filename)[0]
+		if c!=string.lower(filecrc):
+			return c
 
-def testfilemd5(filename,filecrc):
-	c=getfilemd5(filename)[0]
-	if c!=string.lower(filecrc):
-		return c
+class MD5(ChksumType, MD5_MixIn):
+	def auto_chksumfile_match(file):
+		return re.match(r'[0-9a-fA-F]{32} [ *].+', file.peekline(4096)) is not None
+	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
 
-md5rem=re.compile(r'([0-9a-fA-F]{32}) ([ *])(.+)$')
-def testmd5line(l,testfiles):
-	x=md5rem.match(chomp(l))
-	if not x: return -1
-	if x.group(2)==' ':
-		perror('warning: file %s tested in textmode' %x.group(3))
-	testfile(testfiles,testfilemd5,x.group(3),x.group(1))
+	def auto_filename_match(filename):
+		return string.find(filename,'md5')>=0
+	auto_filename_match = staticmethod(auto_filename_match)
+	
+	_md5rem=re.compile(r'([0-9a-fA-F]{32}) ([ *])(.+)$')
+	def do_test_chksumline(self, l):
+		x=self._md5rem.match(chomp(l))
+		if not x: return -1
+		if x.group(2)==' ':
+			perror('warning: file %s tested in textmode' %x.group(3))
+		self.test_file(x.group(3),x.group(1))
+	
+	def make_std_filename(filename):
+		return filename+'.md5'
+	make_std_filename = staticmethod(make_std_filename)
+	
+	def make_addfile(self, filename):
+		self.wfile.write('%s *%s\n'%(getfilemd5(filename)[0],filename))
 
-types['md5']=fv_type(
-	testmd5line,
-	(r'[0-9a-fA-F]{32} [ *].+',0),
-	lambda o: string.find(o,'md5')>=0,
-	lambda o: o+'.md5',
-	lambda file: None,
-	lambda a: '%s *%s\n'%(getfilemd5(a)[0],a)
-)
+cftypes['md5']=MD5
 
 
 #---------- bsdmd5 ----------
 
+class BSDMD5(ChksumType, MD5_MixIn):
+	def auto_chksumfile_match(file):
+		return re.match(r'MD5 \(.+\) = [0-9a-fA-F]{32}$', file.peekline(4096)) is not None
+	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
 
-bsdmd5rem=re.compile(r'MD5 \((.+)\) = ([0-9a-fA-F]{32})$')
-def testbsdmd5line(l,testfiles):
-	x=bsdmd5rem.match(chomp(l))
-	if not x: return -1
-	testfile(testfiles,testfilemd5,x.group(1),x.group(2))
+	def auto_filename_match(filename):
+		return string.lower(filename)=='md5' #####hm, make this have priority over md5sum type??
+	auto_filename_match = staticmethod(auto_filename_match)
+	
+	_bsdmd5rem=re.compile(r'MD5 \((.+)\) = ([0-9a-fA-F]{32})$')
+	def do_test_chksumline(self, l):
+		x=self._bsdmd5rem.match(chomp(l))
+		if not x: return -1
+		self.test_file(x.group(1),x.group(2))
+	
+	def make_std_filename(filename):
+		return filename+'.md5'
+	make_std_filename = staticmethod(make_std_filename)
+	
+	def make_addfile(self, filename):
+		self.wfile.write('MD5 (%s) = %s\n'%(filename, getfilemd5(filename)[0]))
 
-types['bsdmd5']=fv_type(
-	testbsdmd5line,
-	(r'MD5 \(.+\) = [0-9a-fA-F]{32}$',0),
-	#lambda o: string.find(o,'md5')>=0,
-	lambda o: string.lower(o)=='md5', #####hm, make this have priority over md5sum type??
-	lambda o: o+'.md5',
-	lambda file: None,
-	lambda a: 'MD5 (%s) = %s\n'%(a, getfilemd5(a)[0])
-)
+cftypes['bsdmd5']=BSDMD5
+
+
+#---------- par ----------
+
+def ver2str(v):
+	vers=[]
+	while v or len(vers)<3:
+		vers.insert(0, str(v&0xFF))
+		v = v >> 8
+	return string.join(vers, '.')
+
+import struct
+try: #support for 64bit ints in struct module was only added in python 2.2
+	struct.calcsize('< Q') 
+except struct.error:
+	class Struct:
+		_calcsize = struct.calcsize
+		_unpack = struct.unpack
+		def calcsize(self, fmt):
+			return self._calcsize(re.sub('Q', 'II', fmt))
+		def unpack(self, fmt, data):
+			ofmt = re.sub('Q', 'II', fmt)
+			unpacked = list(self._unpack(ofmt, data))
+			ret = []
+			for f in fmt.split(' '):
+				if f=='Q':
+					ret.append(long(unpacked.pop(0))+long(unpacked.pop(0))*2**32L)
+				elif f=='<':pass
+				else:
+					ret.append(unpacked.pop(0))
+			return tuple(ret)
+	struct = Struct()
+
+class PAR(ChksumType, MD5_MixIn):
+	def auto_chksumfile_match(file):
+		return file.peek(8)=='PAR\0\0\0\0\0'
+	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
+
+	def do_test_chksumfile(self, file):
+		def prog2str(v):
+			return {0x01: 'Mirror', 0x02: 'PAR'}.get(v, 'unknown(%x)'%v)
+		par_header_fmt = '< 8s I I 16s 16s Q Q Q Q Q Q'
+		par_entry_fmt = '< Q Q Q 16s 16s'
+		par_entry_fmtsize = struct.calcsize(par_entry_fmt)
+
+		magic, version, client, control_hash, set_hash, vol_number, num_files, file_list_ofs, file_list_size, data_ofs, data_size = struct.unpack(par_header_fmt, file.read(struct.calcsize(par_header_fmt)))
+		if version & 0xFFFFFF00 != 0x00010000: #presumably the lowest byte is for the minor version number, which should indicate that we can keep going?
+			raise EnvironmentError, (errno.EINVAL,"can't handle PAR version %s"%ver2str(version))
+
+		pverbose('testing from %s (par v%s, created by %s v%s)'%(file.name,ver2str(version), prog2str(client>>24), ver2str(client&0xFFFFFF)))
+
+		for i in range(0, num_files):
+			size, status, file_size, md5, md5_16k = struct.unpack(par_entry_fmt, file.read(par_entry_fmtsize))
+			filename = unicode(file.read(size - par_entry_fmtsize), 'utf-16')
+			c=""
+			for z in md5:
+				c=c+'%02x'%ord(z)
+			self.test_file(filename, c, file_size)
+
+cftypes['par']=PAR
 
 
 #---------- sfv ----------
 
-def testfilecrc32(filename,filecrc):
-	c=getfilecrc(filename)[0]
-	if string.atol(c,16)!=string.atol(filecrc,16):
-		return c
+class CRC_MixIn:
+	def do_test_file(self, filename, filecrc):
+		c=getfilecrc(filename)[0]
+		if string.atol(c,16)!=string.atol(filecrc,16):
+			return c
 		
+class SFV(ChksumType, CRC_MixIn):
+	def auto_chksumfile_match(file):
+		#(r';.*generated (by|using) (.* on|.*sfv|.*crc32)',re.IGNORECASE),
+		return re.match(r';|.+ [0-9a-fA-F]{8}$', file.peekline(4096)) is not None
+	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
 
-sfvrem=re.compile(r'(.+) ([0-9a-fA-F]+)$')
-def testsfvline(l,testfiles):
-	if l[0]==';': return
-	x=sfvrem.match(chomp(l))
-	if not x: return -1
-	testfile(testfiles,testfilecrc32,x.group(1),x.group(2))
+	def auto_filename_match(filename):
+		return filename[-3:]=='sfv'
+	auto_filename_match = staticmethod(auto_filename_match)
+	
+	_sfvrem=re.compile(r'(.+) ([0-9a-fA-F]+)$')
+	def do_test_chksumline(self, l):
+		if l[0]==';': return
+		x=self._sfvrem.match(chomp(l))
+		if not x: return -1
+		self.test_file(x.group(1),x.group(2))
+	
+	def make_std_filename(filename):
+		return filename+'.sfv'
+	make_std_filename = staticmethod(make_std_filename)
+	
+	def make_chksumfile(self, file):
+		ChksumType.make_chksumfile(self, file)
+		file.write('; Generated by cfv v%s on %s\n;\n'%(version,time.strftime('%Y-%m-%d at %H:%M.%S',time.gmtime(time.time()))))
+		
+	def make_addfile(self, filename):
+		self.wfile.write('%s %s\n'%(filename,getfilecrc(filename)[0]))
 
-types['sfv']=fv_type(
-	testsfvline,
-	#(r';.*generated (by|using) (.* on|.*sfv|.*crc32)',re.IGNORECASE),
-	(r';|.+ [0-9a-fA-F]{8}$',0),
-	lambda o: o[-3:]=='sfv',
-	lambda o: o+'.sfv',
-	lambda file: file.write('; Generated by cfv v%s on %s\n;\n'%(version,time.strftime('%Y-%m-%d at %H:%M.%S',time.gmtime(time.time())))),
-	lambda a: '%s %s\n'%(a,getfilecrc(a)[0])
-)
+cftypes['sfv']=SFV
 
 
 #---------- csv ----------
 
-csvrem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]+),')
-def testcsvline(l,testfiles):
-	x=csvrem.match(l)
-	if not x: return -1
-	testfile(testfiles,testfilecrc32,x.group(1),x.group(3),x.group(2))
+class CSV(ChksumType, CRC_MixIn):
+	def auto_chksumfile_match(file):
+		return re.match('[^,]+,[0-9]+,[0-9a-fA-F]+,[\n\r]*$', file.peekline(4096)) is not None
+	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
 
-def make_dofile_csv(a):
-	c,s=getfilecrc(a)
-	return '%s,%i,%s,\n'%(a,s,c)
+	def auto_filename_match(filename):
+		return filename[-3:]=='csv'
+	auto_filename_match = staticmethod(auto_filename_match)
+	
+	_csvrem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]+),')
+	def do_test_chksumline(self, l):
+		x=self._csvrem.match(l)
+		if not x: return -1
+		self.test_file(x.group(1),x.group(3),int(x.group(2)))
+	
+	def make_std_filename(filename):
+		return filename+'.csv'
+	make_std_filename = staticmethod(make_std_filename)
+	
+	def make_addfile(self, filename):
+		c,s=getfilecrc(filename)
+		self.wfile.write('%s,%i,%s,\n'%(filename,s,c))
 
-types['csv']=fv_type(
-	testcsvline,
-	('[^,]+,[0-9]+,[0-9a-fA-F]+,[\n\r]*$',0),
-	lambda o: o[-3:]=='csv',
-	lambda o: o+'.csv',
-	lambda file: None,
-	make_dofile_csv
-)
+cftypes['csv']=CSV
 
 
 #---------- csv with 4 fields ----------
 
-csv4rem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]+),([^,]*),')
-def testcsv4line(l,testfiles):
-	x=csv4rem.match(l)
-	if not x: return -1
-	testfile(testfiles,testfilecrc32,os.path.join(x.group(4),x.group(1)),x.group(3),x.group(2)) 
+class CSV4(ChksumType, CRC_MixIn):
+	def auto_chksumfile_match(file):
+		return re.match(r'[^,]+,[0-9]+,[0-9a-fA-F]+,[^,]*,', file.peekline(4096)) is not None
+	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
 
-def make_dofile_csv4(a):
-	c,s=getfilecrc(a)
-	p=os.path.split(a)
-	return '%s,%i,%s,%s,\n'%(p[1],s,c,p[0])
+	_csv4rem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]+),([^,]*),')
+	def do_test_chksumline(self, l):
+		x=self._csv4rem.match(l)
+		if not x: return -1
+		self.test_file(os.path.join(x.group(4),x.group(1)),x.group(3),int(x.group(2))) 
+	
+	def make_std_filename(filename):
+		return filename+'.csv'
+	make_std_filename = staticmethod(make_std_filename)
+	
+	def make_addfile(self, filename):
+		c,s=getfilecrc(filename)
+		p=os.path.split(filename)
+		self.wfile.write('%s,%i,%s,%s,\n'%(p[1],s,c,p[0]))
 
-types['csv4']=fv_type(
-	testcsv4line,
-	(r'[^,]+,[0-9]+,[0-9a-fA-F]+,[^,]*,',0),
-	lambda o: 0,
-	lambda o: o+'.csv',
-	lambda file: None,
-	make_dofile_csv4
-)
+cftypes['csv4']=CSV4
 
 
 #---------- csv with only 2 fields ----------
 
-csv2rem=re.compile(r'([^,]+),([0-9]+),')
-def testcsv2line(l,testfiles):
-	x=csv2rem.match(l)
-	if not x: return -1
-	testfile(testfiles,None,x.group(1),None,x.group(2))
+class CSV2(ChksumType):
+	def auto_chksumfile_match(file):
+		return re.match('[^,]+,[0-9]+,[\n\r]*$', file.peekline(4096)) is not None
+	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
 
-def make_dofile_csv2(a):
-	if a=='':
-		s=getfilecrc(a)[1]#no way to get size of stdin other than to read it
-	else:
-		s=os.path.getsize(a)
-	return '%s,%i,\n'%(a,s)
-		
-types['csv2']=fv_type(
-	testcsv2line,
-	('[^,]+,[0-9]+,[\n\r]*$',0),
-	lambda o: 0,
-	lambda o: o+'.csv',
-	lambda file: None,
-	make_dofile_csv2
-)
+	_csv2rem=re.compile(r'([^,]+),([0-9]+),')
+	def do_test_chksumline(self, l):
+		x=self._csv2rem.match(l)
+		if not x: return -1
+		self.test_file(x.group(1),None,int(x.group(2)))
+	
+	def make_std_filename(filename):
+		return filename+'.csv'
+	make_std_filename = staticmethod(make_std_filename)
+	
+	def make_addfile(self, filename):
+		if filename=='':
+			s=getfilecrc(filename)[1]#no way to get size of stdin other than to read it
+		else:
+			s=os.path.getsize(filename)
+		self.wfile.write('%s,%i,\n'%(filename,s))
+
+cftypes['csv2']=CSV2
 
 
 #---------- generic ----------
@@ -634,119 +878,30 @@ def normpath(filename):
 		return t[1:]
 	return t
 
-def testfile(testfiles,crctestfunc,filename,filecrc,filesize=-1):
-	if len(config.fixpaths):
-		filename=fixpath(filename)
-	filename=normpath(filename)
-	if testfiles:
-		if config.ignorecase:
-			if string.lower(filename) not in testfiles:
-				return
-		elif filename not in testfiles:
-			return
-	stats.num=stats.num+1
-	l_filename=filename
-	try:
-		if config.ignorecase:
-			#we need to find the correct filename if using showunverified, even if the filename we are given works, since on FAT/etc filesystems the incorrect case will still return true from os.path.exists, but it could be the incorrect case to remove from the unverified files list.
-			if config.showunverified or not os.path.exists(l_filename):
-				try:
-					l_filename=nocase_findfile(l_filename)
-				except IOError, e:
-					if e[0]==errno.ENOENT and l_filename[0]=='"' and l_filename[-1]=='"':
-						stats.quoted = stats.quoted + 1
-						l_filename=nocase_findfile(l_filename[1:-1])
-					else:
-						raise
-		elif l_filename[0]=='"' and l_filename[-1]=='"' and not os.path.exists(l_filename):
-			l_filename=l_filename[1:-1] #work around buggy sfv encoders that quote filenames
-			stats.quoted = stats.quoted + 1
-		if config.showunverified:
-			try:
-				stats.unverifiedfiles[-1].remove(l_filename)
-			except ValueError:
-				pass #don't error if file has already been removed.
-		if filesize>=0:
-			fs=os.path.getsize(l_filename)
-			if fs!=string.atoi(filesize):
-				stats.badsize=stats.badsize+1
-				raise CFVVerifyError, 'file size does not match (%s!=%i)'%(filesize,fs)
-		if config.docrcchecks and filecrc!=None:
-			c=crctestfunc(l_filename,filecrc)
-			if c:
-				stats.badcrc=stats.badcrc+1
-				raise CFVVerifyError, 'crc does not match (%s!=%s)'%(filecrc,c)
-		else:
-			if not os.path.exists(l_filename):
-				raise EnvironmentError, (errno.ENOENT,"missing")
-			if not os.path.isfile(l_filename):
-				raise EnvironmentError, (errno.ENOENT,"not a file")
-			filecrc="exists" #since we didn't actually test the crc, make verbose mode merely say it exists
-	except EnvironmentError, a:
-		if a[0]==errno.ENOENT:
-			stats.notfound=stats.notfound+1
-			if config.list&LISTNOTFOUND:
-				plistf(l_filename)
-		else:
-			stats.ferror=stats.ferror+1
-		perror('%s : %s'%(perhaps_showpath(l_filename),a[1]))
-		return -1
-	except CFVVerifyError, a:
-		reninfo=''
-		if config.list&LISTBAD:
-			plistf(l_filename)
-		if config.rename:
-			formatmap=make_rename_formatmap(l_filename) 
-			for count in xrange(0,sys.maxint):
-				formatmap['count']=count
-				newfilename=config.renameformat%formatmap
-				if config.renameformatnocount and count>0:
-					newfilename='%s-%i'%(newfilename,count)
-				if l_filename==newfilename:
-					continue #if the filenames are the same they would cmp the same and be deleted. (ex. when renameformat="%(fullname)s")
-				if os.path.exists(newfilename):
-					if fcmp(l_filename, newfilename):
-						os.unlink(l_filename)
-						reninfo=' (dupe of %s removed)'%newfilename
-						break
-				else:
-					os.rename(l_filename, newfilename)
-					reninfo=' (renamed to %s)'%newfilename
-					break
-		perror('%s : %s%s'%(perhaps_showpath(l_filename),a,reninfo))
-		return -2
-	stats.ok=stats.ok+1
-	if config.list&LISTOK:
-		plistf(filename)
-	if filesize>=0:
-		pverbose('%s : OK (%i,%s)'%(perhaps_showpath(filename),fs,filecrc))
-	else:
-		pverbose('%s : OK (%s)'%(perhaps_showpath(filename),filecrc))
 
 def test(filename,testfiles):
 	try:
 		file=doopen(filename,'r')
-		l=file.peekline(512)#limit max line length to be read for testing, in case its a binary file or something.
+		for typename,cftype in cftypes.items():
+			if cftype.auto_chksumfile_match(file):
+				cf = cftype(testfiles)
+				if config.showunverified and filename in stats.unverifiedfiles[-1]:#we can't expect the checksum file itself to be checksummed
+					stats.unverifiedfiles[-1].remove(filename)
+				cf.test_chksumfile(file, filename)
+				return
 	except EnvironmentError, a:
 		stats.cferror=stats.cferror+1
 		perror('%s : %s (CF)'%(perhaps_showpath(filename),a[1]))
 		return -1
-	for typename,type in types.items():
-		if re.match(type.testmatch[0],l,type.testmatch[1]):
-			if config.showunverified and filename in stats.unverifiedfiles[-1]:#we can't expect the checksum file itself to be checksummed
-				stats.unverifiedfiles[-1].remove(filename)
-			pverbose('testing from %s (%s)'%(filename,typename))
-			testchecksumfile(type,file,filename,testfiles)
-			return
 	perror("I don't recognize the type of %s"%filename)
 	stats.cferror=stats.cferror+1
 
-def make(type,ifilename,testfiles):
+def make(cftype,ifilename,testfiles):
 	file=None
 	if ifilename:
 		filename=ifilename
 	else:
-		filename=type.make_std_filename(os.path.basename(curdir))
+		filename=cftype.make_std_filename(os.path.basename(curdir))
 		if config.gzip==1 and filename[-3:]!='.gz': #if user does -zz, perhaps they want to force the filename to be kept?
 			filename=filename+'.gz'
 	if os.path.exists(filename):
@@ -790,10 +945,11 @@ def make(type,ifilename,testfiles):
 			continue
 		if file==None:
 			file=doopen(filename,'w')
-			type.writeheader(file)
-			dof=type.make_dofile
+			cf = cftype(None)
+			cf.make_chksumfile(file)
+			dof=cf.make_addfile
 		try:
-			s=dof(f)
+			dof(f)
 		except EnvironmentError, a:
 			if a[0]==errno.ENOENT:
 				stats.notfound=stats.notfound+1
@@ -801,10 +957,9 @@ def make(type,ifilename,testfiles):
 				stats.ferror=stats.ferror+1
 			perror('%s : %s'%(f,a[1]))
 			continue
-		file.write(s)
 		stats.ok=stats.ok+1
 	if file and file!=IOError:
-		file.close()
+		file.close() #### should this call cf.close or something instead?
 	
 	for f in testdirs:
 		olddir=curdir
@@ -814,7 +969,7 @@ def make(type,ifilename,testfiles):
 			perror('%s%s : %s'%(f, os.sep, a[1]))
 			stats.ferror=stats.ferror+1
 		else:
-			make(type,ifilename,None)
+			make(cftype,ifilename,None)
 			chdir(olddir)
 
 def start_test_dir(args):
@@ -839,7 +994,7 @@ def finish_test_dir():
 			perror('%s : not verified'%perhaps_showpath(file,curdir))
 			stats.unverified=stats.unverified+1
 
-atrem=re.compile(r'md5|\.(csv|sfv)(\.gz)?$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
+atrem=re.compile(r'md5|\.(csv|sfv|par)(\.gz)?$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
 def autotest(args):
 	start_test_dir(args)
 	for a in os.listdir('.'):
@@ -864,7 +1019,7 @@ def printusage(err=0):
 	perror('  -R       not recursive (default)')
 	perror('  -T       test mode (default)')
 	perror('  -C       create mode')
-	perror('  -t <t>   set type to <t> (%s, or auto(default))'%string.join(types.keys(),', ')) #reduce(lambda a,b: a+b+', ',types.keys(),''))
+	perror('  -t <t>   set type to <t> (%s, or auto(default))'%string.join(cftypes.keys(),', ')) #reduce(lambda a,b: a+b+', ',types.keys(),''))
 	perror('  -f <f>   use <f> as list file')
 	perror('  -m       check only for missing files (don\'t compare checksums)')
 	perror('  -M       check checksums (default)')
@@ -892,7 +1047,7 @@ def printusage(err=0):
 	perror(' --version show cfv and module versions')
 	sys.exit(err)
 def printhelp():
-	perror('cfv v%s - Copyright (C) 2000-2001 Matthew Mueller - GPL license'%version)
+	perror('cfv v%s - Copyright (C) 2000-2002 Matthew Mueller - GPL license'%version)
 	printusage()
 
 stats=Stats()
@@ -902,7 +1057,7 @@ config=Config()
 def main(argv):
 	manual=0
 	mode=0
-	type='auto'
+	typename='auto'
 
 	try:
 		optlist, args = getopt.getopt(argv, 'rRTCt:f:mMnNp:uUiIvVzZqh?', ['list=', 'list0=', 'fixpaths=','showpaths=','renameformat=','help','version'])
@@ -920,10 +1075,10 @@ def main(argv):
 		elif o=='-C':
 			mode=1
 		elif o=='-t':
-			if not a in ['auto']+types.keys():
+			if not a in ['auto']+cftypes.keys():
 				perror('type %s not recognized'%a)
 				sys.exit(1)
-			type=a
+			typename=a
 		elif o=='-f':
 			manual=1 #filename selected manually, don't try to autodetect
 			filename=a
@@ -931,23 +1086,23 @@ def main(argv):
 				if config.ignorecase:
 					args=map(string.lower,args) #lowercase it all now, so we don't have to keep doing it over and over in the testfile
 				start_test_dir(args)
-				if type=='auto':
+				if typename=='auto':
 					test(a,args)
 				else:
-					testchecksumfile(types[type],None,filename,args)
-					#types[type].checksumfile(open(a,'r'),args)
+					cf = cftypes[typename](args)
+					cf.test_chksumfile(None,filename)
 				finish_test_dir()
 			else:
-				if type!='auto':
-					make(types[type],a,args)
+				if typename!='auto':
+					make(cftypes[typename],a,args)
 				else:
 					ok=0
 					testa=''
 					if config.gzip>=0 and a[-3:]=='.gz':
 							testa=a[:-3]
-					for type in types.values():
-						if type.automake_filenametest(a) or (testa and type.automake_filenametest(testa)):
-							make(type,a,args)
+					for cftype in cftypes.values():
+						if cftype.auto_filename_match(a) or (testa and cftype.auto_filename_match(testa)):
+							make(cftype,a,args)
 							ok=1
 							break;
 					if not ok:
@@ -1032,9 +1187,9 @@ def main(argv):
 				args=map(string.lower,args) #lowercase it all now, so we don't have to keep doing it over and over in the testfile
 			autotest(args)
 		else:
-			if type=='auto':
-				type=config.defaulttype
-			make(types[type],None,args)
+			if typename=='auto':
+				typename=config.defaulttype
+			make(cftypes[typename],None,args)
 	
 	#only print total stats if more than one checksum file has been checked. (or if none have)
 	#We must also print stats here if there are unverified files or checksum file errors, since those conditions occur outside of the cf_stats section.

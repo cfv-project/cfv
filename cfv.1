@@ -1,6 +1,6 @@
-.TH cfv 1 "30 Sep 2001"
+.TH cfv 1 "10 Jan 2002"
 .SH NAME
-cfv \- Verify file concistency with .sfv, .csv, or md5sum files
+cfv \- Verify file concistency with .sfv, .csv, md5sum, or par files
 .SH SYNOPSIS
 .B cfv [-p dir] [-v|-V|-VV] [-r|-rr|-R] [-n|-N] [--renameformat <s>] [-zz|-z|-Z|-ZZ] [-T|-C] [-m|-M] [-i|-I] [-u|-U] [--fixpaths <s>] [--showpaths <i>] [--list/--list0 <l>] [-t type] [-f file] [files...]
 .SH DESCRIPTION
@@ -69,7 +69,7 @@ Change to directory before doing anything.
 .IP "-f file"
 Specify the name of the checksum file to test or create.
 .IP "-t type"
-Specify the type of the file.  Can be sfv, csv, csv2, csv4, md5, bsdmd5, or auto.  The default is auto,
+Specify the type of the file.  Can be sfv, csv, csv2, csv4, md5, bsdmd5, par, or auto.  The default is auto,
 which will detect the file type for you.  When creating, if type is auto an sfv
 will be made, unless a different default has been set in the config file.
 .IP "--list listset"
@@ -95,6 +95,9 @@ is md5sum format file
 .br
 .B bsdmd5
 is md5 format file
+.br
+.B par
+is parchive format file (test-only)
 .SH EXIT STATUS
 The exit status of cfv can be examined to determine what kind of errors, if any, occured.
 .P
@@ -218,7 +221,7 @@ Specifying the [files...] arguments when using recursive test mode probably does
 .PP
 Show unverified files does not work correctly with checksum files that have deep listings (ie, ones made with -rr).
 .SH AUTHOR
-Matt Mueller <donut@azstarnet.com>
+Matthew Mueller <donut@azstarnet.com>
 .P
 The latest version, and other programs I have written, are available from:
 .br
