@@ -1,6 +1,12 @@
 #! /usr/bin/env python
 
-import commands,re,os,sys
+import commands,re,os,sys,string
+
+def pathfind(p, path=string.split(os.environ.get('PATH',os.defpath),os.pathsep)):
+	for d in path:
+		if os.path.exists(os.path.join(d,p)):
+			return 1
+
 
 class stats:
 	ok=0
@@ -249,7 +255,11 @@ test_generic(cfvcmd+r" --fixpaths \\/ -T -f testfix.csv4",cfv_test)
 test_generic(cfvcmd+r" -i --fixpaths \\/ -T -f testfix.csv4",cfv_test)
 
 C_test("bsdmd5","-t bsdmd5")#,verify=lambda f: test_generic("md5 -c "+f,status_test)) #bsd md5 seems to have no way to check, only create
-C_test("md5",verify=lambda f: test_generic("md5sum -c "+f,status_test))
+if pathfind('md5sum'): #don't report pointless errors on systems that don't have md5sum
+	md5verify=lambda f: test_generic("md5sum -c "+f,status_test)
+else:
+	md5verify=None
+C_test("md5",verify=md5verify)
 C_test("csv")
 C_test("sfv")
 C_test("csv2","-t csv2")

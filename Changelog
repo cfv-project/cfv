@@ -1,5 +1,6 @@
 2001-0?-?? - v1.9:
 	* Support bsd style md5 files (-t bsdmd5).  (requested by Felix Buenemann)
+	* Make test.py not attempt to verify against md5sum if it is not available (ie, on bsd). (reported by Hannu Liljemark)
 2001-05-17 - v1.8:
 	* Fixed ignore case for deep (-rr) checksum files.
 	* Added gzipped checksum file support.
