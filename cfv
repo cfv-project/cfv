@@ -659,7 +659,7 @@ class PAR(ChksumType, MD5_MixIn):
 
 	def do_test_chksumfile(self, file):
 		def prog2str(v):
-			return {0x01: 'Mirror', 0x02: 'PAR'}.get(v, 'unknown(%x)'%v)
+			return {0x01: 'Mirror', 0x02: 'PAR', 0x03:'SmartPar'}.get(v, 'unknown(%x)'%v)
 		par_header_fmt = '< 8s I I 16s 16s Q Q Q Q Q Q'
 		par_entry_fmt = '< Q Q Q 16s 16s'
 		par_entry_fmtsize = struct.calcsize(par_entry_fmt)
