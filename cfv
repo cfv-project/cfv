@@ -1214,7 +1214,7 @@ class PAR(ChksumType, MD5_MixIn):
 			if config.docrcchecks:
 				control_md5.update(d)
 			d = file.read(size - par_entry_fmtsize)
-			filename = unicode(d, 'utf-16')
+			filename = unicode(d, 'utf-16-le')
 			if config.docrcchecks:
 				control_md5.update(d)
 				stats.bytesread=stats.bytesread+size
