@@ -37,7 +37,7 @@ foo:
 #this will create a wrapper script that calls python directly (if we can find it), or using the bin/env trick.
 #we don't need to check for PYTHON being set to something, since os.path.join handles the case of the component being an absolute path
 cfv.wrapper:
-	$(PYTHON) -c 'import string,os; py=filter(lambda x: os.path.isfile(x),map(lambda x: os.path.join(x,"$(PYTHON)"),string.split(os.environ["PATH"],":"))); py.append(" /usr/bin/env $(PYTHON)"); open("cfv.wrapper","w").write("#!%s\nimport sys,cfv\ncfv.main(sys.argv[1:])\n"%py[0])'
+	$(PYTHON) -c 'import string,os; py=filter(lambda x: os.path.isfile(x),map(lambda x: os.path.join(x,"$(PYTHON)"),string.split(os.environ["PATH"],":"))); py.append(" /usr/bin/env $(PYTHON)"); open("cfv.wrapper","w").write("#!%s\nimport cfv\ncfv.main()\n"%py[0])'
 
 $(DESTDIR)$(mandir)/man1 $(DESTDIR)$(bindir):
 	$(install_dir) $@

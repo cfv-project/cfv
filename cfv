@@ -1522,7 +1522,9 @@ stats=Stats()
 config=Config()
 
 
-def main(argv):
+def main(argv=None):
+	if argv is None:
+		argv = sys.argv[1:]
 	manual=0
 	mode=0
 	typename='auto'
@@ -1682,4 +1684,4 @@ def main(argv):
 	sys.exit((stats.badcrc and 2) | (stats.badsize and 4) | (stats.notfound and 8) | (stats.ferror and 16) | (stats.unverified and 32) | (stats.cferror and 64))
 
 if __name__=='__main__':
-	main(sys.argv[1:])
+	main()
