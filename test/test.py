@@ -29,11 +29,6 @@ except ImportError:
 		d = tempfile.mktemp()
 		os.mkdir(d)
 		return d
-try: #zip only in python2.0+
-	zip
-except NameError:
-	def zip(a,b):
-		return map(None, a, b) #not exactly the same, but good enough for us.
 	
 
 import locale
