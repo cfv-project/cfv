@@ -1,4 +1,4 @@
-.TH cfv 1 "09 Apr 2001"
+.TH cfv 1 "29 Aug 2001"
 .SH NAME
 cfv \- Verify file concistency with .sfv, .csv, or md5sum files
 .SH SYNOPSIS
@@ -69,7 +69,7 @@ Change to directory before doing anything.
 .IP "-f file"
 Specify the name of the checksum file to test or create.
 .IP "-t type"
-Specify the type of the file.  Can be sfv, csv, csv2, csv4, md5, or auto.  The default is auto,
+Specify the type of the file.  Can be sfv, csv, csv2, csv4, md5, bsdmd5, or auto.  The default is auto,
 which will detect the file type for you.  When creating, if type is auto an sfv
 will be made, unless a different default has been set in the config file.
 .IP "-h/--help"
@@ -88,6 +88,9 @@ is a comma seperated value file, with the fields being name,size,
 .br
 .B md5
 is md5sum format file
+.br
+.B bsdmd5
+is md5 format file
 .SH EXIT STATUS
 The exit status of cfv can be examined to determine what kind of errors, if any, occured.
 .P
@@ -211,4 +214,5 @@ The latest version, and other programs I have written, are available from:
 .br
 http://www.azstarnet.com/~donut/programs/cfv.html
 .SH "SEE ALSO"
-.BR md5sum(1)
+.BR md5sum (1),
+.BR md5 (1)
