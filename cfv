@@ -394,6 +394,14 @@ version='1.14.1-pre'+'$Revision$'[11:-2]
 _hassymlinks=hasattr(os,'symlink')
 
 try:
+	from binascii import hexlify, unhexlify # only in python >= 2.0
+except ImportError:
+	def hexlify(d):
+		return "%02x"*len(d) % tuple(map(ord, d))
+	def unhexlify(s, _splitre=re.compile('..',re.DOTALL)):
+		return ''.join(map(chr, map(lambda a: int(a,16), _splitre.findall(s))))
+
+try:
 	if os.environ.get('CFV_NOFCHKSUM'): raise ImportError
 	import fchksum
 	try:
@@ -402,13 +410,13 @@ try:
 		_perr("old fchksum version installed, using std python modules. please update.") #can't use perror yet since config hasn't been done..
 		raise ImportError
 	def _getfilemd5(file):
-		c,s=fchksum.fmd5t(file)
+		c,s=fchksum.fmd5(file)
 		stats.bytesread=stats.bytesread+s
 		return c,s
 	def _getfilecrc(file):
-		c,s=fchksum.fcrc32t(file)
+		c,s=fchksum.fcrc32(file)
 		stats.bytesread=stats.bytesread+s
-		return c,s
+		return struct.pack('>I',c),s
 except ImportError:
 	import md5
 	try:
@@ -447,17 +455,15 @@ except ImportError:
 			while 1:
 				x=f.read(65536)
 				if not len(x):
-					c = "%02x"*16 % tuple(map(ord, m.digest())) #m.hexdigest() isn't available till python2.0, but this isn't too bad. (seen on c.l.p)
 					stats.bytesread=stats.bytesread+s
-					return c,s
+					return m.digest(),s
 				s=s+len(x)
 				m.update(x)
 		else:
 			s = os.path.getsize(file)
 			m = md5.new(dommap(f.fileno(), s))
-			c = "%02x"*16 % tuple(map(ord, m.digest()))
 			stats.bytesread = stats.bytesread+s
-			return c,s
+			return m.digest(),s
 			
 	def _getfilecrc(file):
 		if file=='':
@@ -471,14 +477,14 @@ except ImportError:
 				x=f.read(65536)
 				if not len(x):
 					stats.bytesread=stats.bytesread+s
-					return "%08X"%c,s
+					return struct.pack('>I',c),s
 				s=s+len(x)
 				c=_crc32(x,c)
 		else:
 			s = os.path.getsize(file)
 			c = _crc32(dommap(f.fileno(), s))
 			stats.bytesread = stats.bytesread+s
-			return "%08X"%c,s
+			return struct.pack('>I',c),s
 
 def fcmp(f1, f2):
 	import filecmp
@@ -678,15 +684,16 @@ class ChksumType:
 					raise CFVVerifyError, 'file size does not match (%s!=%i)'%(filesize,fs)
 			if config.docrcchecks and filecrc!=None:
 				c=self.do_test_file(l_filename,filecrc)
+				filecrct = hexlify(filecrc)
 				if c:
 					stats.badcrc=stats.badcrc+1
-					raise CFVVerifyError, 'crc does not match (%s!=%s)'%(filecrc,c)
+					raise CFVVerifyError, 'crc does not match (%s!=%s)'%(filecrct,hexlify(c))
 			else:
 				if not os.path.exists(l_filename):
 					raise EnvironmentError, (errno.ENOENT,"missing")
 				if not os.path.isfile(l_filename):
 					raise EnvironmentError, (errno.ENOENT,"not a file")
-				filecrc="exists" #since we didn't actually test the crc, make verbose mode merely say it exists
+				filecrct="exists" #since we didn't actually test the crc, make verbose mode merely say it exists
 		except EnvironmentError, a:
 			if a[0]==errno.ENOENT:
 				stats.notfound=stats.notfound+1
@@ -724,9 +731,9 @@ class ChksumType:
 		if config.list&LISTOK:
 			plistf(filename)
 		if filesize>=0:
-			pverbose('%s : OK (%i,%s)'%(perhaps_showpath(filename),fs,filecrc))
+			pverbose('%s : OK (%i,%s)'%(perhaps_showpath(filename),fs,filecrct))
 		else:
-			pverbose('%s : OK (%s)'%(perhaps_showpath(filename),filecrc))
+			pverbose('%s : OK (%s)'%(perhaps_showpath(filename),filecrct))
 	
 	def make_chksumfile(self, file):
 		pass#self.wfile = file
@@ -739,7 +746,7 @@ class ChksumType:
 class MD5_MixIn:
 	def do_test_file(self, filename, filecrc):
 		c=getfilemd5(filename)[0]
-		if c!=string.lower(filecrc):
+		if c!=filecrc:
 			return c
 
 class MD5(ChksumType, MD5_MixIn):
@@ -765,14 +772,14 @@ class MD5(ChksumType, MD5_MixIn):
 			if stats.textmode==0:
 				perror('warning: file(s) tested in textmode')
 			stats.textmode = stats.textmode + 1
-		self.test_file(x.group(3),x.group(1))
+		self.test_file(x.group(3),unhexlify(x.group(1)))
 	
 	def make_std_filename(filename):
 		return filename+'.md5'
 	make_std_filename = staticmethod(make_std_filename)
 	
 	def make_addfile(self, filename):
-		crc=getfilemd5(filename)[0]
+		crc=hexlify(getfilemd5(filename)[0])
 		return (crc, -1), '%s *%s\n'%(crc,filename)
 
 register_cftype('md5', MD5)
@@ -791,14 +798,14 @@ class BSDMD5(ChksumType, MD5_MixIn):
 	def do_test_chksumline(self, l):
 		x=self._bsdmd5rem.match(l)
 		if not x: return -1
-		self.test_file(x.group(1),x.group(2))
+		self.test_file(x.group(1),unhexlify(x.group(2)))
 	
 	def make_std_filename(filename):
 		return filename+'.md5'
 	make_std_filename = staticmethod(make_std_filename)
 	
 	def make_addfile(self, filename):
-		crc=getfilemd5(filename)[0]
+		crc=hexlify(getfilemd5(filename)[0])
 		return (crc, -1), 'MD5 (%s) = %s\n'%(filename, crc)
 
 register_cftype('bsdmd5', BSDMD5)
@@ -834,6 +841,7 @@ except struct.error:
 					ret.append(unpacked[upos])
 					upos = upos + 1
 			return tuple(ret)
+		pack = struct.pack
 	struct = _Struct()
 
 class PAR(ChksumType, MD5_MixIn):
@@ -870,8 +878,7 @@ class PAR(ChksumType, MD5_MixIn):
 			if config.docrcchecks:
 				control_md5.update(d)
 				stats.bytesread=stats.bytesread+size
-			c = "%02x"*16 % tuple(map(ord, md5))
-			self.test_file(filename, c, file_size)
+			self.test_file(filename, md5, file_size)
 
 		if config.docrcchecks:
 			while 1:
@@ -950,8 +957,7 @@ class PAR2(ChksumType, MD5_MixIn):
 				if seen_file_ids.get(file_id) is None:
 					seen_file_ids[file_id] = 1
 					filename = chompnulls(d[file_pkt_size:])
-					c = "%02x"*16 % tuple(map(ord, file_md5))
-					self.test_file(filename, c, file_size)
+					self.test_file(filename, file_md5, file_size)
 			elif pkt_type == "PAR 2.0\0Main\0\0\0\0":
 				if not config.docrcchecks:
 					d = file.read(pkt_len - pkt_header_size)
@@ -986,7 +992,7 @@ register_cftype('par2', PAR2)
 class CRC_MixIn:
 	def do_test_file(self, filename, filecrc):
 		c=getfilecrc(filename)[0]
-		if string.atol(c,16)!=string.atol(filecrc,16):
+		if c!=filecrc:
 			return c
 		
 class SFV_Base(ChksumType):
@@ -999,7 +1005,7 @@ class SFV_Base(ChksumType):
 		if l[0]==';': return
 		x=self._sfvrem.match(l)
 		if not x: return -1
-		self.test_file(x.group(1),x.group(2))
+		self.test_file(x.group(1),unhexlify(x.group(2)))
 	
 	def make_chksumfile(self, file):
 		ChksumType.make_chksumfile(self, file)
@@ -1022,7 +1028,7 @@ class SFV(SFV_Base, CRC_MixIn):
 	make_std_filename = staticmethod(make_std_filename)
 		
 	def make_addfile(self, filename):
-		crc=getfilecrc(filename)[0]
+		crc=hexlify(getfilecrc(filename)[0])
 		return (crc, -1), '%s %s\n'%(filename,crc)
 
 register_cftype('sfv', SFV)
@@ -1045,7 +1051,7 @@ class SFVMD5(SFV_Base, MD5_MixIn):
 	make_std_filename = staticmethod(make_std_filename)
 		
 	def make_addfile(self, filename):
-		crc=getfilemd5(filename)[0]
+		crc=hexlify(getfilemd5(filename)[0])
 		return (crc, -1), '%s %s\n'%(filename,crc)
 	
 register_cftype('sfvmd5', SFVMD5)
@@ -1064,7 +1070,7 @@ class CSV(ChksumType, CRC_MixIn):
 	def do_test_chksumline(self, l):
 		x=self._csvrem.match(l)
 		if not x: return -1
-		self.test_file(x.group(1),x.group(3),int(x.group(2)))
+		self.test_file(x.group(1),unhexlify(x.group(3)),int(x.group(2)))
 	
 	def make_std_filename(filename):
 		return filename+'.csv'
@@ -1072,6 +1078,7 @@ class CSV(ChksumType, CRC_MixIn):
 	
 	def make_addfile(self, filename):
 		c,s=getfilecrc(filename)
+		c = hexlify(c)
 		return (c,s), '%s,%i,%s,\n'%(filename,s,c)
 
 register_cftype('csv', CSV)
@@ -1098,7 +1105,7 @@ class CSV4(ChksumType, CRC_MixIn):
 		if len(name)>1 and name[0]=='"' and name[-1]=='"' and path: #if path is empty, then the quote checks in test_file will handle it already.
 			name = name[1:-1]
 			q = stats.quoted
-		self.test_file(os.path.join(fixpath(path),name),x.group(3),int(x.group(2))) #we need to fixpath before path.join since os.path.join looks for path.sep
+		self.test_file(os.path.join(fixpath(path),name),unhexlify(x.group(3)),int(x.group(2))) #we need to fixpath before path.join since os.path.join looks for path.sep
 		if q>=0 and q == stats.quoted: #ensure that stats.quoted isn't incremented multiple times for a single file.
 			stats.quoted = stats.quoted + 1
 	
@@ -1108,6 +1115,7 @@ class CSV4(ChksumType, CRC_MixIn):
 	
 	def make_addfile(self, filename):
 		c,s=getfilecrc(filename)
+		c = hexlify(c)
 		p=os.path.split(filename)
 		return (c,s), '%s,%i,%s,%s,\n'%(p[1],s,c,p[0])
 
@@ -1206,7 +1214,7 @@ class JPEGSheriff_CRC(ChksumType, CRC_MixIn):
 			size = int(self._nstrip.sub('',x.group('size')))
 		else:
 			size = -1
-		self.test_file(x.group('name'), x.group('crc'), size)
+		self.test_file(x.group('name'), unhexlify(x.group('crc')), size)
 	
 	def make_std_filename(filename):
 		return filename+'.crc'
@@ -1253,6 +1261,7 @@ class JPEGSheriff_CRC(ChksumType, CRC_MixIn):
 	
 	def make_addfile(self, filename):
 		crc,size=getfilecrc(filename)
+		crc = hexlify(crc)
 		if self.use_dimensions:
 			w,h = getimagedimensions(filename)
 		else:
