@@ -1,3 +1,9 @@
+2000-11-08 - v1.6:
+	* Added ignore case option.
+	* Added fix paths option.
+	* Added handler for csv files with the dir seperate from the file name (-t csv4).
+	* Makes any absolute paths found in checksum files into relative paths.
+	* Added show paths option.
 2000-10-17 - v1.5.2:
 	* Added test suite.
 	* Fixed 'x not in list' error when using -u and checksum file was not among the files to be tested. (First bug found with test suite ;)

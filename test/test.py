@@ -35,7 +35,7 @@ def status_test(s,o):
 	return 1
 
 #set everything to default in case user has different in config file
-cfvcmd="../cfv -VRMU"
+cfvcmd="../cfv -VRMUI"
 
 def cfv_test(s,o):
 	x=re.search(r'^(\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$',o)
@@ -67,6 +67,8 @@ def cfv_version_test(s,o):
 
 def T_test(f):
 	test_generic(cfvcmd+" -T -f test."+f,cfv_test)
+	test_generic(cfvcmd+" -i -T -f test."+f,cfv_test) #all tests should work with -i
+	test_generic(cfvcmd+" -m -T -f test."+f,cfv_test) #all tests should work with -m
 
 def C_test(f,extra=None,verify=None):
 	cmd=cfvcmd
@@ -84,6 +86,10 @@ T_test("md5")
 T_test("csv")
 T_test("sfv")
 T_test("csv2")
+test_generic(cfvcmd+" -i -T -f testcase.csv",cfv_test)
+test_generic(cfvcmd+r" --fixpaths \\/ -T -f testfix.csv",cfv_test)
+test_generic(cfvcmd+r" --fixpaths \\/ -T -f testfix.csv4",cfv_test)
+test_generic(cfvcmd+r" -i --fixpaths \\/ -T -f testfix.csv4",cfv_test)
 
 C_test("md5",verify=lambda f: test_generic("md5sum -c "+f,status_test))
 C_test("csv")

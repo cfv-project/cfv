@@ -1,8 +1,8 @@
-.TH cfv 1 "11 Oct 2000"
+.TH cfv 1 "05 Nov 2000"
 .SH NAME
 cfv \- Verify file concistency with .sfv, .csv, or md5sum files
 .SH SYNOPSIS
-.B cfv [-v|-V] [-r|-rr|-R] [-T|-C] [-m|-M] [-u|-U] [-t type] [-f file] [files...]
+.B cfv [-v|-V] [-r|-rr|-R] [-T|-C] [-m|-M] [-i|-I] [-u|-U] [--fixpaths <s>] [--showpaths <i>] [-t type] [-f file] [files...]
 .SH DESCRIPTION
 .B cfv
 verifies that the files you have are the same as those that the were used to create
@@ -28,14 +28,22 @@ Set create mode.
 Check only for missing files (don't compare checksums)
 .IP "-M"
 Check checksums (default)
+.IP "-i"
+Ignore case.  Currently has no effect in create mode.
+.IP "-I"
+Don't ignore case (default)
 .IP "-u"
 Show unverified files.  Currently has no effect in create mode.
 .IP "-U"
 Don't show unverified files (default)
+.IP "--fixpaths string"
+Convert all occurances of any characters in string to the dir seperator for the current platform.  No effect in create mode. Use an empty string to disable.
+.IP "--showpaths int"
+Show full paths 0:never, 1:always, 2:only in recursive mode(default)
 .IP "-f file"
 Specify the name of the checksum file to test or create.
 .IP "-t type"
-Specify the type of the file.  Can be sfv, csv, csv2, md5, or auto.  The default is auto,
+Specify the type of the file.  Can be sfv, csv, csv2, csv4, md5, or auto.  The default is auto,
 which will detect the file type for you.  When creating, if type is auto an sfv
 will be made, unless a different default has been set in the config file.
 .P
@@ -51,9 +59,9 @@ is a comma seperated value file, with the fields being name,size,
 .B md5
 is md5sum format file
 .SH NOTES
-Since different platforms represent the path seperator differently, using recursive mode 2 (-rr) is not recommended for anything other than personal usage.
+Since different platforms represent the path seperator differently, using recursive mode 2 (-rr) is not recommended for anything other than personal usage.  Although the addition of the fixpaths option can be used to work around this, it isn't guaranteed that whatever program others user have will have a similar feature.
 .SH EXAMPLES
-If no options are specified, the default will be -T -t auto, and it will search the current directory for any sfv or csv files.
+If no options are specified, the default will be -T -t auto, and it will search the current directory for any sfv, csv, or md5sum files.
 .br
 .B
 cfv
@@ -112,10 +120,26 @@ recursive 0
 #don't show unverified files
 .br
 showunverified 0
+.br
+#don't ignore case
+.br
+ignorecase 0
+.br
+#don't fix any paths (note that there is a single space after fixpaths, thus the value it gets set to is an empty string)
+.br
+fixpaths 
+.br
+#show full paths in recursive mode (set to 0 for never, 1 for always, 2 for only in recursive mode)
+.br
+showpaths 2
 .SH FILES
 .PP
 .IP "~/.cfvrc"
 cfv configuration file.  See configuration section.
+.SH BUGS
+Specifying the [files...] arguments when using recursive test mode probably does not do what you want it to.  (Comments or suggestions on desired behavior welcome.)
+.PP
+Show unverified files does not work correctly with checksum files that have deep listings (ie, ones made with -rr).
 .SH AUTHOR
 Matt Mueller <donut@azstarnet.com>
 .P

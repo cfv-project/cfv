@@ -33,6 +33,9 @@ class CFVNameError(CFVException):#invalid command in user input
 class CFVSyntaxError(CFVException):#error in user input
 	pass
 
+class CFVVerifyError(CFVException):#invalid crc/filesize/etc
+	pass
+
 class Stats:
 	num=0
 	ok=0
@@ -52,6 +55,9 @@ class Config:
 	recursive=0
 	showunverified=0
 	defaulttype='sfv'
+	ignorecase=0
+	fixpaths=''
+	showpaths=2
 	def setdefault(self,type):
 		if type in types.keys():
 			self.defaulttype=type
@@ -74,13 +80,17 @@ class Config:
 		else:
 			raise CFVValueError, "invalid bool type '%s' for %s"%(v,o)
 		self.__dict__[o]=x
+	def setstr(self,o,v):
+		self.__dict__[o]=v
 	def setx(self,o,v):
 		if o=="default":
 			self.setdefault(v)
-		elif o in ("dirsort","cmdlinesort","verbose","showunverified"):
+		elif o in ("dirsort","cmdlinesort","verbose","showunverified","ignorecase"):
 			self.setbool(o,v)
-		elif o=="recursive":
+		elif o in ("recursive","showpaths"):
 			self.setintr(o,v,0,2)
+		elif o=="fixpaths":
+			self.setstr(o,v)
 		else:
 			raise CFVNameError, "invalid option '%s'"%o
 	def readconfig(self):
@@ -100,7 +110,6 @@ class Config:
 					continue #ignore blank lines
 				x=re.search("^(.*) (.*)$",s)
 				if not x:
-					#raise SyntaxError, ("%s:%i: invalid line '%s'"%(filename,l,s),filename,l,0,s)
 					raise CFVSyntaxError, "%s:%i: invalid line '%s'"%(filename,l,s)
 				else:
 					o,v=x.groups()
@@ -111,7 +120,7 @@ class Config:
 	def __init__(self):
 		self.readconfig()
 
-version='1.5.2'
+version='1.6'
 
 
 #---------- md5 ----------
@@ -156,8 +165,7 @@ def testmd5(file,testfiles):
 		if x:
 			if x.group(2)==' ':
 				print 'warning: file %s tested in textmode' %x.group(3)
-			if not testfiles or x.group(3) in testfiles:
-				testfile(testfilemd5,x.group(3),x.group(1))
+			testfile(testfiles,testfilemd5,x.group(3),x.group(1))
 
 
 types['md5']=imp.new_module('cfvmd5')
@@ -216,8 +224,7 @@ def testsfv(file,testfiles):
 			continue
 		x=rem.match(l)
 		if x:
-			if not testfiles or x.group(1) in testfiles:
-				testfile(testfilecrc32,x.group(1),x.group(2))
+			testfile(testfiles,testfilecrc32,x.group(1),x.group(2))
 
 types['sfv']=imp.new_module('cfvsfv')
 types['sfv'].checksumfile=testsfv
@@ -232,23 +239,43 @@ types['sfv'].make_dofile=lambda a: '%s %s\n'%(a,getfilecrc(a))
 #---------- csv ----------
 
 def testcsv(file,testfiles):
-	rem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]+)')
+	rem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]+),')
 	while 1:
 		l=file.readline()
 		if not len(l):
 			return
 		x=rem.match(l)
 		if x:
-			if not testfiles or x.group(1) in testfiles:
-				testfile(testfilecrc32,x.group(1),x.group(3),x.group(2))
+			testfile(testfiles,testfilecrc32,x.group(1),x.group(3),x.group(2))
 
 types['csv']=imp.new_module('cfvcsv')
 types['csv'].checksumfile=testcsv
-types['csv'].testmatch=(r'[^,]+,[0-9]+,[0-9a-fA-F]+',0)
+types['csv'].testmatch=('[^,]+,[0-9]+,[0-9a-fA-F]+,[\n\r]*$',0)
 types['csv'].automake_filenametest=lambda o: o[-3:]=='csv'
 types['csv'].make_std_filename=lambda o: o+'.csv'
 types['csv'].writeheader=lambda file: None
 types['csv'].make_dofile=lambda a: '%s,%i,%s,\n'%(a,os.path.getsize(a),getfilecrc(a))
+
+
+#---------- csv with 4 fields ----------
+
+def testcsv4(file,testfiles):
+	rem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]+),([^,]*),')
+	while 1:
+		l=file.readline()
+		if not len(l):
+			return
+		x=rem.match(l)
+		if x:
+			testfile(testfiles,testfilecrc32,os.path.join(x.group(4),x.group(1)),x.group(3),x.group(2)) 
+
+types['csv4']=imp.new_module('cfvcsv4')
+types['csv4'].checksumfile=testcsv4
+types['csv4'].testmatch=(r'[^,]+,[0-9]+,[0-9a-fA-F]+,[^,]*,',0)
+types['csv4'].automake_filenametest=lambda o: 0
+types['csv4'].make_std_filename=lambda o: o+'.csv'
+types['csv4'].writeheader=lambda file: None
+types['csv4'].make_dofile=lambda a: '%s,%i,%s,%s,\n'%(os.path.split(a)[1],os.path.getsize(a),getfilecrc(a),os.path.split(a)[0])
 
 
 #---------- csv with only 2 fields ----------
@@ -261,8 +288,7 @@ def testcsv2(file,testfiles):
 			return
 		x=rem.match(l)
 		if x:
-			if not testfiles or x.group(1) in testfiles:
-				testfile(None,x.group(1),None,x.group(2))
+			testfile(testfiles,None,x.group(1),None,x.group(2))
 
 types['csv2']=imp.new_module('cfvcsv2')
 types['csv2'].checksumfile=testcsv2
@@ -275,33 +301,90 @@ types['csv2'].make_dofile=lambda a: '%s,%i,\n'%(a,os.path.getsize(a))
 
 #---------- generic ----------
 
-def testfile(crctestfunc,filename,filecrc,filesize=-1):
+def perhaps_showpath(file,dir=None):
+	if config.showpaths==1 or (config.showpaths==2 and config.recursive):
+		if dir==None:
+			dir=os.getcwd()
+		return os.path.join(dir,file)
+	return file
+
+def findfile_nocase(filename):
+	head=filename
+	parts=[]
+	cur="."
+	while 1:
+		head,tail=os.path.split(head)
+		if len(tail):
+			parts.insert(0,string.lower(tail))
+		else:
+			if len(head):
+				parts.insert(0,string.lower(head))
+			break
+	#print filename,parts
+	for i in range(0,len(parts)):
+		p=parts[i]
+		matches=filter(lambda f,p=p: string.lower(f)==p,os.listdir(cur))
+		if i==len(parts)-1:#if we are on the last part of the path, we want to match a file
+			matches=filter(os.path.isfile,matches)
+		else:#otherwise, we want to match a dir
+			matches=filter(os.path.isdir,matches)
+		if len(matches)==0:
+			raise IOError, (errno.ENOENT,os.strerror(errno.ENOENT))
+		if len(matches)>1:
+			raise IOError, (errno.EEXIST,"More than one name matches %s"%os.path.join(cur,p))
+		if cur=='.':
+			cur=matches[0] #don't put the ./ on the front of the name
+		else:
+			cur=os.path.join(cur,matches[0])
+	return cur
+	
+def fixpath(filename):
+	return re.sub('['+re.escape(config.fixpaths)+']',os.sep,filename)
+
+def normpath(filename):
+	t=os.path.normpath(filename)
+	if re.match(r"[a-z]:\\",t[0:3],re.I): #we can't use os.path.splitdrive, since we want to get rid of it even if we are not on a dos system.
+		return t[3:]
+	if t[0]==os.sep:
+		return t[1:]
+	return t
+
+def testfile(testfiles,crctestfunc,filename,filecrc,filesize=-1):
+	if len(config.fixpaths):
+		filename=fixpath(filename)
+	filename=normpath(filename)
+	if testfiles:
+		if config.ignorecase:
+			if string.lower(filename) not in testfiles:
+				return
+		elif filename not in testfiles:
+			return
 	global stats,config
 	stats.num=stats.num+1
+	l_filename=filename
 	try:
+		if config.ignorecase:
+			if not os.path.exists(l_filename):
+				l_filename=findfile_nocase(l_filename)
 		if config.showunverified:
 			try:
-				stats.unverifiedfiles[-1].remove(filename)
+				stats.unverifiedfiles[-1].remove(l_filename)
 			except ValueError:
 				pass #don't error if file has already been removed.
 		if filesize>=0:
-			fs=os.path.getsize(filename)
+			fs=os.path.getsize(l_filename)
 			if fs!=string.atoi(filesize):
 				stats.badsize=stats.badsize+1
-				if config.verbose>=0:
-					print '%s : file size does not match (%s!=%i)'%(filename,filesize,fs)
-				return -1
+				raise CFVVerifyError, 'file size does not match (%s!=%i)'%(filesize,fs)
 		if config.docrcchecks and filecrc!=None:
-			c=crctestfunc(filename,filecrc)
+			c=crctestfunc(l_filename,filecrc)
 			if c:
 				stats.badcrc=stats.badcrc+1
-				if config.verbose>=0:
-					print '%s : crc does not match (%s!=%s)'%(filename,filecrc,c)
-				return -2
+				raise CFVVerifyError, 'crc does not match (%s!=%s)'%(filecrc,c)
 		else:
-			if not os.path.exists(filename):
+			if not os.path.exists(l_filename):
 				raise EnvironmentError, (errno.ENOENT,"missing")
-			if not os.path.isfile(filename):
+			if not os.path.isfile(l_filename):
 				raise EnvironmentError, (errno.ENOENT,"not a file")
 			filecrc="exists" #since we didn't actually test the crc, make verbose mode merely say it exists
 	except EnvironmentError, a:
@@ -310,14 +393,18 @@ def testfile(crctestfunc,filename,filecrc,filesize=-1):
 		else:
 			stats.ferror=stats.ferror+1
 		if config.verbose>=0 or a[0]!=errno.ENOENT:
-			print '%s : %s'%(filename,a[1])
-		return 0
+			print '%s : %s'%(perhaps_showpath(l_filename),a[1])
+		return -1
+	except CFVVerifyError, a:
+		if config.verbose>=0:
+			print '%s : %s'%(perhaps_showpath(l_filename),a)
+		return -2
 	stats.ok=stats.ok+1
 	if config.verbose>0:
 		if filesize>=0:
-			print '%s : OK (%i,%s)'%(filename,fs,filecrc)
+			print '%s : OK (%i,%s)'%(perhaps_showpath(filename),fs,filecrc)
 		else:
-			print '%s : OK (%s)'%(filename,filecrc)
+			print '%s : OK (%s)'%(perhaps_showpath(filename),filecrc)
 
 def test(filename,testfiles):
 	file=open(filename,'r')
@@ -325,7 +412,7 @@ def test(filename,testfiles):
 	file.seek(0)#go back to start so that type-specific test funcs get whole file
 	for typename,type in types.items():
 		if re.match(type.testmatch[0],l,type.testmatch[1]):
-			if config.showunverified and filename in stats.unverifiedfiles[-1]:#we can't except the checksum file itself to be checksummed
+			if config.showunverified and filename in stats.unverifiedfiles[-1]:#we can't expect the checksum file itself to be checksummed
 				stats.unverifiedfiles[-1].remove(filename)
 			if config.verbose>0:
 				print 'testing from %s (%s)'%(filename,typename)
@@ -395,14 +482,13 @@ def make(type,ifilename,testfiles):
 		os.chdir(f)
 		make(type,ifilename,None)
 		os.chdir(olddir)
-	
+
 def start_test_dir():
 	if not config.showunverified:
 		return
 	global stats;
 	if len(args):
-		import copy
-		filelist=copy.copy(args) #make a copy so we don't modify the args list (teehee)
+		filelist=args[:] #make a copy so we don't modify the args list (teehee)
 	else:
 		filelist=os.listdir('.')
 	#dir=os.getcwd()
@@ -417,7 +503,7 @@ def finish_test_dir():
 	unverified=stats.unverifiedfiles.pop()
 	for file in unverified:
 		if os.path.isfile(file):
-			print '%s : not verified'%os.path.join(dir,file)
+			print '%s : not verified'%perhaps_showpath(file,dir)
 			stats.unverified=stats.unverified+1
 
 stats=Stats()
@@ -428,7 +514,7 @@ type='auto'
 starttime=time.time()
 
 def printusage():
-	print 'Usage: cfv [-v|-V] [-r|-R] [-T|-C] [-m|-M] [-u|-U] [-t type] [-f file] [files...]'
+	print 'Usage: cfv [opts] [-T|-C] [-t type] [-f file] [files...]'
 	print '  -r       recursive mode 1 (make seperate chksum files for each dir)'
 	print '  -rr      recursive mode 2 (make a single file with deep listing in it)'
 	print '  -R       not recursive (default)'
@@ -438,17 +524,21 @@ def printusage():
 	print '  -f <f>   use <f> as list file'
 	print '  -m       check only for missing files (don\'t compare checksums)'
 	print '  -M       check checksums (default)'
+	print '  -i       ignore case'
+	print '  -I       don\'t ignore case (default)'
 	print '  -u       show unverified files'
 	print '  -U       don\'t show unverified files (default)'
 	print '  -v       verbose'
 	print '  -V       not verbose (default)'
+	print ' --fixpaths=<s>  replace any chars in <s> with %s'%os.sep
+	print ' --showpaths=<p> show full paths 0:never, 1:always, 2:in recursive mode(default)'
 	sys.exit()
 def printhelp():
 	print 'cfv v%s - Copyright (C) 2000 Matthew Mueller - GPL license'%version
 	printusage()
 
 try:
-	optlist, args = getopt.getopt(sys.argv[1:], 'rRTCt:f:mMuUvVh?')
+	optlist, args = getopt.getopt(sys.argv[1:], 'rRTCt:f:mMuUiIvVh?', ['fixpaths=','showpaths='])
 except getopt.error, a:
 	print "cfv: %s"%a
 	printusage()
@@ -471,6 +561,8 @@ for o,a in optlist:
 		manual=1 #filename selected manually, don't try to autodetect
 		filename=a
 		if mode==0:
+			if config.ignorecase:
+				args=map(string.lower,args) #lowercase it all now, so we don't have to keep doing it over and over in the testfile
 			start_test_dir()
 			if type=='auto':
 				test(a,args)
@@ -494,6 +586,10 @@ for o,a in optlist:
 		config.showunverified=0
 	elif o=='-u':
 		config.showunverified=1
+	elif o=='-I':
+		config.ignorecase=0
+	elif o=='-i':
+		config.ignorecase=1
 	elif o=='-m':
 		config.docrcchecks=0
 	elif o=='-M':
@@ -509,6 +605,10 @@ for o,a in optlist:
 		config.verbose=1
 	elif o=='-V':
 		config.verbose=0
+	elif o=='--showpaths':
+		config.showpaths=int(a)
+	elif o=='--fixpaths':
+		config.fixpaths=a
 	elif o=='-h' or o=='-?':
 		printhelp()
 	prevopt=o
@@ -516,6 +616,8 @@ for o,a in optlist:
 if not manual:
 	if mode==0:
 		rem=re.compile(r'md5|\.(csv|sfv)$',re.IGNORECASE)#md5sum files have no standard extension, so just search for files with md5 in the name anywhere, and let the test func see if it really is one.
+		if config.ignorecase:
+			args=map(string.lower,args) #lowercase it all now, so we don't have to keep doing it over and over in the testfile
 		def autotest(rem):
 			start_test_dir()
 			for a in os.listdir('.'):

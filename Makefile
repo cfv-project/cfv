@@ -49,7 +49,7 @@ install_man:
 	$(install) -o $(user) -g $(group) -m 0644 cfv.1 $(DESTDIR)$(mandir)/man1
 
 clean:
-	-rm *.pyc cfv.wrapper
+	-rm *.py[co] cfv.wrapper
 
 distclean: clean
 	-rm *~ test/test.log test/*~
