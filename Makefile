@@ -56,4 +56,4 @@ clean:
 	-rm *.py[co] cfv.wrapper
 
 distclean: clean
-	-rm *~ test/test.log test/*~
+	-rm -r test/test.log `find . -regex '^.*~$$' -o -name CVS`
