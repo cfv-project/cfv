@@ -2560,9 +2560,8 @@ def make(cftype,ifilename,testfiles):
 				perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
 				file=IOError
 				continue
-			dof=cf.make_addfile
 		try:
-			(filecrc,filesize),dat = dof(f)
+			(filecrc,filesize),dat = cf.make_addfile(f)
 		except EnvironmentError, a:
 			if a[0]==errno.ENOENT:
 				stats.notfound=stats.notfound+1
