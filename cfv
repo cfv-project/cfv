@@ -842,6 +842,8 @@ class PAR2(ChksumType, MD5_MixIn):
 		pkt_header_size = struct.calcsize(pkt_header_fmt)
 		file_pkt_fmt = '< 16s 16s 16s Q'
 		file_pkt_size = struct.calcsize(file_pkt_fmt)
+		main_pkt_fmt = '< Q I'
+		main_pkt_size = struct.calcsize(main_pkt_fmt)
 
 		def get_creator(file, pkt_header_fmt=pkt_header_fmt, pkt_header_size=pkt_header_size):#nested scopes not supported until python 2.1
 			if not config.verbose>0:
@@ -859,7 +861,8 @@ class PAR2(ChksumType, MD5_MixIn):
 		self.do_test_chksumfile_print_testingline(file, get_creator(file))
 		file.seek(0) # reset file position after looking for creator packet
 		
-		num_file_pkts = 0
+		seen_file_ids = {}
+		expected_file_ids = None
 
 		while 1:
 			d = file.read(pkt_header_size)
@@ -882,17 +885,30 @@ class PAR2(ChksumType, MD5_MixIn):
 			if pkt_type == 'PAR 2.0\0FileDesc':
 				if not config.docrcchecks:
 					d = file.read(pkt_len - pkt_header_size)
-				num_file_pkts = num_file_pkts + 1
 				file_id, file_md5, file_md5_16k, file_size = struct.unpack(file_pkt_fmt, d[:file_pkt_size])
-				filename = chompnulls(d[file_pkt_size:])
-				c = "%02x"*16 % tuple(map(ord, file_md5))
-				self.test_file(filename, c, file_size)
+				if seen_file_ids.get(file_id) is None:
+					seen_file_ids[file_id] = 1
+					filename = chompnulls(d[file_pkt_size:])
+					c = "%02x"*16 % tuple(map(ord, file_md5))
+					self.test_file(filename, c, file_size)
+			elif pkt_type == "PAR 2.0\0Main\0\0\0\0":
+				if not config.docrcchecks:
+					d = file.read(pkt_len - pkt_header_size)
+				if expected_file_ids is None:
+					expected_file_ids = []
+					slice_size, num_files = struct.unpack(main_pkt_fmt, d[:main_pkt_size])
+					num_nonrecovery = (len(d)-main_pkt_size)/16 - num_files
+					for i in range(main_pkt_size,main_pkt_size+(num_files+num_nonrecovery)*16,16):
+						expected_file_ids.append(d[i:i+16])
 			else:
 				if not config.docrcchecks:
 					file.seek(pkt_len - pkt_header_size, 1)
 
-		if num_file_pkts == 0:
-			raise EnvironmentError, (errno.EINVAL,"corrupt or unsupported par2 file - no file description packets found")
+		if expected_file_ids is None:
+			raise EnvironmentError, (errno.EINVAL,"corrupt or unsupported par2 file - no main packet found")
+		for id in expected_file_ids:
+			if not seen_file_ids.has_key(id):
+				raise EnvironmentError, (errno.EINVAL,"corrupt or unsupported par2 file - expected file description packet not found")
 
 	#we don't support PAR2 in create mode, but add these methods so that we can get error messages that are probaby more user friendly.
 	auto_filename_match = 'par2$'

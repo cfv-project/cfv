@@ -444,8 +444,12 @@ def all_tests():
 	test_generic(cfvcmd+" -u -t md5 -f test.md5 data* test.py test.md5",cfv_unv_test)
 	test_generic(cfvcmd+" -u -f test.md5 data* test.py",cfv_unv_test)
 	test_generic(cfvcmd+" -u -f test.md5 data* test.py test.md5",cfv_unv_test)
-	test_generic(cfvcmd+r" -i --fixpaths \\/ -Trru",lambda s,o: cfv_unv_test(s,o,None))
+	test_generic(cfvcmd+r" -i --fixpaths \\/ -Tu",lambda s,o: cfv_unv_test(s,o,None))
 	test_generic(cfvcmd+" -T -t md5 -f non_existant_file",cfv_cferror_test)
+	test_generic(cfvcmd+" -T -f corrupt/missingfiledesc.par2",cfv_cferror_test)
+	test_generic(cfvcmd+" -T -f corrupt/missingmain.par2",cfv_cferror_test)
+	test_generic(cfvcmd+" -T -m -f corrupt/missingfiledesc.par2",cfv_cferror_test)
+	test_generic(cfvcmd+" -T -m -f corrupt/missingmain.par2",cfv_cferror_test)
 	test_generic(cfvcmd+" -h",cfv_version_test)
 
 	donestr="tests finished:  ok: %i  failed: %i"%(stats.ok,stats.failed)

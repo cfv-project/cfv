@@ -1,6 +1,8 @@
 2003-xx-xx - v1.xx:
 	* Add -l/-L options to toggle symlink following.
 	* When following symlinks, don't die on cycles.
+	* Ignore redundant FileDesc packets in PAR2 files.
+	* Check that PAR2 files have FileDesc packets for every file listed in the Main packet.
 
 2003-05-23 - v1.14:
 	* Support md5sum files with comments in them.
