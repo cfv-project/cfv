@@ -931,6 +931,9 @@ def main(argv):
 			printhelp()
 		elif o=='--version':
 			print 'cfv %s'%version
+			try:
+				if not nommap: print '+mmap'
+			except NameError: pass
 			try: print 'fchksum %s'%fchksum.version()
 			except NameError: pass
 			print 'python %08x-%s'%(sys.hexversion,sys.platform)
