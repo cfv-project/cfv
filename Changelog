@@ -1,7 +1,7 @@
 200x-xx-xx - v1.xx:
 	* Handle .torrent files that have the creation date encoded as a string.
 	* Handle .torrent files that specify the filename encoding.
-	* Fix exceptions when trying to print unicode filenames encoded with non-ascii characters.
+	* Fix exceptions when trying to print unicode filenames containing non-ascii characters.
 	* Add -s option to search for misnamed files.
 	* Make .torrent support try BitTornado module if BitTorrent isn't found.
 	* Fix --strippaths=0 handling of multiple leading slashes and of dos-style drive letters with forward slashes.
