@@ -98,13 +98,13 @@ def gzC_test(f,extra=None,verify=None,t=None,d=None):
 	cmd=cfvcmd
 	if not t:
 		t=f
-	f='test.C.'+f+'.gz'
 	f2='test.C.'+f+'.tmp.gz'
+	f='test.C.'+f+'.gz'
 	if extra:
 		cmd=cmd+" "+extra
 	test_generic("%s -q -C -t %s -zz -f - %s > %s "%(cmd,t,d,f2),status_test)
 	test_generic("%s -C -f %s %s"%(cmd,f,d),cfv_test)
-	test_generic("zcmp %s %s "%(f,f2),status_test)
+	test_generic("zdiff %s %s "%(f,f2),status_test)
 	test_generic("%s -T -f %s"%(cmd,f),cfv_test)
 	test_generic("cat %s|%s -zz -T -f -"%(f,cmd),cfv_test)
 	if verify:
