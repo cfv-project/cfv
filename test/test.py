@@ -63,7 +63,7 @@ def status_test(s,o):
 	return 1
 
 #set everything to default in case user has different in config file
-cfvcmd="../cfv -VRMUI"
+cfvcmd="../cfv -ZNVRMUI"
 
 def cfv_test(s,o):
 	x=re.search(r'^(\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$',o)
