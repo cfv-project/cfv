@@ -175,15 +175,9 @@ def log(text):
 	logr(text+"\n");
 
 
-def test_log_results(cmd,s,o,r,kw):
-	"""
-	cmd=command being tested (info only)
-	s=return status
-	o=output
-	r=result (false=ok, anything else=fail (anything other than 1 will be printed))
-	"""
+def test_log_start(cmd,kw):
 	log("*** testing "+cmd + (kw and ' '+str(kw) or ''));
-	log(o);
+def test_log_finish(cmd,s,r):
 	if r:
 		stats.failed=stats.failed+1
 		print "failed test:",cmd
@@ -197,6 +191,16 @@ def test_log_results(cmd,s,o,r,kw):
 	if r:
 		log("\n".join(traceback.format_stack()))
 	log("");
+def test_log_results(cmd,s,o,r,kw):
+	"""
+	cmd=command being tested (info only)
+	s=return status
+	o=output
+	r=result (false=ok, anything else=fail (anything other than 1 will be printed))
+	"""
+	test_log_start(cmd,kw)
+	log(o);
+	test_log_finish(cmd,s,r)
 	
 
 def test_external(cmd,test):
@@ -1302,6 +1306,20 @@ def specialfile_test(cfpath):
 		shutil.rmtree(d)
 	
 
+def all_unittest_tests():
+	if not run_internal:
+		return
+	test_log_start('all_unittests_suite', None)
+	from unittest import TextTestRunner
+	suite = cfvtest.all_unittests_suite()
+	runner = TextTestRunner(stream=logfile, descriptions=1, verbosity=2)
+	result = runner.run(suite)
+	if not result.wasSuccessful():
+		r = '%i failures, %i errors'%tuple(map(len, (result.failures, result.errors)))
+	else:
+		r = 0
+	test_log_finish('all_unittests_suite', not result.wasSuccessful(), r)
+
 
 run_internal = 1
 run_long_tests = 0
@@ -1574,6 +1592,7 @@ def all_tests():
 	print donestr
 
 print 'testing...'
+all_unittest_tests()
 all_tests()
 if cfvtest.ver_fchksum:
 	print 'testing without fchksum...'
