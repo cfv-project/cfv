@@ -185,6 +185,7 @@ def make_rename_formatmap(l_filename):
 version='1.10-pre'+'$Revision$'[11:-2]
 
 try:
+	if os.environ.get('CFV_NOFCHKSUM'): raise ImportError
 	import fchksum
 	try:
 		if fchksum.version()<2:raise ImportError
@@ -202,6 +203,7 @@ try:
 except ImportError:
 	import md5,zlib
 	try:
+		if os.environ.get('CFV_NOMMAP'): raise ImportError
 		import mmap
 		if hasattr(mmap, 'PROT_READ'):
 			def dommap(fileno, len):#unix mmap.  python default is PROT_READ|PROT_WRITE, but we open readonly.
