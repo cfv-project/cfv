@@ -1,3 +1,6 @@
+2002-xx-xx - v1.xx:
+	* Fix exception in test mode when specifying -t and -f with a non-existant file.
+
 2002-09-23 - v1.12:
 	* Fix make install when target directories don't already exist. (Reported by Svend S. Sorensen)
 	* Fix cfv -u -t blah -f foo.blah from reporting foo.blah as unverified.

@@ -296,7 +296,7 @@ def make_rename_formatmap(l_filename):
 	sp=os.path.splitext(l_filename)
 	return {'name':sp[0], 'ext':sp[1], 'fullname':l_filename}
 
-version='1.12'#-pre'+'$Revision$'[11:-2]
+version='1.12.1-pre'+'$Revision$'[11:-2]
 
 try:
 	if os.environ.get('CFV_NOFCHKSUM'): raise ImportError
@@ -532,7 +532,7 @@ class ChksumType:
 				cf_stats.print_stats()
 		except EnvironmentError, a:
 			stats.cferror=stats.cferror+1
-			perror('%s : %s (CF)'%(perhaps_showpath(file.name),a[1]))
+			perror('%s : %s (CF)'%(perhaps_showpath(filename),a[1]))
 
 	def do_test_chksumfile_print_testingline(self, file):
 		pverbose('testing from %s (%s)'%(file.name, string.lower(self.__class__.__name__)))

@@ -87,6 +87,7 @@ rx_Begin=r'^(?:.* )?(\d+) files, (\d+) OK'
 rx_unv=r', (\d)+ unverified'
 rx_notfound=r', (\d)+ not found'
 rx_bad=r', (\d)+ bad(crc|size)'
+rx_cferror=r', (\d)+ chksum file errors'
 rx_End=r'(, \d+ differing cases)?(, \d+ quoted filenames)?.  [\d.]+ seconds, [\d.]+K(/s)?$'
 
 def tail(s):
@@ -109,6 +110,14 @@ def cfv_notfound_test(s,o,unv=1):
 	x=re.search(rx_Begin+rx_notfound+rx_End,tail(o))
 	if s!=0 and x and int(x.group(2))==0 and int(x.group(1))>0:
 		if int(x.group(3))!=unv:
+			return 1
+		return 0
+	return 1
+
+def cfv_cferror_test(s,o,bad=1):
+	x=re.search(rx_Begin+rx_cferror+rx_End,tail(o))
+	if s!=0 and x and int(x.group(3))>0:
+		if bad>0 and int(x.group(3))!=bad:
 			return 1
 		return 0
 	return 1
@@ -388,6 +397,7 @@ def all_tests():
 	test_generic(cfvcmd+" -u -f test.md5 data* test.py",cfv_unv_test)
 	test_generic(cfvcmd+" -u -f test.md5 data* test.py test.md5",cfv_unv_test)
 	test_generic(cfvcmd+r" -i --fixpaths \\/ -Trru",lambda s,o: cfv_unv_test(s,o,None))
+	test_generic(cfvcmd+" -T -t md5 -f non_existant_file",cfv_cferror_test)
 	test_generic(cfvcmd+" -h",cfv_version_test)
 
 	donestr="tests finished:  ok: %i  failed: %i"%(stats.ok,stats.failed)
