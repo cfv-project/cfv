@@ -270,7 +270,7 @@ if len(sys.argv)>1:
 	cfvcmd=sys.argv[1]
 
 #set everything to default in case user has different in config file
-cfvcmd=cfvcmd+" -ZNVRMUI"
+cfvcmd=cfvcmd+' -ZNVRMUI --fixpaths=""'
 
 
 logfile=open("test.log","w")
