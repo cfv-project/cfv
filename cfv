@@ -1273,6 +1273,10 @@ class ChksumType:
 	
 	def make_chksumfile_create(self, filename):
 		return doopen_write(filename)
+	
+	def make_writefile(self, data, file):
+		if data:
+			file.write(data)
 
 	def make_chksumfile_finish(self, file):
 		file.close()
@@ -2572,7 +2576,7 @@ def make(cftype,ifilename,testfiles):
 			perror('%s : %s'%(perhaps_showpath(f),enverrstr(a)))
 			continue
 		try:
-			file.write(dat)
+			cf.make_writefile(dat, file)
 		except EnvironmentError, a:
 			stats.cferror=stats.cferror+1
 			perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
