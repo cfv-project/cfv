@@ -86,6 +86,9 @@ class Config:
 	fixpaths=''
 	showpaths=2
 	gzip=0
+	rename=0
+	renameformat='%(name)s.bad-%(count)i%(ext)s'
+	renameformatnocount=0
 	def setdefault(self,type):
 		if type in types.keys():
 			self.defaulttype=type
@@ -113,7 +116,7 @@ class Config:
 	def setx(self,o,v):
 		if o=="default":
 			self.setdefault(v)
-		elif o in ("dirsort","cmdlinesort","showunverified","ignorecase"):
+		elif o in ("dirsort","cmdlinesort","showunverified","ignorecase","rename"):
 			self.setbool(o,v)
 		elif o in ("verbose","gzip"):
 			self.setintr(o,v,-1,1)
@@ -121,6 +124,17 @@ class Config:
 			self.setintr(o,v,0,2)
 		elif o=="fixpaths":
 			self.setstr(o,v)
+		elif o=="renameformat":
+			testmap=make_rename_formatmap('1.2')
+			testmapwc=make_rename_formatmap('1.2')
+			testmapwc['count']=1
+			format_test=v%testmapwc
+			try:
+				format_test=v%testmap
+				self.renameformatnocount=1 #if we can get here, it doesn't use the count param
+			except KeyError:
+				self.renameformatnocount=0
+			self.renameformat=v
 		else:
 			raise CFVNameError, "invalid option '%s'"%o
 	def readconfig(self):
@@ -150,6 +164,11 @@ class Config:
 						raise sys.exc_info()[0], "%s:%i: %s"%(filename,l,err), sys.exc_info()[2] #reuse the traceback of the original exception, but add file and line numbers to the error
 	def __init__(self):
 		self.readconfig()
+			
+			
+def make_rename_formatmap(l_filename):
+	sp=os.path.splitext(l_filename)
+	return {'name':sp[0], 'ext':sp[1], 'fullname':l_filename}
 
 version='1.8-pre'+'$Revision$'[11:-2]
 
@@ -205,6 +224,16 @@ except ImportError:
 				return "%08X"%c,s
 			s=s+len(x)
 			c=zlib.crc32(x,c)
+
+try:
+	import filecmp
+	def fcmp(f1, f2):
+		return filecmp.cmp(f1, f2, shallow=0)
+except ImportError:
+	import cmp #obsolete since python 1.6
+	def fcmp(f1, f2):
+		#old cmp module is always shallow, so call its real do_cmp function if the files signatures match.  do_cmp is undocumented but in all the versions of the cmp.py on sourceforge python cvs so I think its safe :)
+		return cmp.cmp(f1, f2) and cmp.do_cmp(f1, f2)
 
 
 class fv_type:
@@ -533,7 +562,26 @@ def testfile(testfiles,crctestfunc,filename,filecrc,filesize=-1):
 		perror('%s : %s'%(perhaps_showpath(l_filename),a[1]))
 		return -1
 	except CFVVerifyError, a:
-		perror('%s : %s'%(perhaps_showpath(l_filename),a))
+		reninfo=''
+		if config.rename:
+			formatmap=make_rename_formatmap(l_filename) 
+			for count in xrange(0,sys.maxint):
+				formatmap['count']=count
+				newfilename=config.renameformat%formatmap
+				if config.renameformatnocount and count>0:
+					newfilename='%s-%i'%(newfilename,count)
+				if l_filename==newfilename:
+					continue #if the filenames are the same they would cmp the same and be deleted. (ex. when renameformat="%(fullname)s")
+				if os.path.exists(newfilename):
+					if fcmp(l_filename, newfilename):
+						os.unlink(l_filename)
+						reninfo=' (dupe of %s removed)'%newfilename
+						break
+				else:
+					os.rename(l_filename, newfilename)
+					reninfo=' (renamed to %s)'%newfilename
+					break
+		perror('%s : %s%s'%(perhaps_showpath(l_filename),a,reninfo))
 		return -2
 	stats.ok=stats.ok+1
 	if filesize>=0:
@@ -668,6 +716,8 @@ def printusage(err=0):
 	perror('  -f <f>   use <f> as list file')
 	perror('  -m       check only for missing files (don\'t compare checksums)')
 	perror('  -M       check checksums (default)')
+	perror('  -n       rename bad files')
+	perror('  -N       don\'t rename bad files (default)')
 	perror('  -p <d>   change to directory <d> before doing anything')
 	perror('  -i       ignore case')
 	perror('  -I       don\'t ignore case (default)')
@@ -683,6 +733,7 @@ def printusage(err=0):
 	perror('  -ZZ      never use gzip, even if file ends in .gz')
 	perror(' --fixpaths=<s>  replace any chars in <s> with %s'%os.sep)
 	perror(' --showpaths=<p> show full paths 0:never, 1:always, 2:in recursive mode(default)')
+	perror(' --renameformat=<f> format string to use with -n option')
 	perror(' --help/-h show help')
 	perror(' --version show version')
 	sys.exit(err)
@@ -701,7 +752,7 @@ def main(argv):
 	starttime=time.time()
 
 	try:
-		optlist, args = getopt.getopt(argv, 'rRTCt:f:mMp:uUiIvVzZqh?', ['fixpaths=','showpaths=','help','version'])
+		optlist, args = getopt.getopt(argv, 'rRTCt:f:mMnNp:uUiIvVzZqh?', ['fixpaths=','showpaths=','renameformat=','help','version'])
 	except getopt.error, a:
 		perror("cfv: %s"%a)
 		printusage(1)
@@ -757,6 +808,12 @@ def main(argv):
 			config.ignorecase=0
 		elif o=='-i':
 			config.ignorecase=1
+		elif o=='-n':
+			config.rename=1
+		elif o=='-N':
+			config.rename=0
+		elif o=='--renameformat':
+			config.setx('renameformat', a)
 		elif o=='-m':
 			config.docrcchecks=0
 		elif o=='-M':
