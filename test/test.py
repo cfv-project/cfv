@@ -388,13 +388,7 @@ def ren_test(f,extra=None,verify=None,t=None):
 		flscmp('63',3,fls=flsf_2)
 		flscmp('hello',None,fls=fls)
 	finally:
-		import glob
-		for d in glob.glob(join(dir2,'*')):
-			os.unlink(d)
-		os.rmdir(dir2)
-		for d in glob.glob(join(dir,'*')):
-			os.unlink(d)
-		os.rmdir(dir)
+		shutil.rmtree(dir)
 
 def symlink_test():
 	dir='s.test'
