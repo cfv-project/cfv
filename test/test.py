@@ -89,6 +89,19 @@ def cfv_bad_test(s,o,bad=-1):
 		return 0
 	return 1
 
+def cfv_listdata_test(s,o):
+	if s==0 and re.search('^data1\0data2\0data3\0data4\0$',o,re.I):
+		return 0
+	return 1
+def cfv_listdata_unv_test(s,o):
+	if os.WEXITSTATUS(s)==32 and re.search('^test.py\0testfix.csv\0$',o,re.I):
+		return 0
+	return 1
+def cfv_listdata_bad_test(s,o):
+	if os.WEXITSTATUS(s)&6 and not os.WEXITSTATUS(s)&~6 and re.search('^(d2.)?test4.foo\0test.ext.end\0test2.foo\0test3\0$',o,re.I):
+		return 0
+	return 1
+
 def cfv_version_test(s,o):
 	x=re.search(r'cfv v([\d.]+) -',o)
 	x2=re.search(r'cfv ([\d.]+) ',open("../README").readline())
@@ -109,6 +122,11 @@ def T_test(f):
 	test_generic(cfvcmd+" -T -f test"+f,cfv_test)
 	test_generic(cfvcmd+" -i -T -f test"+f,cfv_test) #all tests should work with -i
 	test_generic(cfvcmd+" -m -T -f test"+f,cfv_test) #all tests should work with -m
+	
+	test_generic(cfvcmd+" -T --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_test)
+	#ensure all verbose stuff goes to stderr:
+	test_generic(cfvcmd+" -v -T --list0=ok -f test"+f+" 2> /dev/null",cfv_listdata_test)
+	test_generic(cfvcmd+" -v -T --list0=unverified -f test"+f+" test.py testfix.csv data1 2> /dev/null",cfv_listdata_unv_test)
 
 def gzC_test(f,extra=None,verify=None,t=None,d=None):
 	cmd=cfvcmd
@@ -152,9 +170,10 @@ def ren_test(f,extra=None,verify=None,t=None):
 	join=os.path.join
 	dir='n.test'
 	dir2=join('n.test','d2')
-	cmd=cfvcmd+' --renameformat="%(name)s-%(count)i%(ext)s" -r -p '+dir
+	basecmd=cfvcmd+' -r -p '+dir
 	if extra:
-		cmd=cmd+" "+extra
+		basecmd=basecmd+" "+extra
+	cmd=basecmd+' --renameformat="%(name)s-%(count)i%(ext)s"'
 	try:
 		os.mkdir(dir)
 		os.mkdir(dir2)
@@ -182,6 +201,7 @@ def ren_test(f,extra=None,verify=None,t=None):
 		flsw('hello')
 		test_generic("%s -C -t %s"%(cmd,f),cfv_test)
 		flsw('1')
+		test_generic(basecmd+" --showpaths=0 -v -T --list0=bad 2> /dev/null",cfv_listdata_bad_test)
 		test_generic("%s -Tn"%(cmd),cfv_bad_test)
 		flsw('11')
 		test_generic("%s -Tn"%(cmd),cfv_bad_test)

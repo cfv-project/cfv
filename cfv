@@ -21,6 +21,12 @@ import getopt, re, os, string, sys, errno, time
 
 types={}
 
+LISTOK=512
+LISTBAD=1024
+LISTNOTFOUND=2048
+LISTUNVERIFIED=4096
+LISTARGS={'ok':LISTOK, 'bad':LISTBAD, 'notfound':LISTNOTFOUND, 'unverified':LISTUNVERIFIED}
+
 def chomp(line):
 	if line[-2:] == '\r\n': return line[:-2]
 	elif line[-1:] in '\r\n': return line[:-1]
@@ -33,19 +39,22 @@ def chdir(d):
 	os.chdir(d)
 	curdir=os.getcwd()
 
-def p(s,nl=1,outf=sys.stdout):
-	outf.write(s)
-	if nl:
-		outf.write('\n')
-def pverbose(s,nl=1):
+
+def _pstd(s,nl='\n',write=sys.stdout.write):
+	write(s + nl)
+def _perr(s,nl='\n',write=sys.stderr.write):
+	write(s + nl)
+
+p=_pstd
+def pverbose(s,nl='\n'):
 	if config.verbose>0:
 		p(s,nl)
-def pinfo(s,nl=1):
+def pinfo(s,nl='\n'):
 	if config.verbose>=0:
 		p(s,nl)
-def perror(s,nl=1):
+def perror(s,nl='\n'):
 	if config.verbose>=-1:
-		p(s,nl,outf=sys.stderr)
+		_perr(s,nl)
 
 class CFVException(Exception):
 	pass
@@ -73,6 +82,7 @@ class Stats:
 	bytesread=0L #use long int for size, to avoid possible overflow.
 	unverifiedfiles=[]
 	unverified=0
+	listfiles=[]
 
 class Config:
 	verbose=0 # -1=quiet  0=norm  1=noisy
@@ -89,6 +99,8 @@ class Config:
 	rename=0
 	renameformat='%(name)s.bad-%(count)i%(ext)s'
 	renameformatnocount=0
+	list=0
+	listsep='\n'
 	def setdefault(self,type):
 		if type in types.keys():
 			self.defaulttype=type
@@ -177,7 +189,7 @@ try:
 	try:
 		if fchksum.version()<2:raise ImportError
 	except:
-		p("old fchksum version installed, using std python modules. please update.",nl=1,outf=sys.stderr) #can't use perror yet since config hasn't been done..
+		_perr("old fchksum version installed, using std python modules. please update.") #can't use perror yet since config hasn't been done..
 		raise ImportError
 	def getfilemd5(file):
 		c,s=fchksum.fmd5t(file)
@@ -572,12 +584,16 @@ def testfile(testfiles,crctestfunc,filename,filecrc,filesize=-1):
 	except EnvironmentError, a:
 		if a[0]==errno.ENOENT:
 			stats.notfound=stats.notfound+1
+			if config.list&LISTNOTFOUND:
+				stats.listfiles.append(perhaps_showpath(l_filename))
 		else:
 			stats.ferror=stats.ferror+1
 		perror('%s : %s'%(perhaps_showpath(l_filename),a[1]))
 		return -1
 	except CFVVerifyError, a:
 		reninfo=''
+		if config.list&LISTBAD:
+			stats.listfiles.append(perhaps_showpath(l_filename))
 		if config.rename:
 			formatmap=make_rename_formatmap(l_filename) 
 			for count in xrange(0,sys.maxint):
@@ -599,6 +615,8 @@ def testfile(testfiles,crctestfunc,filename,filecrc,filesize=-1):
 		perror('%s : %s%s'%(perhaps_showpath(l_filename),a,reninfo))
 		return -2
 	stats.ok=stats.ok+1
+	if config.list&LISTOK:
+		stats.listfiles.append(perhaps_showpath(filename))
 	if filesize>=0:
 		pverbose('%s : OK (%i,%s)'%(perhaps_showpath(filename),fs,filecrc))
 	else:
@@ -701,6 +719,8 @@ def finish_test_dir():
 	unverified=stats.unverifiedfiles.pop()
 	for file in unverified:
 		if os.path.isfile(file):
+			if config.list&LISTUNVERIFIED:
+				stats.listfiles.append(perhaps_showpath(file))
 			perror('%s : not verified'%perhaps_showpath(file,curdir))
 			stats.unverified=stats.unverified+1
 
@@ -743,6 +763,8 @@ def printusage(err=0):
 	perror('  -z       make gzipped files in auto create mode')
 	perror('  -Z       don\'t create gzipped files automatically. (default)')
 	perror('  -ZZ      never use gzip, even if file ends in .gz')
+	perror(' --list=<l> raw list files of type <l> (%s)'%string.join(LISTARGS.keys(),', '))
+	perror(' --list0=<l> same as list, but seperate files with nulls (useful for xargs -0)')
 	perror(' --fixpaths=<s>  replace any chars in <s> with %s'%os.sep)
 	perror(' --showpaths=<p> show full paths 0:never, 1:always, 2:in recursive mode(default)')
 	perror(' --renameformat=<f> format string to use with -n option')
@@ -764,7 +786,7 @@ def main(argv):
 	starttime=time.time()
 
 	try:
-		optlist, args = getopt.getopt(argv, 'rRTCt:f:mMnNp:uUiIvVzZqh?', ['fixpaths=','showpaths=','renameformat=','help','version'])
+		optlist, args = getopt.getopt(argv, 'rRTCt:f:mMnNp:uUiIvVzZqh?', ['list=', 'list0=', 'fixpaths=','showpaths=','renameformat=','help','version'])
 	except getopt.error, a:
 		perror("cfv: %s"%a)
 		printusage(1)
@@ -858,6 +880,16 @@ def main(argv):
 				config.gzip=-1
 			else:
 				config.gzip=0
+		elif o=='--list' or o=='--list0':
+			if a not in LISTARGS.keys():
+				perror('list arg must be one of '+`LISTARGS.keys()`)
+				sys.exit(1)
+			config.list=LISTARGS[a]
+			config.listsep = o=='--list0' and '\0' or '\n'
+			if config.list==LISTUNVERIFIED:
+				config.showunverified=1
+			global p
+			p=_perr #redirect all messages to stderr so only the list gets on stdout
 		elif o=='--showpaths':
 			config.showpaths=int(a)
 		elif o=='--fixpaths':
@@ -882,29 +914,32 @@ def main(argv):
 				type=config.defaulttype
 			make(types[type],None,args)
 
-	pinfo('%i files'%stats.num,0)
-	pinfo(', %i OK' %stats.ok,0)
+	pinfo('%i files'%stats.num,'')
+	pinfo(', %i OK' %stats.ok,'')
 	if stats.badcrc:
-		pinfo(', %i badcrc' %stats.badcrc,0)
+		pinfo(', %i badcrc' %stats.badcrc,'')
 	if stats.badsize:
-		pinfo(', %i badsize' %stats.badsize,0)
+		pinfo(', %i badsize' %stats.badsize,'')
 	if stats.notfound:
-		pinfo(', %i not found' %stats.notfound,0)
+		pinfo(', %i not found' %stats.notfound,'')
 	if stats.ferror:
-		pinfo(', %i file errors' %stats.ferror,0)
+		pinfo(', %i file errors' %stats.ferror,'')
 	if stats.unverified:
-		pinfo(', %i unverified' %stats.unverified,0)
+		pinfo(', %i unverified' %stats.unverified,'')
 	if stats.cferror:
-		pinfo(', %i chksum file errors' %stats.cferror,0)
+		pinfo(', %i chksum file errors' %stats.cferror,'')
 
 	elapsed=time.time()-starttime
-	pinfo('.  %.3f seconds, '%(elapsed),0)
+	pinfo('.  %.3f seconds, '%(elapsed),'')
 	if elapsed==0.0:
-		pinfo('%.1fK'%(stats.bytesread/1024.0),0)
+		pinfo('%.1fK'%(stats.bytesread/1024.0),'')
 	else:
-		pinfo('%.1fK/s'%(stats.bytesread/elapsed/1024.0),0)
+		pinfo('%.1fK/s'%(stats.bytesread/elapsed/1024.0),'')
 
-	pinfo('\n',0)
+	pinfo('\n','')
+
+	for f in stats.listfiles:
+		sys.stdout.write(f+config.listsep)
 
 #if stats.badcrc or stats.badsize or stats.notfound or stats.ferror or stats.unverified or stats.cferror:
 #	sys.exit(1)
