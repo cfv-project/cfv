@@ -385,15 +385,9 @@ except ImportError:
 			stats.bytesread = stats.bytesread+s
 			return "%08X"%c,s
 
-try:
+def fcmp(f1, f2):
 	import filecmp
-	def fcmp(f1, f2):
-		return filecmp.cmp(f1, f2, shallow=0)
-except ImportError:
-	import cmp #obsolete since python 1.6
-	def fcmp(f1, f2):
-		#old cmp module is always shallow, so call its real do_cmp function if the files signatures match.  do_cmp is undocumented but in all the versions of the cmp.py on sourceforge python cvs so I think its safe :)
-		return cmp.cmp(f1, f2) and cmp.do_cmp(f1, f2)
+	return filecmp.cmp(f1, f2, shallow=0)
 
 try:
 	staticmethod #new in python 2.2
