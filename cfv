@@ -165,6 +165,7 @@ class Config:
 	renameformatnocount=0
 	list=0
 	listsep='\n'
+	user_cf_fn_regexs=[]
 	def setdefault(self,cftype):
 		if cftype in cftypes.keys():
 			self.defaulttype=cftype
@@ -266,6 +267,11 @@ class Config:
 			except KeyError:
 				self.renameformatnocount=0
 			self.renameformat=v
+		elif o=="filename_type":
+			typename,match = v.split('=',1)
+			if not cftypes.has_key(typename):
+				raise CFVValueError, "filename_type: invalid type '%s'"%typename
+			self.user_cf_fn_regexs.append((re.compile(match, re.I).search, cftypes[typename]))
 		else:
 			raise CFVNameError, "invalid option '%s'"%o
 	def readconfig(self):
@@ -476,7 +482,7 @@ def doopen_write(filename):
 
 
 def auto_filename_match(*names):
-	for searchfunc, cftype in _cf_fn_matches + _cf_fn_exts + _cf_fn_searches:
+	for searchfunc, cftype in config.user_cf_fn_regexs + _cf_fn_matches + _cf_fn_exts + _cf_fn_searches:
 		for name in names:
 			if searchfunc(name):
 				return cftype

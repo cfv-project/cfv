@@ -235,6 +235,14 @@ rename 0
 #format to use for renaming bad files with -n
 .br
 renameformat %(name)s.bad-%(count)i%(ext)s
+.br
+#filename_type can be used to override what type of file to create when -t isn't specified.
+.br
+#The format of the argument is <typename>=<regex>.  Can be specified multiple times, the earlier instances having higher priority.
+.br
+#for example, the following line would cause cfv -C -f foo.md5 to create a 'sfvmd5' file rather than a 'md5' file.
+.br
+#filename_type sfvmd5=md5$
 .SH FILES
 .PP
 .IP "~/.cfvrc"
