@@ -644,9 +644,7 @@ except ImportError:
 			f=sys.stdin
 		else:
 			f=open(file,'rb')
-		if f==sys.stdin or nommap or stdprogress:
-			m=md5.new()
-			s=0L
+		def finish(m,s,f=f,file=file):
 			if stdprogress: progress.init(file)
 			try:
 				while 1:
@@ -659,9 +657,18 @@ except ImportError:
 					if stdprogress: progress.update(s)
 			finally:
 				if stdprogress: progress.cleanup()
+
+		if f==sys.stdin or nommap or stdprogress:
+			return finish(md5.new(),0L)
 		else:
 			s = os.path.getsize(file)
-			m = md5.new(dommap(f.fileno(), s))
+			try:
+				m = md5.new(dommap(f.fileno(), s))
+			except OverflowError:
+				mmapsize = min(s, 2**31-1) #mmap size is limited by C's int type, which even on 64 bit arches is often 32 bits, so we can't use sys.maxint either.  If we get the error, just assume 32 bits. 
+				m = md5.new(dommap(f.fileno(), mmapsize))
+				f.seek(mmapsize)
+				return finish(m,mmapsize) #unfortunatly, python's mmap module doesn't support the offset parameter, so we just have to do the rest of the file the old fashioned way.
 			stats.bytesread = stats.bytesread+s
 			return m.digest(),s
 			
@@ -670,9 +677,7 @@ except ImportError:
 			f=sys.stdin
 		else:
 			f=open(file,'rb')
-		if f==sys.stdin or nommap or stdprogress:
-			c=_crc32('')
-			s=0L
+		def finish(c,s,f=f,file=file):
 			if stdprogress: progress.init(file)
 			try:
 				while 1:
@@ -685,9 +690,18 @@ except ImportError:
 					if stdprogress: progress.update(s)
 			finally:
 				if stdprogress: progress.cleanup()
+
+		if f==sys.stdin or nommap or stdprogress:
+			return finish(_crc32(''),0L)
 		else:
 			s = os.path.getsize(file)
-			c = _crc32(dommap(f.fileno(), s))
+			try:
+				c = _crc32(dommap(f.fileno(), s))
+			except OverflowError:
+				mmapsize = min(s, 2**31-1) #mmap size is limited by C's int type, which even on 64 bit arches is often 32 bits, so we can't use sys.maxint either.  If we get the error, just assume 32 bits. 
+				c = _crc32(dommap(f.fileno(), mmapsize))
+				f.seek(mmapsize)
+				return finish(c,mmapsize) #unfortunatly, python's mmap module doesn't support the offset parameter, so we just have to do the rest of the file the old fashioned way.
 			stats.bytesread = stats.bytesread+s
 			return struct.pack('>I',c),s
 

@@ -899,6 +899,24 @@ def test_encoding2():
 	shutil.rmtree(d)
 	
 
+def largefile_test():
+	# hope you have sparse file support ;)
+	fn = os.path.join('bigfile','bigfile')
+	f = open(fn,'wb')
+	try:
+		f.write('hi')
+		f.seek(2**30)
+		f.write('foo')
+		f.seek(2**31)
+		f.write('bar')
+		f.seek(2**32)
+		f.write('baz')
+		f.close()
+		test_generic(cfvcmd+" -v -T -p %s"%('bigfile'), rcurry(cfv_all_test,ok=9))
+	finally:
+		os.unlink(fn)
+
+
 cfvenv=''
 cfvexe=os.path.join(os.pardir,'cfv')
 run_internal = 1
@@ -1116,6 +1134,8 @@ def all_tests():
 			test_log_results("non-creation of empty torrent on missing announceurl?",'',repr(os.listdir(d)),len(os.listdir(d))>1,{})
 		finally:
 			shutil.rmtree(d)
+
+	largefile_test()
 
 	test_generic(cfvcmd+" -h",cfv_version_test)
 
