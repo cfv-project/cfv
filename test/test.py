@@ -19,7 +19,7 @@
 
 default_ns = globals().copy()
 
-import re,os,sys,string,operator,shutil,getopt,gzip,stat
+import re,os,sys,string,operator,shutil,getopt,gzip,stat,traceback
 try: # tempfile.mkdtemp is only in python 2.3+
 	from tempfile import mkdtemp
 except ImportError:
@@ -142,6 +142,8 @@ def test_log_results(cmd,s,o,r,kw):
 		stats.ok=stats.ok+1
 		result="OK";
 	log("%s (%s)"%(result,s));
+	if r:
+		log("\n".join(traceback.format_stack()))
 	log("");
 	
 def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None):
