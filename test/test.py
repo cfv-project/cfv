@@ -469,13 +469,19 @@ def deep_unverified_test():
 		B_ushallow_d = join(B_ushallow, 'd')
 		u = 'u'
 		u_u2 = join(u, 'u2')
-		for d in a, a_C, B, B_ushallow, B_ushallow_d, u, u_u2:
+		e = 'e'
+		e_es = join(e, 'es')
+		e2 = 'e2'
+		e2_e2s = join(e2, 'e2s')
+		
+		for d in a, a_C, B, B_ushallow, B_ushallow_d, u, u_u2, e, e_es, e2, e2_e2s:
 			os.mkdir(join(dir,d))
 		datafns = ('DATa1', 'UnV1',
 				join(a,'dAta2'), join(a, 'Unv2'), join(a_C,'dATa4'), join(a_C,'unV4'),
 				join(B,'daTA3'), join(B,'uNv3'),
 				join(B_ushallow,'uNvs'), join(B_ushallow_d,'unvP'), join(B_ushallow_d,'datA5'),
-				join(u,'uNVu'), join(u,'UnvY'), join(u_u2,'UNVX'),)
+				join(u,'uNVu'), join(u,'UnvY'), join(u_u2,'UNVX'),
+				join(e2_e2s,'DaTaE'),)
 		lower_datafns = map(string.lower, datafns)
 		for fn in datafns:
 			open(join(dir,fn),'w').close()
@@ -484,16 +490,19 @@ def deep_unverified_test():
 d41d8cd98f00b204e9800998ecf8427e *B/ushAllOw/D/daTa5
 d41d8cd98f00b204e9800998ecf8427e *a/c/DatA4
 d41d8cd98f00b204e9800998ecf8427e *A/dATA2
+d41d8cd98f00b204e9800998ecf8427e *E2/e2S/DAtae
 d41d8cd98f00b204e9800998ecf8427e *daTA1""")
 		f.close()
 			
 		def r_test(s,o):
-			if cfv_test(s,o,op_eq,5): return 1
+			if cfv_test(s,o,op_eq,6): return 1
 			if string.count(o,'not verified')!=0: return 1
 			return 0
 		def r_unv_test(s,o):
 			if cfv_unvonly_test(s,o,9): return 1
 			if string.count(o,'not verified')!=7: return 1
+			if string.find(o,os.path.join('e','*'))>=0: return 1
+			if string.find(o,os.path.join('e2','*'))>=0: return 1
 			return 0
 		def r_unv_verbose_test(s,o):
 			if cfv_unvonly_test(s,o,9): return 1
