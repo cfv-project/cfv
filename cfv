@@ -1077,7 +1077,23 @@ class SHA1_MixIn:
 		if c!=filecrc:
 			return c
 
-class SHA1(ChksumType, SHA1_MixIn):
+# Base class for md5sum/sha1sum style checksum file formats.
+class FooSum_Base(ChksumType):
+	def do_test_chksumfile_print_testingline(self, file):
+		ChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(128), ';#'))
+	
+	def do_test_chksumline(self, l):
+		if l[0] in ';#': return
+		x=self._foosum_rem.match(l)
+		if not x: return -1
+		if x.group(2)==' ':
+			if stats.textmode==0:
+				perror('warning: file(s) tested in textmode')
+			stats.textmode = stats.textmode + 1
+		self.test_file(x.group(3),unhexlify(x.group(1)))
+
+
+class SHA1(FooSum_Base, SHA1_MixIn):
 	def auto_chksumfile_match(file, _autorem=re.compile(r'[0-9a-fA-F]{40} [ *].')):
 		l = file.peekline(4096)
 		while l:
@@ -1088,19 +1104,7 @@ class SHA1(ChksumType, SHA1_MixIn):
 
 	auto_filename_match = 'sha1'
 
-	def do_test_chksumfile_print_testingline(self, file):
-		ChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(128), ';#'))
-	
-	_sha1rem=re.compile(r'([0-9a-fA-F]{40}) ([ *])([^\r\n]+)[\r\n]*$')
-	def do_test_chksumline(self, l):
-		if l[0] in ';#': return
-		x=self._sha1rem.match(l)
-		if not x: return -1
-		if x.group(2)==' ':
-			if stats.textmode==0:
-				perror('warning: file(s) tested in textmode')
-			stats.textmode = stats.textmode + 1
-		self.test_file(x.group(3),unhexlify(x.group(1)))
+	_foosum_rem=re.compile(r'([0-9a-fA-F]{40}) ([ *])([^\r\n]+)[\r\n]*$')
 	
 	def make_std_filename(filename):
 		return filename+'.sha1'
@@ -1121,7 +1125,7 @@ class MD5_MixIn:
 		if c!=filecrc:
 			return c
 
-class MD5(ChksumType, MD5_MixIn):
+class MD5(FooSum_Base, MD5_MixIn):
 	def auto_chksumfile_match(file, _autorem=re.compile(r'[0-9a-fA-F]{32} [ *].')):
 		l = file.peekline(4096)
 		while l:
@@ -1132,19 +1136,7 @@ class MD5(ChksumType, MD5_MixIn):
 
 	auto_filename_match = 'md5'
 
-	def do_test_chksumfile_print_testingline(self, file):
-		ChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(128), ';#'))
-	
-	_md5rem=re.compile(r'([0-9a-fA-F]{32}) ([ *])([^\r\n]+)[\r\n]*$')
-	def do_test_chksumline(self, l):
-		if l[0] in ';#': return
-		x=self._md5rem.match(l)
-		if not x: return -1
-		if x.group(2)==' ':
-			if stats.textmode==0:
-				perror('warning: file(s) tested in textmode')
-			stats.textmode = stats.textmode + 1
-		self.test_file(x.group(3),unhexlify(x.group(1)))
+	_foosum_rem=re.compile(r'([0-9a-fA-F]{32}) ([ *])([^\r\n]+)[\r\n]*$')
 	
 	def make_std_filename(filename):
 		return filename+'.md5'
