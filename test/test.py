@@ -270,6 +270,15 @@ rxo_TestingFrom=re.compile(r'^testing from .* \((.+?)\b.*\)$', re.M)
 def optionalize(s):
 	return '(?:%s)?'%s
 
+class OneOf:
+	def __init__(self, *possibilities):
+		self.possible = possibilities
+	def __cmp__(self, a):
+		if a in self.possible: return 0
+		return cmp(a,self.possible[0])
+	def __repr__(self):
+		return 'OneOf'+repr(self.possible)
+		
 def intize(s):
 	return s and int(s) or 0
 def icomp(foo):
@@ -644,7 +653,7 @@ def search_test(t,test_nocrc=0,extra=None):
 		elif hassize:
 			experrs={'badsize':2, 'ok':1}
 			misnamed1=3
-			misnamed2=4 #actually this depends on what order os.listdir finds stuff. (could actually be 3 or 4) Oh well.
+			misnamed2=OneOf(3,4) #this depends on what order os.listdir finds stuff. (could be 3 or 4)
 		else:#if hascrc:
 			experrs={'badcrc':3}
 
