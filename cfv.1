@@ -1,8 +1,8 @@
-.TH cfv 1 "07 Jul 2004"
+.TH cfv 1 "14 Jul 2004"
 .SH NAME
 cfv \- Verify file consistency with .sfv, .csv, .crc, .md5, md5sum, .torrent, par, or par2 files
 .SH SYNOPSIS
-.B cfv [\-p dir] [\-v|\-V|\-VV] [\-r|\-rr|\-R] [\-n|\-N] [\-\-renameformat <s>] [\-s|\-S] [\-zz|\-z|\-Z|\-ZZ] [\-T|\-C] [\-m|\-M] [\-i|\-I] [\-u|\-uu|\-U] [\-\-unquote <b>] [\-\-fixpaths <s>] [\-\-showpaths <i>] [\-\-list/\-\-list0 <l>] [\-t type] [\-f file] [files...]
+.B cfv [\-p dir] [\-v|\-V|\-VV] [\-r|\-rr|\-R] [\-n|\-N] [\-\-renameformat <s>] [\-s|\-S] [\-zz|\-z|\-Z|\-ZZ] [\-T|\-C] [\-m|\-M] [\-i|\-I] [\-u|\-uu|\-U] [\-\-unquote <b>] [\-\-fixpaths <s>] [\-\-showpaths <i>] [\-\-list/\-\-list0 <l>] [\-\-announceurl <u>] [\-\-piece_size_pow2 <n>] [\-t type] [\-f file] [files...]
 .SH DESCRIPTION
 .B cfv
 verifies that the files you have are the same as those that the were used to create
@@ -113,6 +113,11 @@ When creating, if type is auto an sfv will be made, unless a different default h
 Prints a raw listing of files in the given set (ok, bad, unverified, notfound).  Usually used with \-q, but not strictly needed since specifying \-\-list will redirect all other messages to stderr.
 .IP "\-\-list0 listset"
 Like \-\-list but files are seperated by a null char.  Useful in combination with xargs \-0.
+.IP "\-\-announceurl URL"
+Tracker announce URL for .torrent file creation.
+.IP "\-\-piece_size_pow2 N"
+Power of two to set piece size to for .torrent file creation.
+The default is 18, which gives a piece size of 2^18=256KB.
 .IP "\-h/\-\-help"
 Print help info.
 .IP "\-\-version"
@@ -146,7 +151,7 @@ is parchive v1 format file (test-only)
 is parchive v2 format file (test-only)
 .br
 .B torrent
-is a BitTorrent metainfo file (test-only)
+is a BitTorrent metainfo file
 .br
 .B crc
 is a JPEG Sheriff format crc file
@@ -292,6 +297,16 @@ search 0
 #for example, the following line would cause cfv \-C \-f foo.md5 to create a 'sfvmd5' file rather than a 'md5' file.
 .br
 #filename_type sfvmd5=md5$
+.P
+#torrent options:
+.br
+# you can specify a default announce url:
+.br
+#announceurl http://foo.bar/announce
+.br
+# piece size of 2^18 bytes (256KB):
+.br
+piece_size_pow2 18
 .SH FILES
 .PP
 .IP "~/.cfvrc"

@@ -42,18 +42,18 @@ except ImportError: BitTorrent = None
 
 
 fmt_info = {
-	#name: (hascrc, hassize, cancreate)
-	'md5': (1,0,1),
-	'bsdmd5': (1,0,1),
-	'sfv': (1,0,1),
-	'sfvmd5': (1,0,1),
-	'csv': (1,1,1),
-	'csv2': (0,1,1),
-	'csv4': (1,1,1),
-	'crc': (1,1,1),
-	'par': (1,1,0),
-	'par2': (1,1,0),
-	'torrent': (1,1,0),
+	#name: (hascrc, hassize, cancreate, available)
+	'md5': (1,0,1,1),
+	'bsdmd5': (1,0,1,1),
+	'sfv': (1,0,1,1),
+	'sfvmd5': (1,0,1,1),
+	'csv': (1,1,1,1),
+	'csv2': (0,1,1,1),
+	'csv4': (1,1,1,1),
+	'crc': (1,1,1,1),
+	'par': (1,1,0,1),
+	'par2': (1,1,0,1),
+	'torrent': (1,1,1,not not BitTorrent),
 }
 def fmt_hascrc(f):
 	return fmt_info[f][0]
@@ -61,6 +61,8 @@ def fmt_hassize(f):
 	return fmt_info[f][1]
 def fmt_cancreate(f):
 	return fmt_info[f][2]
+def fmt_available(f):
+	return fmt_info[f][3]
 def allfmts():
 	return fmt_info.keys()
 
@@ -489,6 +491,8 @@ def C_funkynames_test(t):
 			n = chr(i)
 			if n in (os.sep, os.altsep, '\n', '\r'):
 				continue
+			if t == 'torrent' and n in ('/','\\'): continue # "ValueError: path \ disallowed for security reasons"
+			if t == 'torrent' and n in ('~',): n = 'foo'+n #same
 			if n == os.curdir: n = 'foo'+n # can't create a file of name '.', but 'foo.' is ok.
 			if t in ('sfv','sfvmd5') and n==';': n = 'foo'+n # ';' is comment character in sfv files, filename cannot start with it.
 			if t == 'crc' and n.isspace(): n = n + 'foo' # crc format can't handle trailing whitespace in filenames
@@ -926,7 +930,7 @@ if args:
 	cfvexe=args[0]
 
 #set everything to default in case user has different in config file
-cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no'
+cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url'
 
 if run_internal:
 	runcfv = runcfv_py
@@ -954,13 +958,15 @@ def all_tests():
 	ren_test('csv2')
 	ren_test('csv4')
 	ren_test('crc')
+	if BitTorrent:
+		ren_test('torrent')
 
 	for t in 'md5', 'bsdmd5', 'sfv', 'sfvmd5', 'csv', 'csv2', 'csv4', 'crc', 'par', 'par2':
 		search_test(t)
 		search_test(t,test_nocrc=1)
 	if BitTorrent:
 		search_test('torrent',test_nocrc=1)
-		search_test('torrent',test_nocrc=1,extra="--strip=1")
+		#search_test('torrent',test_nocrc=1,extra="--strip=1")
 	quoted_search_test()
 
 	T_test(".md5")
@@ -1060,7 +1066,7 @@ def all_tests():
 	#test_generic("../cfv -V -T -f test.md5",cfv_test)
 	#test_generic("../cfv -V -tcsv -T -f test.md5",cfv_test)
 	for t in allfmts():
-		if fmt_cancreate(t):
+		if fmt_cancreate(t) and fmt_available(t):
 			C_funkynames_test(t)
 
 	test_generic(cfvcmd+" -m -v -T -t sfv", lambda s,o: cfv_typerestrict_test(s,o,'sfv'))

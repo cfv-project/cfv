@@ -422,6 +422,8 @@ class Config:
 	user_cf_fn_regexs=[]
 	dereference=1
 	progress='a'
+	announceurl=None
+	piece_size_pow2=18
 	def setdefault(self,cftype):
 		if cftype in cftypes.keys():
 			self.defaulttype=cftype
@@ -530,6 +532,10 @@ class Config:
 			if not cftypes.has_key(typename):
 				raise CFVValueError, "filename_type: invalid type '%s'"%typename
 			self.user_cf_fn_regexs.append((re.compile(match, re.I).search, cftypes[typename]))
+		elif o=='announceurl':
+			self.setstr(o,v)
+		elif o=='piece_size_pow2':
+			self.setintr(o,v,1,30)
 		else:
 			raise CFVNameError, "invalid option '%s'"%o
 	def readconfig(self):
@@ -1276,6 +1282,15 @@ register_cftype('par2', PAR2)
 
 
 #---------- .torrent ----------
+import sha
+_btimporterror = None
+try:
+	from BitTorrent import bencode, btformats
+except ImportError, e1:
+	try:
+		from BitTornado import bencode; from BitTornado.BT1 import btformats
+	except ImportError, e2:
+		_btimporterror = '%s and %s'%(e1,e2)
 
 class Torrent(ChksumType):
 	def auto_chksumfile_match(file):
@@ -1283,18 +1298,12 @@ class Torrent(ChksumType):
 	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	def do_test_chksumfile(self, file):
+		if _btimporterror:
+			raise EnvironmentError, _btimporterror
 		try:
-			import sha
-			try:
-				from BitTorrent import bencode, btformats
-			except ImportError, e1:
-				try:
-					from BitTornado import bencode; from BitTornado.BT1 import btformats
-				except ImportError, e2:
-					raise ImportError, '%s and %s'%(e1,e2)
 			metainfo = bencode.bdecode(file.read())
 			btformats.check_message(metainfo)
-		except (ImportError,ValueError), e:
+		except ValueError, e:
 			raise EnvironmentError, str(e) or 'invalid or corrupt torrent'
 
 		comments = []
@@ -1459,12 +1468,76 @@ class Torrent(ChksumType):
 			if f.fh:
 				f.fh.close()
 			
-	#we don't support .torrent in create mode, but add these methods so that we can get error messages that are probaby more user friendly.
 	auto_filename_match = 'torrent$'
 
 	def make_std_filename(filename):
 		return filename+'.torrent'
 	make_std_filename = staticmethod(make_std_filename)
+
+	def make_chksumfile(self, file):
+		if _btimporterror:
+			raise EnvironmentError, _btimporterror
+		if config.announceurl==None:
+			raise EnvironmentError, 'announce url required'
+		ChksumType.make_chksumfile(self, file)
+		self.sh = sha.sha()
+		self.files = []
+		self.pieces = []
+		self.piece_done = 0
+		self.piece_length = 2**config.piece_size_pow2
+	
+	def make_addfile(self, filename):
+		firstpiece = len(self.pieces)
+		f = open(filename, 'rb')
+		if stdprogress: progress.init(filename)
+		fs = 0
+		while 1:
+			piece_left = self.piece_length - self.piece_done
+			d = f.read(piece_left)
+			if not d:
+				break
+			self.sh.update(d)
+			s = len(d)
+			stats.bytesread=stats.bytesread+s
+			fs = fs + s
+			if stdprogress: progress.update(fs)
+			self.piece_done = self.piece_done + s
+			if self.piece_done == self.piece_length:
+				self.pieces.append(self.sh.digest())
+				self.sh = sha.sha()
+				self.piece_done = 0
+		f.close()
+		if stdprogress: progress.cleanup()
+		self.files.append({'length':fs, 'path':path_split(filename)})
+		return ('pieces %i..%i'%(firstpiece,len(self.pieces)),fs), ''
+	
+	def make_chksumfile_finish(self, file):
+		if self.piece_done > 0:
+			self.pieces.append(self.sh.digest())
+
+		info = {'pieces':''.join(self.pieces), 'piece length':self.piece_length}
+		if len(self.files)==1 and len(self.files[0]['path'])==1:
+			info['name'],info['length'] = self.files[0]['path'][0],self.files[0]['length']
+		else:
+			commonroot = self.files[0]['path'][0]
+			for fileinfo in self.files[1:]:
+				if commonroot!=fileinfo['path'][0]:
+					commonroot = None
+					break
+			if commonroot:
+				for fileinfo in self.files:
+					del fileinfo['path'][0]
+			else:
+				commonroot = os.path.split(os.getcwd())[1]
+			info['files'] = self.files
+			info['name'] = commonroot
+
+		btformats.check_info(info)
+		data = {'info': info, 'announce': config.announceurl.strip(), 'creation date': long(time.time())}
+		#if comment:
+		#	data['comment'] = comment
+		file.write(bencode.bencode(data))
+		
 
 register_cftype('torrent', Torrent)
 
@@ -2185,6 +2258,9 @@ def printusage(err=0):
 	perror(' --progress=VAL  show progress meter (yes, no, or auto(default))')
 	perror(' --help/-h show help')
 	perror(' --version show cfv and module versions')
+	perror('torrent creation options:')
+	perror(' --announceurl=URL    tracker announce url')
+	perror(' --piece_size_pow2=N  power of two to set the piece size to (default 18)')
 	sys.exit(err)
 def printhelp():
 	perror('cfv v%s - Copyright (C) 2000-2004 Matthew Mueller - GPL license'%version)
@@ -2204,7 +2280,10 @@ def main(argv=None):
 	typename='auto'
 
 	try:
-		optlist, args = getopt.getopt(argv, 'rRlLTCt:f:mMnNsSp:uUiIvVzZqQh?', ['list=', 'list0=', 'fixpaths=', 'strippaths=', 'showpaths=','renameformat=','progress=','unquote=','help','version'])
+		optlist, args = getopt.getopt(argv, 'rRlLTCt:f:mMnNsSp:uUiIvVzZqQh?',
+				['list=', 'list0=', 'fixpaths=', 'strippaths=', 'showpaths=','renameformat=','progress=','unquote=','help','version',
+				'announceurl=','piece_size_pow2=', #torrent options
+				])
 	except getopt.error, a:
 		perror("cfv: %s"%a)
 		printusage(1)
@@ -2330,6 +2409,10 @@ def main(argv=None):
 				config.setx('fixpaths', a)
 			elif o=='--unquote':
 				config.setx('unquote', a)
+			elif o=='--announceurl':
+				config.setx('announceurl', a)
+			elif o=='--piece_size_pow2':
+				config.setx('piece_size_pow2', a)
 			elif o=='-h' or o=='-?' or o=='--help':
 				printhelp()
 			elif o=='--version':
