@@ -158,7 +158,7 @@ C_test("csv4","-t csv4")
 
 test_generic(cfvcmd+" -u -f test.md5 data* test.py",cfv_unv_test)
 test_generic(cfvcmd+" -u -f test.md5 data* test.py test.md5",cfv_unv_test)
-test_generic(cfvcmd+r" -i --fixpaths \\/ -Tu",lambda s,o: cfv_unv_test(s,o,None))
+test_generic(cfvcmd+r" -i --fixpaths \\/ -Trru",lambda s,o: cfv_unv_test(s,o,None))
 test_generic(cfvcmd+" -h",cfv_version_test)
 
 donestr="tests finished:  ok: %i  failed: %i"%(stats.ok,stats.failed)
