@@ -64,7 +64,7 @@ Don't create gzipped files automatically. (default)
 Never use gzip, even if file ends in ".gz".
 .IP "--fixpaths string"
 Convert all occurances of any characters in string to the dir seperator for the current platform.  No effect in create mode. Use an empty string to disable.
-.IP "-strippaths VAL"
+.IP "--strippaths VAL"
 Strip NUM leading components from file names in test mode.  Similar to the -p/--strip options of patch. 
 VAL may be 'none': leave exactly as is, 'all': strip everything but the filename, 0: strip the leading driveletter/slash (if any), 1+: strip this many path components in addition.  
 The default is 0.
