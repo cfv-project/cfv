@@ -172,7 +172,7 @@ def expand_cmdline(cmd):
 
 def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None):
 	try:
-		import subprocess
+		import subprocess # subprocess module only in python >= 2.4, but it works on windows, unlike commands
 	except ImportError:
 		from commands import getstatusoutput
 		runcmd = cfvenv+cfvexe+' '+cmd
