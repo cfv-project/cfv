@@ -592,6 +592,8 @@ def testfile(testfiles,crctestfunc,filename,filecrc,filesize=-1):
 			#we need to find the correct filename if using showunverified, even if the filename we are given works, since on FAT/etc filesystems the incorrect case will still return true from os.path.exists, but it could be the incorrect case to remove from the unverified files list.
 			if config.showunverified or not os.path.exists(l_filename):
 				l_filename=nocase_findfile(l_filename)
+		if l_filename[0]=='"' and l_filename[-1]=='"' and not os.path.exists(l_filename):
+			l_filename=l_filename[1:-1] #work around buggy sfv encoders that quote filenames
 		if config.showunverified:
 			try:
 				stats.unverifiedfiles[-1].remove(l_filename)
