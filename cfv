@@ -44,7 +44,8 @@ def pinfo(s,nl=1):
 	if config.verbose>=0:
 		p(s,nl)
 def perror(s,nl=1):
-	p(s,nl,outf=sys.stderr)
+	if config.verbose>=-1:
+		p(s,nl,outf=sys.stderr)
 
 class CFVException(Exception):
 	pass
@@ -68,6 +69,7 @@ class Stats:
 	badcrc=0
 	notfound=0
 	ferror=0
+	cferror=0
 	bytesread=0L #use long int for size, to avoid possible overflow.
 	unverifiedfiles=[]
 	unverified=0
@@ -148,14 +150,14 @@ class Config:
 	def __init__(self):
 		self.readconfig()
 
-version='1.7.1'
+version='1.7.2'
 
 try:
 	import fchksum
 	try:
 		if fchksum.version()<2:raise ImportError
 	except:
-		perror("old fchksum version installed, using std python modules. please update.")
+		p("old fchksum version installed, using std python modules. please update.",nl=1,outf=sys.stderr) #can't use perror yet since config hasn't been done..
 		raise ImportError
 	def getfilemd5(file):
 		global stats
@@ -176,7 +178,7 @@ except ImportError:
 			f=sys.stdin
 		else:
 			f=open(file,'rb')
-		s=0
+		s=0L
 		while 1:
 			x=f.read(65536)
 			if not len(x):
@@ -194,7 +196,7 @@ except ImportError:
 		else:
 			f=open(file,'rb')
 		c=zlib.crc32('')
-		s=0
+		s=0L
 		while 1:
 			x=f.read(65536)
 			if not len(x):
@@ -206,12 +208,30 @@ except ImportError:
 
 class fv_type:
 	def __init__(self,csf,tm,am,msf,wh,mdf):
-		self.checksumfile=csf
+#		self.checksumfile=csf
+		self.dochecksumfileline=csf
 		self.testmatch=tm
 		self.automake_filenametest=am
 		self.make_std_filename=msf
 		self.writeheader=wh
 		self.make_dofile=mdf
+
+def testchecksumfile(type,file,filename,testfiles):
+	line=1
+	try:
+		if not file:
+			file=open(filename,'r')
+		while 1:
+			l=file.readline()
+			if not len(l):
+				return
+			if type.dochecksumfileline(l,testfiles):
+				stats.cferror=stats.cferror+1
+				perror('%s : unrecognized line %i (CF)'%(perhaps_showpath(filename),line))
+			line=line+1
+	except EnvironmentError, a:
+		stats.cferror=stats.cferror+1
+		perror('%s : %s (CF)'%(perhaps_showpath(filename),a[1]))
 
 #---------- md5 ----------
 
@@ -221,21 +241,16 @@ def testfilemd5(filename,filecrc):
 	if c!=string.lower(filecrc):
 		return c
 
-def testmd5(file,testfiles):
-	rem=re.compile(r'([0-9a-fA-F]{32}) ([ *])(.+)$')
-	while 1:
-		l=file.readline()
-		if not len(l):
-			return
-		x=rem.match(chomp(l))
-		if x:
-			if x.group(2)==' ':
-				perror('warning: file %s tested in textmode' %x.group(3))
-			testfile(testfiles,testfilemd5,x.group(3),x.group(1))
-
+md5rem=re.compile(r'([0-9a-fA-F]{32}) ([ *])(.+)$')
+def testmd5line(l,testfiles):
+	x=md5rem.match(chomp(l))
+	if not x: return -1
+	if x.group(2)==' ':
+		perror('warning: file %s tested in textmode' %x.group(3))
+	testfile(testfiles,testfilemd5,x.group(3),x.group(1))
 
 types['md5']=fv_type(
-	testmd5,
+	testmd5line,
 	(r'[0-9a-fA-F]{32} [ *].+',0),
 	lambda o: string.find(o,'md5')>=0,
 	lambda o: o+'.md5',
@@ -252,20 +267,15 @@ def testfilecrc32(filename,filecrc):
 		return c
 		
 
-def testsfv(file,testfiles):
-	rem=re.compile(r'(.+) ([0-9a-fA-F]+)$')
-	while 1:
-		l=file.readline()
-		if not len(l):
-			return
-		if l[0]==';':
-			continue
-		x=rem.match(chomp(l))
-		if x:
-			testfile(testfiles,testfilecrc32,x.group(1),x.group(2))
+sfvrem=re.compile(r'(.+) ([0-9a-fA-F]+)$')
+def testsfvline(l,testfiles):
+	if l[0]==';': return
+	x=sfvrem.match(chomp(l))
+	if not x: return -1
+	testfile(testfiles,testfilecrc32,x.group(1),x.group(2))
 
 types['sfv']=fv_type(
-	testsfv,
+	testsfvline,
 	#(r';.*generated (by|using) (.* on|.*sfv|.*crc32)',re.IGNORECASE),
 	(r';|.+ [0-9a-fA-F]{8}',0),
 	lambda o: o[-3:]=='sfv',
@@ -277,22 +287,18 @@ types['sfv']=fv_type(
 
 #---------- csv ----------
 
-def testcsv(file,testfiles):
-	rem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]+),')
-	while 1:
-		l=file.readline()
-		if not len(l):
-			return
-		x=rem.match(l)
-		if x:
-			testfile(testfiles,testfilecrc32,x.group(1),x.group(3),x.group(2))
+csvrem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]+),')
+def testcsvline(l,testfiles):
+	x=csvrem.match(l)
+	if not x: return -1
+	testfile(testfiles,testfilecrc32,x.group(1),x.group(3),x.group(2))
 
 def make_dofile_csv(a):
 	c,s=getfilecrc(a)
 	return '%s,%i,%s,\n'%(a,s,c)
 
 types['csv']=fv_type(
-	testcsv,
+	testcsvline,
 	('[^,]+,[0-9]+,[0-9a-fA-F]+,[\n\r]*$',0),
 	lambda o: o[-3:]=='csv',
 	lambda o: o+'.csv',
@@ -303,15 +309,11 @@ types['csv']=fv_type(
 
 #---------- csv with 4 fields ----------
 
-def testcsv4(file,testfiles):
-	rem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]+),([^,]*),')
-	while 1:
-		l=file.readline()
-		if not len(l):
-			return
-		x=rem.match(l)
-		if x:
-			testfile(testfiles,testfilecrc32,os.path.join(x.group(4),x.group(1)),x.group(3),x.group(2)) 
+csv4rem=re.compile(r'([^,]+),([0-9]+),([0-9a-fA-F]+),([^,]*),')
+def testcsv4line(l,testfiles):
+	x=csv4rem.match(l)
+	if not x: return -1
+	testfile(testfiles,testfilecrc32,os.path.join(x.group(4),x.group(1)),x.group(3),x.group(2)) 
 
 def make_dofile_csv4(a):
 	c,s=getfilecrc(a)
@@ -319,7 +321,7 @@ def make_dofile_csv4(a):
 	return '%s,%i,%s,%s,\n'%(p[1],s,c,p[0])
 
 types['csv4']=fv_type(
-	testcsv4,
+	testcsv4line,
 	(r'[^,]+,[0-9]+,[0-9a-fA-F]+,[^,]*,',0),
 	lambda o: 0,
 	lambda o: o+'.csv',
@@ -330,15 +332,11 @@ types['csv4']=fv_type(
 
 #---------- csv with only 2 fields ----------
 
-def testcsv2(file,testfiles):
-	rem=re.compile(r'([^,]+),([0-9]+),')
-	while 1:
-		l=file.readline()
-		if not len(l):
-			return
-		x=rem.match(l)
-		if x:
-			testfile(testfiles,None,x.group(1),None,x.group(2))
+csv2rem=re.compile(r'([^,]+),([0-9]+),')
+def testcsv2line(l,testfiles):
+	x=csv2rem.match(l)
+	if not x: return -1
+	testfile(testfiles,None,x.group(1),None,x.group(2))
 
 def make_dofile_csv2(a):
 	if a=='':
@@ -348,7 +346,7 @@ def make_dofile_csv2(a):
 	return '%s,%i,\n'%(a,s)
 		
 types['csv2']=fv_type(
-	testcsv2,
+	testcsv2line,
 	('[^,]+,[0-9]+,[\n\r]*$',0),
 	lambda o: 0,
 	lambda o: o+'.csv',
@@ -488,17 +486,23 @@ def testfile(testfiles,crctestfunc,filename,filecrc,filesize=-1):
 		pverbose('%s : OK (%s)'%(perhaps_showpath(filename),filecrc))
 
 def test(filename,testfiles):
-	file=open(filename,'r')
-	l=file.readline(512)#limit max line length to be read for testing, in case its a binary file or something.
-	file.seek(0)#go back to start so that type-specific test funcs get whole file
+	try:
+		file=open(filename,'r')
+		l=file.readline(512)#limit max line length to be read for testing, in case its a binary file or something.
+		file.seek(0)#go back to start so that type-specific test funcs get whole file
+	except EnvironmentError, a:
+		stats.cferror=stats.cferror+1
+		perror('%s : %s (CF)'%(perhaps_showpath(filename),a[1]))
+		return -1
 	for typename,type in types.items():
 		if re.match(type.testmatch[0],l,type.testmatch[1]):
 			if config.showunverified and filename in stats.unverifiedfiles[-1]:#we can't expect the checksum file itself to be checksummed
 				stats.unverifiedfiles[-1].remove(filename)
 			pverbose('testing from %s (%s)'%(filename,typename))
-			type.checksumfile(file,testfiles)
+			testchecksumfile(type,file,filename,testfiles)
 			return
 	perror("I don't recognize the type of %s"%filename)
+	stats.cferror=stats.cferror+1
 
 def make(type,ifilename,testfiles):
 	global stats
@@ -614,7 +618,7 @@ def printusage(err=0):
 	perror('  -v       verbose')
 	perror('  -V       not verbose (default)')
 	perror('  -VV      don\'t print status line at end either')
-#	perror('  -VVV     quiet mode.  check exit code for success.')
+	perror('  -q       quiet mode.  check exit code for success.')
 	perror(' --fixpaths=<s>  replace any chars in <s> with %s'%os.sep)
 	perror(' --showpaths=<p> show full paths 0:never, 1:always, 2:in recursive mode(default)')
 	perror(' --help/-h show help')
@@ -625,7 +629,7 @@ def printhelp():
 	printusage()
 
 try:
-	optlist, args = getopt.getopt(sys.argv[1:], 'rRTCt:f:mMuUiIvVh?', ['fixpaths=','showpaths=','help','version'])
+	optlist, args = getopt.getopt(sys.argv[1:], 'rRTCt:f:mMuUiIvVqh?', ['fixpaths=','showpaths=','help','version'])
 except getopt.error, a:
 	perror("cfv: %s"%a)
 	printusage(1)
@@ -654,7 +658,8 @@ for o,a in optlist:
 			if type=='auto':
 				test(a,args)
 			else:
-				types[type].checksumfile(open(a,'r'),args)
+				testchecksumfile(types[type],None,filename,args)
+				#types[type].checksumfile(open(a,'r'),args)
 			finish_test_dir()
 		else:
 			if type!='auto':
@@ -695,6 +700,8 @@ for o,a in optlist:
 			config.verbose=-1
 		else:
 			config.verbose=0
+	elif o=='-q':
+		config.verbose=-2
 	elif o=='--showpaths':
 		config.showpaths=int(a)
 	elif o=='--fixpaths':
@@ -740,9 +747,11 @@ if stats.ferror:
 	pinfo(', %i file errors' %stats.ferror,0)
 if stats.unverified:
 	pinfo(', %i unverified' %stats.unverified,0)
+if stats.cferror:
+	pinfo(', %i chksum file errors' %stats.cferror,0)
 
 elapsed=time.time()-starttime
-pinfo('.  %.2f seconds, '%(elapsed),0)
+pinfo('.  %.3f seconds, '%(elapsed),0)
 if elapsed==0.0:
 	pinfo('%.1fK'%(stats.bytesread/1024.0),0)
 else:
@@ -750,5 +759,6 @@ else:
 
 pinfo('\n',0)
 
-if stats.badcrc or stats.badsize or stats.notfound or stats.ferror or stats.unverified:
-	sys.exit(1)
+#if stats.badcrc or stats.badsize or stats.notfound or stats.ferror or stats.unverified or stats.cferror:
+#	sys.exit(1)
+sys.exit((stats.badcrc and 2) | (stats.badsize and 4) | (stats.notfound and 8) | (stats.ferror and 16) | (stats.unverified and 32) | (stats.cferror and 64))

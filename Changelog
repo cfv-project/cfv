@@ -1,3 +1,12 @@
+2001-02-27 - v1.7.2:
+	* Fixed makefile not finding pkgdir if installing to /usr/local and no site-packages in /usr/local is in python's sys.path.
+	* Added -q option.
+	* Make exit status a bitwise or of the various possible error types.
+	* Added cferror counter/exit status for unrecognized checksum files.
+	* Catch errors opening checksum files and set cferror counter instead of exiting with unhandled exception.
+	* Add error message for reading unrecognized lines in a checksum file, and set cferror counter.
+	* Use Longs for per file sizes too, should be no large file issues anymore. (if you are using fchksum you should upgrade to 1.3 too.)
+	* Time format uses .3 instead of .2 precision.
 2001-02-22 - v1.7.1:
 	* Fixed reading md5sum files that had dos eol on non-dos systems.
 	* Loosened .sfv file recognition all the way.

@@ -90,9 +90,9 @@ def cfv_version_test(s,o):
 	return 1
 
 def T_test(f):
-	test_generic(cfvcmd+" -T -f test."+f,cfv_test)
-	test_generic(cfvcmd+" -i -T -f test."+f,cfv_test) #all tests should work with -i
-	test_generic(cfvcmd+" -m -T -f test."+f,cfv_test) #all tests should work with -m
+	test_generic(cfvcmd+" -T -f test"+f,cfv_test)
+	test_generic(cfvcmd+" -i -T -f test"+f,cfv_test) #all tests should work with -i
+	test_generic(cfvcmd+" -m -T -f test"+f,cfv_test) #all tests should work with -m
 
 def C_test(f,extra=None,verify=None):
 	cmd=cfvcmd
@@ -107,10 +107,13 @@ def C_test(f,extra=None,verify=None):
 	os.unlink(f)
 	
 logfile=open("test.log","w")
-T_test("md5")
-T_test("csv")
-T_test("sfv")
-T_test("csv2")
+T_test(".md5")
+T_test(".csv")
+T_test(".sfv")
+T_test(".csv2")
+T_test("crlf.md5")
+T_test("crlf.csv")
+T_test("crlf.sfv")
 test_generic(cfvcmd+" -i -T -f testcase.csv",cfv_test)
 test_generic(cfvcmd+r" --fixpaths \\/ -T -f testfix.csv",cfv_test)
 test_generic(cfvcmd+r" --fixpaths \\/ -T -f testfix.csv4",cfv_test)
