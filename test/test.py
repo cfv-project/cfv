@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-import commands,re,os;
+import commands,re,os,sys
 
 class stats:
 	ok=0
@@ -61,9 +61,6 @@ def status_test(s,o):
 	if s==0:
 		return 0
 	return 1
-
-#set everything to default in case user has different in config file
-cfvcmd="../cfv -ZNVRMUI"
 
 def cfv_test(s,o):
 	x=re.search(r'^(\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$',o)
@@ -199,6 +196,19 @@ def ren_test(f,extra=None,verify=None,t=None):
 		for d in glob.glob(join(dir,'*')):
 			os.unlink(d)
 		os.rmdir(dir)
+
+cfvcmd='../cfv'
+
+if len(sys.argv)>1:
+	if '--help' in sys.argv:
+		print 'usage: test.py [cfv]'
+		print 'default [cfv] is:',cfvcmd
+		sys.exit(1)
+	cfvcmd=sys.argv[1]
+
+#set everything to default in case user has different in config file
+cfvcmd=cfvcmd+" -ZNVRMUI"
+
 	
 logfile=open("test.log","w")
 
