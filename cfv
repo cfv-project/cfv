@@ -366,12 +366,12 @@ class Config:
 			while 1:
 				l=l+1
 				s=file.readline()
-				if not len(s):
+				if not s:
 					break #end of file
 				if s[0]=="#":
 					continue #ignore lines starting with #
 				s=chomp(s)
-				if not len(s):
+				if not s:
 					continue #ignore blank lines
 				x = s.split(' ',1)
 				if len(x)!=2:
@@ -455,7 +455,7 @@ except ImportError:
 			s=0L
 			while 1:
 				x=f.read(65536)
-				if not len(x):
+				if not x:
 					stats.bytesread=stats.bytesread+s
 					return m.digest(),s
 				s=s+len(x)
@@ -476,7 +476,7 @@ except ImportError:
 			s=0L
 			while 1:
 				x=f.read(65536)
-				if not len(x):
+				if not x:
 					stats.bytesread=stats.bytesread+s
 					return struct.pack('>I',c),s
 				s=s+len(x)
@@ -643,7 +643,7 @@ class ChksumType:
 		line=1
 		while 1:
 			l=file.readline()
-			if not len(l):
+			if not l:
 				break
 			if self.do_test_chksumline(l):
 				stats.cferror=stats.cferror+1
@@ -883,7 +883,7 @@ class PAR(ChksumType, MD5_MixIn):
 		if config.docrcchecks:
 			while 1:
 				d=file.read(65536)
-				if not len(d):
+				if not d:
 					if control_md5.digest() != control_hash:
 						raise EnvironmentError, (errno.EINVAL,"corrupt par file - bad control hash")
 					break
@@ -1318,10 +1318,10 @@ def path_split(filename):
 	parts=[]
 	while 1:
 		head,tail=os.path.split(head)
-		if len(tail):
+		if tail:
 			parts.insert(0,tail)
 		else:
-			if len(head):
+			if head:
 				parts.insert(0,head)
 			break
 	return parts
@@ -1339,7 +1339,7 @@ def nocase_findfile(filename):
 			matches=filter(lambda f,cur=cur: os.path.isfile(os.path.join(cur,f)), matches)
 		else:#otherwise, we want to match a dir
 			matches=filter(lambda f,cur=cur: os.path.isdir(os.path.join(cur,f)), matches)
-		if len(matches)==0:
+		if not matches:
 			raise IOError, (errno.ENOENT,os.strerror(errno.ENOENT))
 		if len(matches)>1:
 			raise IOError, (errno.EEXIST,"More than one name matches %s"%os.path.join(cur,p))
@@ -1435,7 +1435,7 @@ def make(cftype,ifilename,testfiles):
 		perror("%s already exists"%perhaps_showpath(filename))
 		stats.cferror=stats.cferror+1
 		file=IOError #just need some special value to indicate a cferror so that recursive mode still continues to work, IOError seems like a good choice ;)
-	if not testfiles or not len(testfiles):
+	if not testfiles:
 		tfauto=1
 		testfiles=os.listdir(os.curdir)
 		if config.dirsort:
