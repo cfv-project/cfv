@@ -145,6 +145,7 @@ class Config:
 	docrcchecks=1
 	dirsort=1
 	cmdlinesort=1
+	cmdlineglob='a'
 	recursive=0
 	showunverified=0
 	defaulttype='sfv'
@@ -188,6 +189,15 @@ class Config:
 			self.setdefault(v)
 		elif o in ("dirsort","cmdlinesort","showunverified","ignorecase","rename"):
 			self.setbool(o,v)
+		elif o=="cmdlineglob":
+			if 'yes'.startswith(v.lower()):
+				self.cmdlineglob='y'
+			elif 'auto'.startswith(v.lower()):
+				self.cmdlineglob='a'
+			elif 'no'.startswith(v.lower()):
+				self.cmdlineglob='n'
+			else:
+				raise CFVValueError, "invalid cmdlineglob option '%s', must be 'no', 'auto', or 'yes'"%v
 		elif o in ("verbose","gzip"):
 			self.setintr(o,v,-1,1)
 		elif o in ("recursive",):
@@ -1173,11 +1183,24 @@ def main(argv):
 		perror("cfv: %s"%a)
 		printusage(1)
 
-	if config.cmdlinesort:
-		args.sort()
-
-	prevopt=''
 	try:
+		if config.cmdlineglob=='y' or (config.cmdlineglob=='a' and os.name in ('os2', 'nt', 'dos')):
+			from glob import glob
+			globbed = []
+			for arg in args:
+				if '*' in arg or '?' in arg or '[' in arg:
+					g = glob(arg)
+					if not g:
+						raise CFVValueError, 'no matches for %s'%arg
+					globbed.extend(g)
+				else:
+					globbed.append(arg)
+			args = globbed
+			
+		if config.cmdlinesort:
+			args.sort()
+
+		prevopt=''
 		for o,a in optlist:
 			if o=='-T':
 				mode=0

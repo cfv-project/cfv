@@ -4,6 +4,7 @@
 	* Print first SFV comment line in testing from blah.sfv line.  (usually shows creating sfv program/creation time.)
 	* Add --strippaths option. (Like patch's -p/--strip option.)
 	* Revamp --showpaths option parsing, and add relative mode. (Note, auto-relative is now the default, to get the old behaviour specify "showpaths auto-absolute" in your .cfvrc)
+	* Added cmdlineglob config option.
 2001-12-06 - v1.10:
 	* Fix file.close() exception on -C in empty dir.
 	* Add mmap support for faster checksumming when not using fchksum module.
