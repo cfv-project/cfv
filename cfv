@@ -682,42 +682,20 @@ except ImportError:
 	except ImportError:
 		import binascii
 		_crc32=binascii.crc32
+	class CRC32:
+		digest_size = 4
+		def __init__(self, s=''):
+			self.value = _crc32(s)
+		def update(self, s):
+			self.value = _crc32(s, self.value)
+		def digest(self):
+			return struct.pack('>I',self.value)
 
 	def _getfilemd5(file):
 		return _getfilechecksum(file, md5.new)
 			
 	def _getfilecrc(file):
-		if file=='':
-			f=sys.stdin
-		else:
-			f=open(file,'rb')
-		def finish(c,s,f=f,file=file):
-			if stdprogress: progress.init(file)
-			try:
-				while 1:
-					x=f.read(65536)
-					if not x:
-						stats.bytesread=stats.bytesread+s
-						return struct.pack('>I',c),s
-					s=s+len(x)
-					c=_crc32(x,c)
-					if stdprogress: progress.update(s)
-			finally:
-				if stdprogress: progress.cleanup()
-
-		if f==sys.stdin or nommap or stdprogress:
-			return finish(_crc32(''),0L)
-		else:
-			s = os.path.getsize(file)
-			try:
-				c = _crc32(dommap(f.fileno(), s))
-			except OverflowError:
-				mmapsize = min(s, 2**31-1) #mmap size is limited by C's int type, which even on 64 bit arches is often 32 bits, so we can't use sys.maxint either.  If we get the error, just assume 32 bits. 
-				c = _crc32(dommap(f.fileno(), mmapsize))
-				f.seek(mmapsize)
-				return finish(c,mmapsize) #unfortunatly, python's mmap module doesn't support the offset parameter, so we just have to do the rest of the file the old fashioned way.
-			stats.bytesread = stats.bytesread+s
-			return struct.pack('>I',c),s
+		return _getfilechecksum(file, CRC32)
 
 def fcmp(f1, f2):
 	import filecmp
