@@ -1299,7 +1299,7 @@ class SHA1_MixIn:
 # Base class for md5sum/sha1sum style checksum file formats.
 class FooSum_Base(TextChksumType):
 	def do_test_chksumfile_print_testingline(self, file):
-		TextChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(128), ';#'))
+		TextChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(512), ';#'))
 	
 	def do_test_chksumline(self, l):
 		if l[0] in ';#': return
@@ -1891,7 +1891,7 @@ class SFV_Base(TextChksumType):
 
 	def do_test_chksumfile_print_testingline(self, file):
 		#override the default testing line to show first SFV comment line, if any
-		TextChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(128), ';'))
+		TextChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(512), ';'))
 
 	def do_test_chksumline(self, l):
 		if l[0]==';': return
