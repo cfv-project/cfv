@@ -694,7 +694,8 @@ def make(type,ifilename,testfiles):
 			continue
 		file.write(s)
 		stats.ok=stats.ok+1
-	file.close()
+	if file:
+		file.close()
 	
 	for f in testdirs:
 		olddir=curdir

@@ -1,6 +1,14 @@
 #! /usr/bin/env python
 
-import commands,re,os,sys,string
+import commands,re,os,sys,string,operator
+
+class rcurry:
+	def __init__(self, func, *args):
+		self.curry_func = func
+		self.curry_args = args[:]
+	def __call__(self, *_args, **_kwargs):
+		return apply(self.curry_func, (_args+self.curry_args), _kwargs)
+
 
 def pathfind(p, path=string.split(os.environ.get('PATH',os.defpath),os.pathsep)):
 	for d in path:
@@ -67,9 +75,9 @@ def status_test(s,o):
 		return 0
 	return 1
 
-def cfv_test(s,o):
+def cfv_test(s,o, op=operator.gt, opval=0):
 	x=re.search(r'^(\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$',o)
-	if s==0 and x and x.group(1) == x.group(2) and int(x.group(1))>0:
+	if s==0 and x and x.group(1) == x.group(2) and op(int(x.group(1)),opval):
 		return 0
 	return 1
 
@@ -165,6 +173,13 @@ def C_test(f,extra=None,verify=None,t=None,d='data?'):
 	if verify:
 		verify(f)
 	os.unlink(f)
+
+	dir='Ce.test'
+	try:
+		os.mkdir(dir)
+		test_generic("%s -p %s -C -f %s"%(cmd,dir,f),rcurry(cfv_test,operator.eq,0))
+	finally:
+		os.rmdir(dir)
 
 def ren_test(f,extra=None,verify=None,t=None):
 	join=os.path.join
