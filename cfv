@@ -38,9 +38,9 @@ reldir=['']
 prevdir=[]
 def chdir(d):
 	global curdir
+	os.chdir(d)
 	prevdir.append(curdir)
 	reldir.append(os.path.join(reldir[-1], d))
-	os.chdir(d)
 	curdir=os.getcwd()
 def cdup():
 	global curdir
