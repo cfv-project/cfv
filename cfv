@@ -283,7 +283,9 @@ class Config:
 		else:
 			raise CFVNameError, "invalid option '%s'"%o
 	def readconfig(self):
-		filename=os.path.expanduser("~/.cfvrc")
+		filename=os.path.expanduser(os.path.join("~",".cfvrc"))
+		if not os.path.isfile(filename):
+			filename=os.path.expanduser(os.path.join("~","_cfvrc"))
 		if os.path.isfile(filename):
 			file=open(filename,"r")
 			l=0

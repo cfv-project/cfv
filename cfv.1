@@ -251,8 +251,14 @@ renameformat %(name)s.bad-%(count)i%(ext)s
 .PP
 .IP "~/.cfvrc"
 cfv configuration file.  See configuration section.
+.IP "~/_cfvrc"
+alternate configuration file name.  
+(Since windows won't let you create files starting with a dot.)
 .SH ENVIRONMENT
 .PP
+.IP "HOME"
+Where to look for cfvrc file.
+Note that win9x doesn't set this to anything automatically.
 .IP "CFV_NOFCHKSUM"
 Set to a non-empty value to disable usage of python-fchksum module.
 .IP "CFV_NOMMAP"
