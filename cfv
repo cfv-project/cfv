@@ -663,20 +663,39 @@ class PAR(ChksumType, MD5_MixIn):
 		par_header_fmt = '< 8s I I 16s 16s Q Q Q Q Q Q'
 		par_entry_fmt = '< Q Q Q 16s 16s'
 		par_entry_fmtsize = struct.calcsize(par_entry_fmt)
+		import md5
+		control_md5 = md5.new()
 
-		magic, version, client, control_hash, set_hash, vol_number, num_files, file_list_ofs, file_list_size, data_ofs, data_size = struct.unpack(par_header_fmt, file.read(struct.calcsize(par_header_fmt)))
+		d = file.read(struct.calcsize(par_header_fmt))
+		magic, version, client, control_hash, set_hash, vol_number, num_files, file_list_ofs, file_list_size, data_ofs, data_size = struct.unpack(par_header_fmt, d)
+		control_md5.update(d[0x20:])
+		stats.bytesread=stats.bytesread+len(d)
 		if version not in (0x00000900, 0x00010000): #ver 0.9 and 1.0 are the same, as far as we care.  Future versions (if any) may very likey have incompatible changes, so don't accept them either.
 			raise EnvironmentError, (errno.EINVAL,"can't handle PAR version %s"%ver2str(version))
 
 		pverbose('testing from %s (par v%s, created by %s v%s)'%(file.name,ver2str(version), prog2str(client>>24), ver2str(client&0xFFFFFF)))
 
 		for i in range(0, num_files):
-			size, status, file_size, md5, md5_16k = struct.unpack(par_entry_fmt, file.read(par_entry_fmtsize))
-			filename = unicode(file.read(size - par_entry_fmtsize), 'utf-16')
+			d = file.read(par_entry_fmtsize)
+			size, status, file_size, md5, md5_16k = struct.unpack(par_entry_fmt, d)
+			control_md5.update(d)
+			d = file.read(size - par_entry_fmtsize)
+			filename = unicode(d, 'utf-16')
+			control_md5.update(d)
+			stats.bytesread=stats.bytesread+size
 			c=""
 			for z in md5:
 				c=c+'%02x'%ord(z)
 			self.test_file(filename, c, file_size)
+
+		while 1:
+			d=file.read(65536)
+			if not len(d):
+				if control_md5.digest() != control_hash:
+					raise EnvironmentError, (errno.EINVAL,"corrupt par file - bad control hash")
+				break
+			stats.bytesread=stats.bytesread+len(d)
+			control_md5.update(d)
 
 cftypes['par']=PAR
 
