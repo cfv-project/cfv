@@ -22,7 +22,7 @@ import os,sys
 
 import imp
 _cfvfn = os.path.join(os.pardir,'cfv')
-cfv = imp.load_source('cfv', _cfvfn, open(_cfvfn))
+cfv = imp.load_source('cfv', _cfvfn+'.py', open(_cfvfn))
 sys.modules['cfv'] = cfv
 
 #sys.path.insert(0, os.path.abspath(os.pardir))
