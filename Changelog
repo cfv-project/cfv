@@ -7,6 +7,7 @@
 	* In recursive mode, an unaccessible dir no longer causes an exception. (Reported by Harley Gorrell)
 	* Fix excessive memory usage on deep recursive create mode in tree with lots of files. (Reported by Harley Gorrell)
 	* Display seperate stats per checksum file, and (if needed) a total at the end.
+	* In create mode, an already existing checksum file now causes a cferror, rather than an immediate exit.
 2001-09-03 - v1.9:
 	* Support bsd style md5 files (-t bsdmd5).
 	* Make test.py not attempt to verify against md5sum if it is not available (ie, on bsd). (reported by Hannu Liljemark)

@@ -750,8 +750,9 @@ def make(type,ifilename,testfiles):
 		if config.gzip==1 and filename[-3:]!='.gz': #if user does -zz, perhaps they want to force the filename to be kept?
 			filename=filename+'.gz'
 	if os.path.exists(filename):
-		perror("%s already exists"%filename)
-		sys.exit(1)
+		perror("%s already exists"%perhaps_showpath(filename))
+		stats.cferror=stats.cferror+1
+		file=IOError #just need some special value to indicate a cferror so that recursive mode still continues to work, IOError seems like a good choice ;)
 	if not testfiles or not len(testfiles):
 		tfauto=1
 		testfiles=os.listdir('.')
@@ -785,6 +786,8 @@ def make(type,ifilename,testfiles):
 			if tfauto:#if user isn't specifying files, don't even try to add dirs and stuff, and don't print errors about it.
 				continue
 		stats.num=stats.num+1
+		if file==IOError:
+			continue
 		if file==None:
 			file=doopen(filename,'w')
 			type.writeheader(file)
@@ -800,7 +803,7 @@ def make(type,ifilename,testfiles):
 			continue
 		file.write(s)
 		stats.ok=stats.ok+1
-	if file:
+	if file and file!=IOError:
 		file.close()
 	
 	for f in testdirs:
