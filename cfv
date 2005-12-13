@@ -88,7 +88,7 @@ def codec_supports_readline(e):
 	test=testa+testb
 	r=codecs_getreader(e)(StringIO(test.encode(e)))
 	try:
-		return r.readline()==testa and r.readline()==testb
+		return r.readline(100)==testa and r.readline(100)==testb
 	except (NotImplementedError, UnicodeError):
 		return 0
 
@@ -1012,7 +1012,7 @@ class PeekFile:
 		if self._encoding:
 			self.decodeobj = codecs_getreader(self._encoding)(self.fileobj)
 			if not codec_supports_readline(self._encoding):
-				#print "codec doesn't support readline, hacking it."
+				#print "codec %s doesn't support readline, hacking it." % self._encoding
 				try:
 					self.decodeobj = StringIO(self.decodeobj.read())
 				except UnicodeError:
