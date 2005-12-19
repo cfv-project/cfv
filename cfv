@@ -994,6 +994,13 @@ except NameError:
 			self.__call__ = anycallable
 					
 
+_badbytesmarker = u'\ufffe'
+def _markbadbytes(exc):
+	return (_badbytesmarker, exc.end)
+
+codecs.register_error('markbadbytes', _markbadbytes)
+
+
 class PeekFile:
 	def __init__(self, fileobj, filename=None):
 		self.fileobj = fileobj
@@ -1022,7 +1029,7 @@ class PeekFile:
 	def _reset_decodeobj(self):
 		self.fileobj.seek(self._decode_start)
 		if self._encoding:
-			self.decodeobj = codecs_getreader(self._encoding)(self.fileobj)
+			self.decodeobj = codecs_getreader(self._encoding)(self.fileobj, errors='markbadbytes')
 			if not codec_supports_readline(self._encoding):
 				#print "codec %s doesn't support readline, hacking it." % self._encoding
 				try:
@@ -1038,6 +1045,10 @@ class PeekFile:
 			self._prevlineend=None
 			return self._readline(*args)
 		self._prevlineend=line[-1:]
+		if self._encoding:
+			badbytecount = line.count(_badbytesmarker)
+			if badbytecount:
+				raise UnicodeError, "%r codec: %i decode errors"%(self._encoding, badbytecount)
 		return line
 	def peek(self, *args):
 		self.fileobj.seek(0)
