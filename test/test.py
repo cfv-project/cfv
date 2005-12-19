@@ -70,21 +70,30 @@ try:
 	except ImportError: import BitTornado; BitTorrent = BitTornado
 except ImportError: BitTorrent = None
 
+try:
+	from elementtree import ElementTree
+except ImportError:
+	_have_verifyxml = 0
+else:
+	_have_verifyxml = hasattr(ElementTree,'iterparse')
+	if not os.environ.get("CFV_ENABLE_VERIFYXML"):
+		_have_verifyxml = 0
 
 fmt_info = {
-	#name: (hascrc, hassize, cancreate, available, istext, preferredencoding)
-	'sha1': (1,0,1,1,1,preferredencoding),
-	'md5': (1,0,1,1,1,preferredencoding),
-	'bsdmd5': (1,0,1,1,1,preferredencoding),
-	'sfv': (1,0,1,1,1,preferredencoding),
-	'sfvmd5': (1,0,1,1,1,preferredencoding),
-	'csv': (1,1,1,1,1,preferredencoding),
-	'csv2': (0,1,1,1,1,preferredencoding),
-	'csv4': (1,1,1,1,1,preferredencoding),
-	'crc': (1,1,1,1,1,preferredencoding),
-	'par': (1,1,0,1,0,'utf-16-le'),
-	'par2': (1,1,0,1,0,preferredencoding),
-	'torrent': (1,1,1,not not BitTorrent,0,'utf-8'),
+	#name:    (hascrc, hassize, cancreate, available, istext, preferredencoding)
+	'sha1':   (1, 0, 1, 1,                  1, preferredencoding),
+	'md5':    (1, 0, 1, 1,                  1, preferredencoding),
+	'bsdmd5': (1, 0, 1, 1,                  1, preferredencoding),
+	'sfv':    (1, 0, 1, 1,                  1, preferredencoding),
+	'sfvmd5': (1, 0, 1, 1,                  1, preferredencoding),
+	'csv':    (1, 1, 1, 1,                  1, preferredencoding),
+	'csv2':   (0, 1, 1, 1,                  1, preferredencoding),
+	'csv4':   (1, 1, 1, 1,                  1, preferredencoding),
+	'crc':    (1, 1, 1, 1,                  1, preferredencoding),
+	'par':    (1, 1, 0, 1,                  0, 'utf-16-le'),
+	'par2':   (1, 1, 0, 1,                  0, preferredencoding),
+	'torrent':(1, 1, 1, not not BitTorrent, 0, 'utf-8'),
+	'verify': (1, 1, 1, _have_verifyxml,    0, 'utf-8'),
 }
 def fmt_hascrc(f):
 	return fmt_info[f][0]
@@ -596,6 +605,7 @@ def create_funkynames(t, d, chr, deep):
 		####if n == os.curdir: n = 'foo'+n # can't create a file of name '.', but 'foo.' is ok.
 		####if t in ('sfv','sfvmd5') and n==';': n = 'foo'+n; # ';' is comment character in sfv files, filename cannot start with it.
 		if t == 'crc' and n.isspace(): n = n + 'foo'; # crc format can't handle trailing whitespace in filenames
+		if t == 'verify' and i < 0x20: continue #XML doesn't like control chars.  (and tab,NL,CR get turned into space.)  arg.
 		n = '%02x'%i + n
 		try:
 			if deep:
@@ -1453,6 +1463,8 @@ def all_tests():
 	T_test("crcrlf.sfv")
 	T_test("noheadercrcrlf.sfv")
 	T_test("crcrlf.crc")
+	if fmt_available('verify'):
+		T_test(".verify")
 	if BitTorrent:
 		for strip in (0,1):
 			T_test(".torrent",extra='--strip=%s'%strip)
