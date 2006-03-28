@@ -609,6 +609,8 @@ except ImportError:
 
 try:
 	if os.environ.get('CFV_NOMMAP'): raise ImportError
+	# mmap is broken in python 2.4.2 and leaks file descriptors
+	if sys.version_info[:3] == (2, 4, 2): raise ImportError
 	import mmap
 	if hasattr(mmap, 'ACCESS_READ'):
 		def dommap(fileno, len):#generic mmap.  python2.2 adds ACCESS_* args that work on both nix and win.
