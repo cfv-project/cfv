@@ -113,13 +113,6 @@ def path_join(*paths):
 		paths = npaths
 	return os.path.join(*paths)
 
-def safesort(l):
-	sl = filter(strutil.is_rawstr, l)
-	ul = filter(lambda e: not strutil.is_rawstr(e), l)
-	sl.sort()
-	ul.sort()
-	l[:] = ul+sl
-
 
 curdir=osutil.getcwdu()
 reldir=[u'']
@@ -2440,7 +2433,7 @@ def make(cftype,ifilename,testfiles):
 		tfauto=1
 		testfiles=osutil.listdir(osutil.curdiru)
 		if config.dirsort:
-			safesort(testfiles)
+			strutil.safesort(testfiles)
 	else:
 		tfauto=0
 	testdirs=[]
@@ -2462,7 +2455,7 @@ def make(cftype,ifilename,testfiles):
 					try:
 						rfiles=osutil.listdir(f)
 						if config.dirsort:
-							safesort(rfiles)
+							strutil.safesort(rfiles)
 						testfiles[:i]=map(lambda x,p=f: path_join(p,x), rfiles)
 						i=0
 					except EnvironmentError, a:
@@ -2767,7 +2760,7 @@ def main(argv=None):
 			args = globbed
 			
 		if config.cmdlinesort:
-			safesort(args)
+			strutil.safesort(args)
 
 		prevopt=''
 		for o,a in optlist:

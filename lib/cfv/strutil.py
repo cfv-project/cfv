@@ -7,6 +7,13 @@ def is_unicode(s, _unitype=type(u'')):
 def is_rawstr(s, _stype=type('')):
 	return type(s) == _stype
 
+def safesort(l):
+	sl = filter(is_rawstr, l)
+	ul = filter(lambda e: not is_rawstr(e), l)
+	sl.sort()
+	ul.sort()
+	l[:] = ul+sl
+
 
 try:
 	codecs.getreader
