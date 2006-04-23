@@ -227,7 +227,7 @@ def all_unittests_suite():
 
 
 # initialize with default options
-setcfv(fn=os.path.join(os.pardir,'cfv'), internal=1)
+setcfv(fn=os.path.join(os.pardir,'lib','cfv','common.py'), internal=1)
 
 if __name__ == '__main__':
 	main(defaultTest='all_unittests_suite')
