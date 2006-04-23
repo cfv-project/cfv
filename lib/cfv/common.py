@@ -23,6 +23,8 @@ from stat import *
 from StringIO import StringIO
 
 from cfv import strutil
+from cfv import term
+from cfv.progress import TimedProgressMeter
 
 import locale
 if hasattr(locale,'getpreferredencoding'):
@@ -181,33 +183,11 @@ def cdup():
 	os.chdir(curdir)
 
 
-def getscrwidth():
-	w = -1
-	try:
-		from fcntl import ioctl
-		try:
-			from termios import TIOCGWINSZ
-		except ImportError:
-			from TERMIOS import TIOCGWINSZ
-		tty = sys.stdin.isatty() and sys.stdin or sys.stdout.isatty() and sys.stdout or sys.stderr.isatty() and sys.stderr or None
-		if tty:
-			h,w = struct.unpack('h h', ioctl(tty.fileno(), TIOCGWINSZ, '\0'*struct.calcsize('h h')))
-	except ImportError:
-		pass
-	if w>0:
-		return w
-	c = os.environ.get('COLUMNS',80)
-	try:
-		return int(c)
-	except ValueError:
-		return 80
-scrwidth = getscrwidth()
-
 stdout = sys.stdout
 stderr = sys.stderr
 _stdout_special = 0
 stdinfo = sys.stdout
-stdprogress = None
+progress = None
 def set_stdout_special():
 	"""If stdout is being used for special purposes, redirect informational messages to stderr."""
 	global stdinfo, _stdout_special
@@ -222,19 +202,21 @@ except:
 	codec_error_handler = 'replace'
 
 def setup_output():
-	global stdinfo,stdprogress,stdout,stderr
+	global stdinfo,progress,stdout,stderr
 	stdout = strutil.CodecWriter(getattr(sys.stdout,'encoding',None) or preferredencoding, sys.stdout, errors=codec_error_handler)
 	stderr = strutil.CodecWriter(getattr(sys.stderr,'encoding',None) or getattr(sys.stdout,'encoding',None) or preferredencoding, sys.stderr, errors=codec_error_handler)
 	stdinfo = _stdout_special and stderr or stdout
 	# if one of stdinfo (usually stdout) or stderr is a tty, use it.  Otherwise use stdinfo.
-	stdprogress = stdinfo.isatty() and stdinfo or stderr.isatty() and stderr or stdinfo
+	progressfd = stdinfo.isatty() and stdinfo or stderr.isatty() and stderr or stdinfo
 	doprogress = not config.verbose==-2 and (
 			config.progress=='y' or (
-				config.progress=='a' and stdprogress.isatty()
+				config.progress=='a' and progressfd.isatty()
 			)
 		)
-	if not doprogress:
-		stdprogress = None
+	if doprogress:
+		progress=TimedProgressMeter(fd=progressfd, scrwidth=term.scrwidth, frobfn=perhaps_showpath)
+	else:
+		progress=None
 
 def pverbose(s,nl='\n'):
 	if config.verbose>0:
@@ -250,75 +232,6 @@ def perror(s,nl='\n'):
 
 def plistf(filename):
 	stdout.write(perhaps_showpath(filename)+config.listsep)
-
-class INF:
-	"""object that is always larger than what it is compared to"""
-	def __cmp__(self, other):
-		return 1
-	def __mul__(self, other):
-		return self
-	def __div__(self, other):
-		return self
-	def __rdiv__(self, other):
-		return 0
-INF=INF()
-
-class ProgressMeter:
-	spinnerchars=r'\|/-'
-	def __init__(self, steps=20):
-		self.wantsteps=steps
-		self.needrefresh=1
-		self.filename=None
-
-	def init(self, name, size=None, cursize=0):
-		self.steps = self.wantsteps
-		self.filename = name
-		if size is None:
-			if name != '' and os.path.isfile(name):
-				size = os.path.getsize(name)
-		self.name, self.namewidth = strutil.lchoplen(perhaps_showpath(name), scrwidth - self.steps - 4)
-		if not size: #if stdin or device file, we don't know the size, so just use a spinner.  If the file is actually zero bytes, it doesn't matter either way.
-			self.stepsize = INF
-			self.steps = 1
-		elif size<=self.steps:
-			self.stepsize = 1
-		else:
-			self.stepsize = size/self.steps
-		self.nextstep = self.stepsize
-		self.spinneridx = 0
-		self.needrefresh = 1
-		self.update(cursize)
-	
-	def update(self, cursize):
-		if self.needrefresh:
-			donesteps = cursize/self.stepsize
-			stepsleft = self.steps - donesteps
-			self.nextstep = self.stepsize*(donesteps+1)
-			stdprogress.write('%s : %s'%(self.name,'#'*donesteps+'.'*stepsleft)+'\b'*stepsleft); stdprogress.flush()
-			self.needrefresh = 0
-		elif self.nextstep < cursize:
-			updsteps = (cursize-self.nextstep)/self.stepsize + 1
-			self.nextstep = self.nextstep + self.stepsize*updsteps
-			stdprogress.write('#'*updsteps); stdprogress.flush()
-		else:
-			stdprogress.write(self.spinnerchars[self.spinneridx]+'\b'); stdprogress.flush()
-			self.spinneridx = (self.spinneridx+1)%len(self.spinnerchars)
-	
-	def cleanup(self):
-		if not self.needrefresh:
-			stdprogress.write('\r'+' '*(self.namewidth+3+self.steps+1)+'\r')
-			self.needrefresh = 1
-
-class TimedProgressMeter(ProgressMeter):
-	def __init__(self, *args, **kw):
-		ProgressMeter.__init__(self, *args, **kw)
-		self.nexttime = 0
-	
-	def update(self, cursize):
-		curtime = time.time()
-		if curtime > self.nexttime:
-			self.nexttime = curtime + 0.06
-			ProgressMeter.update(self, cursize)
 
 
 def enverrstr(e):
@@ -727,7 +640,7 @@ def _getfilechecksum(filename, hasher):
 	else:
 		f=open(filename,'rb')
 	def finish(m,s,f=f,filename=filename):
-		if stdprogress: progress.init(filename)
+		if progress: progress.init(filename)
 		try:
 			while 1:
 				x=f.read(65536)
@@ -736,11 +649,11 @@ def _getfilechecksum(filename, hasher):
 					return m.digest(),s
 				s=s+len(x)
 				m.update(x)
-				if stdprogress: progress.update(s)
+				if progress: progress.update(s)
 		finally:
-			if stdprogress: progress.cleanup()
+			if progress: progress.cleanup()
 
-	if f==sys.stdin or nommap or stdprogress:
+	if f==sys.stdin or nommap or progress:
 		return finish(hasher(),0L)
 	else:
 		s = os.path.getsize(filename)
@@ -767,7 +680,7 @@ try:
 		stderr.write("old fchksum version installed, using std python modules. please update.\n") #can't use perror yet since config hasn't been done..
 		raise ImportError
 	def _getfilemd5(filename):
-		if stdprogress: progress.init(filename)
+		if progress: progress.init(filename)
 		try:
 			if filename=='':
 				f = sys.stdin
@@ -777,13 +690,13 @@ try:
 				sname = filename.encode(fsencoding, 'replace')
 			else:
 				sname = filename
-			c,s=fchksum.fmd5(sname, stdprogress and progress.update or None, 0.03, fileno=f.fileno())
+			c,s=fchksum.fmd5(sname, progress and progress.update or None, 0.03, fileno=f.fileno())
 			stats.bytesread=stats.bytesread+s
 		finally:
-			if stdprogress: progress.cleanup()
+			if progress: progress.cleanup()
 		return c,s
 	def _getfilecrc(filename):
-		if stdprogress: progress.init(filename)
+		if progress: progress.init(filename)
 		try:
 			if filename=='':
 				f = sys.stdin
@@ -793,10 +706,10 @@ try:
 				sname = filename.encode(fsencoding, 'replace')
 			else:
 				sname = filename
-			c,s=fchksum.fcrc32d(sname, stdprogress and progress.update or None, 0.03, fileno=f.fileno())
+			c,s=fchksum.fcrc32d(sname, progress and progress.update or None, 0.03, fileno=f.fileno())
 			stats.bytesread=stats.bytesread+s
 		finally:
-			if stdprogress: progress.cleanup()
+			if progress: progress.cleanup()
 		return c,s
 except ImportError:
 	import md5
@@ -1709,7 +1622,7 @@ class Torrent(ChksumType):
 				d = curfh.fh.read(size)
 			except EnvironmentError, e:
 				if not f.done:
-					if stdprogress: progress.cleanup()
+					if progress: progress.cleanup()
 					do_f_enverror(f.l_filename, e)
 					f.done=1
 				return None
@@ -1741,21 +1654,21 @@ class Torrent(ChksumType):
 			if wanttest:
 				sh = sha.sha()
 				for f,fcurpos,fpiecelen in piecefiles:
-					if stdprogress and f.l_filename and f.l_filename!=progress.filename:
+					if progress and f.l_filename and f.l_filename!=progress.filename:
 						progress.cleanup()
 						progress.init(f.l_filename,f.size,fcurpos)
 					d = readfpiece(f, fcurpos, fpiecelen)
 					if d is None:
 						break
 					sh.update(d)
-					if stdprogress and f.l_filename: progress.update(fcurpos+fpiecelen)
+					if progress and f.l_filename: progress.update(fcurpos+fpiecelen)
 				if d is None:
 					if curfh.fh:
 						#close the file in case do_f_badcrc wants to try to rename it
 						curfh.fh.close(); curfh.fh=None
 					for f,fcurpos,fpiecelen in piecefiles:
 						if not f.done:
-							if stdprogress: progress.cleanup()
+							if progress: progress.cleanup()
 							do_f_badcrc(f.l_filename, 'piece %i missing data'%(piece))
 							f.done=1
 				elif sh.digest()!=hashes[piece]:
@@ -1764,18 +1677,18 @@ class Torrent(ChksumType):
 						curfh.fh.close(); curfh.fh=None
 					for f,fcurpos,fpiecelen in piecefiles:
 						if not f.done:
-							if stdprogress: progress.cleanup()
+							if progress: progress.cleanup()
 							do_f_badcrc(f.l_filename, 'piece %i (at %i..%i) crc does not match (%s!=%s)'%(piece,fcurpos,fcurpos+fpiecelen,hexlify(hashes[piece]), sh.hexdigest()))
 							f.done=1
 				else:
 					for f,fcurpos,fpiecelen in piecefiles:
 						if not f.done:
 							if fcurpos+fpiecelen==f.size:
-								if stdprogress: progress.cleanup()
+								if progress: progress.cleanup()
 								do_f_ok(f.l_filename,f.size,'all pieces ok')
 								f.done=1
 
-		if stdprogress: progress.cleanup()
+		if progress: progress.cleanup()
 
 		if curfh.fh:
 			curfh.fh.close()
@@ -1805,7 +1718,7 @@ class Torrent(ChksumType):
 	def make_addfile(self, filename):
 		firstpiece = len(self.pieces)
 		f = open(filename, 'rb')
-		if stdprogress: progress.init(filename)
+		if progress: progress.init(filename)
 		fs = 0
 		while 1:
 			piece_left = self.piece_length - self.piece_done
@@ -1816,14 +1729,14 @@ class Torrent(ChksumType):
 			s = len(d)
 			stats.bytesread=stats.bytesread+s
 			fs = fs + s
-			if stdprogress: progress.update(fs)
+			if progress: progress.update(fs)
 			self.piece_done = self.piece_done + s
 			if self.piece_done == self.piece_length:
 				self.pieces.append(self.sh.digest())
 				self.sh = sha.sha()
 				self.piece_done = 0
 		f.close()
-		if stdprogress: progress.cleanup()
+		if progress: progress.cleanup()
 		def cfencode_utf8pref(s): return cfencode(s, 'UTF-8')
 		self.files.append({'length':fs, 'path':map(cfencode_utf8pref, path_split(filename))})
 		return ('pieces %i..%i'%(firstpiece,len(self.pieces)),fs), ''
@@ -2867,7 +2780,6 @@ def printcftypehelp(err):
 stats=Stats()
 config=Config()
 cache=FileInfoCache()
-progress=TimedProgressMeter()
 
 
 def decode_arg(a):
