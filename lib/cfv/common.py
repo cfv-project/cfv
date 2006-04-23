@@ -23,6 +23,7 @@ import codecs
 from stat import *
 from StringIO import StringIO
 
+from cfv.compat import *
 from cfv import osutil
 from cfv import strutil
 from cfv import term
@@ -65,23 +66,6 @@ LISTARGS={'ok':LISTOK, 'bad':LISTBAD, 'notfound':LISTNOTFOUND, 'unverified':LIST
 class Data:
 	def __init__(self, **kw):
 		self.__dict__.update(kw)
-
-
-try:
-	reversed #reversed(seq) only in python>=2.4
-except NameError:
-	def reversed(seq):
-		l = list(seq)
-		l.reverse()
-		return l
-
-try:
-	sorted #sorted(seq) only in python>=2.4
-except NameError:
-	def sorted(seq):
-		l = list(seq)
-		l.sort()
-		return l
 
 _realpath = getattr(os.path, 'realpath', os.path.abspath) #realpath is only in Python>=2.2
 _path_key_cache = {}
@@ -673,14 +657,6 @@ except ImportError:
 	def _getfilecrc(filename):
 		return _getfilechecksum(filename, CRC32)
 
-
-try:
-	staticmethod #new in python 2.2
-except NameError:
-	class staticmethod:
-		def __init__(self, anycallable):
-			self.__call__ = anycallable
-					
 
 _badbytesmarker = u'\ufffe'
 def _markbadbytes(exc):
