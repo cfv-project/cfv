@@ -23,33 +23,15 @@ import codecs
 from stat import *
 from StringIO import StringIO
 
+from cfv import osutil
 from cfv import strutil
 from cfv import term
 from cfv.progress import TimedProgressMeter
 
-import locale
-if hasattr(locale,'getpreferredencoding'):
-	preferredencoding = locale.getpreferredencoding() or 'ascii'
-else:
-	preferredencoding = 'ascii'
-
-if hasattr(sys,'getfilesystemencoding'):
-	fsencoding = sys.getfilesystemencoding()
-else:
-	fsencoding = preferredencoding
-
-try:
-	os.stat(os.curdir+u'\0foobarbaz')
-	_fs_nullsok=0 #if os.stat succeeded, it means the filename was cut off at the null (or the user has funny files ;)
-except EnvironmentError:
-	_fs_nullsok=1
-except TypeError:
-	_fs_nullsok=0
-
 def cfencode(s, preferred=None):
 	if config.encoding=='raw':
 		if strutil.is_unicode(s):
-			return s.encode(fsencoding)
+			return s.encode(osutil.fsencoding)
 		return s
 	else:
 		return s.encode(config.getencoding(preferred))
@@ -61,7 +43,7 @@ def cfdecode(s, preferred=None):
 	return s
 def cffndecode(s, preferred=None):
 	s = cfdecode(s, preferred)
-	if not _fs_nullsok and '\0' in s:
+	if not osutil.fs_nullsok and '\0' in s:
 		raise FilenameError, "filename contains null characters"
 	return s
 
@@ -125,7 +107,7 @@ else:
 	def os_getcwdu():
 		d = os.getcwd()
 		try:
-			return unicode(d,fsencoding)
+			return unicode(d,osutil.fsencoding)
 		except UnicodeError:
 			return d
 
@@ -138,7 +120,7 @@ else:
 		r = []
 		for fn in os.listdir(path):
 			try:
-				r.append(unicode(fn, fsencoding))
+				r.append(unicode(fn, osutil.fsencoding))
 			except UnicodeError:
 				r.append(fn)
 		return r
@@ -153,7 +135,7 @@ def path_join(*paths):
 		npaths = []
 		for p in paths:
 			if strutil.is_unicode(p):
-				npaths.append(p.encode(fsencoding))
+				npaths.append(p.encode(osutil.fsencoding))
 			else:
 				npaths.append(p)
 		paths = npaths
@@ -204,8 +186,8 @@ except:
 
 def setup_output():
 	global stdinfo,progress,stdout,stderr
-	stdout = strutil.CodecWriter(getattr(sys.stdout,'encoding',None) or preferredencoding, sys.stdout, errors=codec_error_handler)
-	stderr = strutil.CodecWriter(getattr(sys.stderr,'encoding',None) or getattr(sys.stdout,'encoding',None) or preferredencoding, sys.stderr, errors=codec_error_handler)
+	stdout = strutil.CodecWriter(getattr(sys.stdout,'encoding',None) or osutil.preferredencoding, sys.stdout, errors=codec_error_handler)
+	stderr = strutil.CodecWriter(getattr(sys.stderr,'encoding',None) or getattr(sys.stdout,'encoding',None) or osutil.preferredencoding, sys.stderr, errors=codec_error_handler)
 	stdinfo = _stdout_special and stderr or stdout
 	# if one of stdinfo (usually stdout) or stderr is a tty, use it.  Otherwise use stdinfo.
 	progressfd = stdinfo.isatty() and stdinfo or stderr.isatty() and stderr or stdinfo
@@ -266,7 +248,7 @@ class FileInfoCache:
 			if config.ignorecase:
 				fn = fn.lower()
 			if config.encoding=='raw' and strutil.is_unicode(fn):
-				try: fn = fn.encode(fsencoding)
+				try: fn = fn.encode(osutil.fsencoding)
 				except UnicodeError: pass
 			self.testfiles[fn] = 1
 			
@@ -432,7 +414,7 @@ class Config:
 		assert self.encoding!='raw'
 		if self.encoding=='auto':
 			if preferred: return preferred
-			return preferredencoding
+			return osutil.preferredencoding
 		else:
 			return self.encoding
 	def setencoding(self, v):
@@ -681,7 +663,7 @@ try:
 			else:
 				f = open(filename, 'rb')
 			if strutil.is_unicode(filename):
-				sname = filename.encode(fsencoding, 'replace')
+				sname = filename.encode(osutil.fsencoding, 'replace')
 			else:
 				sname = filename
 			c,s=fchksum.fmd5(sname, progress and progress.update or None, 0.03, fileno=f.fileno())
@@ -697,7 +679,7 @@ try:
 			else:
 				f = open(filename, 'rb')
 			if strutil.is_unicode(filename):
-				sname = filename.encode(fsencoding, 'replace')
+				sname = filename.encode(osutil.fsencoding, 'replace')
 			else:
 				sname = filename
 			c,s=fchksum.fcrc32d(sname, progress and progress.update or None, 0.03, fileno=f.fileno())
@@ -2532,7 +2514,7 @@ def make(cftype,ifilename,testfiles):
 		else:
 			if strutil.is_unicode(f):
 				try:
-					f = f.encode(fsencoding)
+					f = f.encode(osutil.fsencoding)
 				except UnicodeError, e:
 					stats.ferror = stats.ferror + 1
 					perror('%s : %s'%(perhaps_showpath(f), e))
@@ -2620,7 +2602,7 @@ def show_unverified_dir(path, unvchild=0):
 	for fn in pathfiles:
 		sfn = fn
 		if config.encoding=='raw' and strutil.is_unicode(fn):
-			try: sfn = fn.encode(fsencoding)
+			try: sfn = fn.encode(osutil.fsencoding)
 			except UnicodeError: pass
 		filename = path_join(path, fn)
 		try:
@@ -2658,7 +2640,7 @@ def show_unverified_dir_verbose(path):
 	for fn in pathfiles:
 		sfn = fn
 		if config.encoding=='raw' and strutil.is_unicode(fn):
-			try: sfn = fn.encode(fsencoding)
+			try: sfn = fn.encode(osutil.fsencoding)
 			except UnicodeError: pass
 		filename = path_join(path, fn)
 		try:
@@ -2780,7 +2762,7 @@ def decode_arg(a):
 	if strutil.is_unicode(a):
 		return a
 	try:
-		return unicode(a,preferredencoding)
+		return unicode(a,osutil.preferredencoding)
 	except UnicodeError:
 		return a
 
