@@ -133,6 +133,8 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
 		sys.stdout = open_output(stdout)
 		sys.stderr = open_output(stderr)
 		sys.argv = [cfvfn] + expand_cmdline(cmd)
+		import cfv.common
+		reload(cfv.common) # XXX: hack until I can get all the global state storage factored out.
 		cfv_ns = default_ns.copy()
 		try:
 			exec cfv_compiled in cfv_ns
@@ -167,30 +169,21 @@ def get_version_flags():
 	ver_mmap = o.find('mmap')>=0
 
 def setcfv(fn=None,internal=None):
-	global cfvfn, cfv_compiled, cfv, runcfv
+	global cfvfn, cfv_compiled, runcfv
 
 	if internal is not None:
 		runcfv = internal and runcfv_py or runcfv_exe
+	
+	if fn is None:
+		fn = os.path.join(os.curdir,'cfv')
 
-	if fn is not None:
-		assert os.path.exists(fn)
-		try:
-			del sys.modules['cfv']
-		except KeyError:
-			pass
-		cfvfn = fn
-		_cfv_code = open(cfvfn,'r').read().replace('\r\n','\n').replace('\r','\n')
-		cfv_compiled = compile(_cfv_code,cfvfn,'exec')
+	assert os.path.isfile(fn)
+	cfvfn = fn
+	_cfv_code = open(cfvfn,'r').read().replace('\r\n','\n').replace('\r','\n')
+	cfv_compiled = compile(_cfv_code,cfvfn,'exec')
 
-		#if sys.modules.has_key('cfv'):
-		#	cfv = sys.modules['cfv']
-		#else:
-		# don't load it unless it looks like it is actually the source.  (Avoid accidentally importing the wrapper script and causing it to run cfv..)
-		if os.path.getsize(fn) > 1000:
-			cfv = imp.load_source('cfv', cfvfn+'.py', open(cfvfn))
-		else:
-			cfv = imp.new_module('cfv')
-		sys.modules['cfv'] = cfv
+	# This is so that the sys.path modification of the wrapper (if it has one) will be executed..
+	imp.load_source('cfvwrapper', cfvfn+'.py', open(cfvfn))
 
 	get_version_flags()
 			
@@ -220,15 +213,17 @@ def all_unittests_suite():
 	except ImportError:
 		pass
 	else:
-		for module in cfv,:
+		import cfv.common
+		for module in cfv.common,:
 			alltests.addTest(DocTestSuite(module))
 	return alltests
 
 
 
-# initialize with default options
-setcfv(fn=os.path.join(os.pardir,'lib','cfv','common.py'), internal=1)
 
 if __name__ == '__main__':
+	# initialize with default options
+	setcfv(internal=1)
+
 	main(defaultTest='all_unittests_suite')
 
