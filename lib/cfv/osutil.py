@@ -48,3 +48,9 @@ else:
 			except UnicodeError:
 				r.append(fn)
 		return r
+
+
+def fcmp(f1, f2):
+	import filecmp
+	return filecmp.cmp(f1, f2, shallow=0)
+

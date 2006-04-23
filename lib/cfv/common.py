@@ -681,10 +681,6 @@ except ImportError:
 		return _getfilechecksum(filename, CRC32)
 
 
-def fcmp(f1, f2):
-	import filecmp
-	return filecmp.cmp(f1, f2, shallow=0)
-
 try:
 	staticmethod #new in python 2.2
 except NameError:
@@ -1072,7 +1068,7 @@ def do_f_verifyerror(l_filename, a, foundok=0):
 			if l_filename==newfilename:
 				continue #if the filenames are the same they would cmp the same and be deleted. (ex. when renameformat="%(fullname)s")
 			if os.path.exists(newfilename):
-				if fcmp(l_filename, newfilename):
+				if osutil.fcmp(l_filename, newfilename):
 					os.unlink(l_filename)
 					reninfo=' (dupe of %s removed)'%showfn(newfilename)
 					break
