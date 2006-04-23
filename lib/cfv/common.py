@@ -89,41 +89,13 @@ def get_path_key(path):
 	dk = _path_key_cache.get(path)
 	if dk is not None:
 		return dk
-	st = os.stat(path or os_curdiru)
+	st = os.stat(path or osutil.curdiru)
 	if st[ST_INO]:
 		dk = (st[ST_DEV],  st[ST_INO])
 	else:
 		dk = _realpath(path_join(curdir, path))
 	_path_key_cache[path] = dk
 	return dk
-
-if hasattr(os,'getcwdu'):
-	def os_getcwdu():
-		try:
-			return os.getcwdu()
-		except UnicodeError:
-			return os.getcwd()
-else:
-	def os_getcwdu():
-		d = os.getcwd()
-		try:
-			return unicode(d,osutil.fsencoding)
-		except UnicodeError:
-			return d
-
-os_curdiru=unicode(os.curdir)
-
-if sys.hexversion>=0x020300f0:
-	os_listdir = os.listdir
-else:
-	def os_listdir(path):
-		r = []
-		for fn in os.listdir(path):
-			try:
-				r.append(unicode(fn, osutil.fsencoding))
-			except UnicodeError:
-				r.append(fn)
-		return r
 
 def path_join(*paths):
 	#The assumption here is that the only reason a raw string path component can get here is that it cannot be represented in unicode (Ie, it is not a valid encoded string)
@@ -149,7 +121,7 @@ def safesort(l):
 	l[:] = ul+sl
 
 
-curdir=os_getcwdu()
+curdir=osutil.getcwdu()
 reldir=[u'']
 prevdir=[]
 def chdir(d):
@@ -157,7 +129,7 @@ def chdir(d):
 	os.chdir(d)
 	prevdir.append((curdir,_path_key_cache))
 	reldir.append(path_join(reldir[-1], d))
-	curdir=os_getcwdu()
+	curdir=osutil.getcwdu()
 	_path_key_cache = {}
 def cdup():
 	global curdir,_path_key_cache
@@ -949,8 +921,8 @@ class ChksumType:
 					fpath = nocase_findfile(fpath, FINDDIR)
 					filename = path_join(fpath,filenametail) #fix the dir the orig filename is in, so that the do_f_found can rename it correctly
 			else:
-				fpath = os_curdiru
-			ftails = os_listdir(fpath)
+				fpath = osutil.curdiru
+			ftails = osutil.listdir(fpath)
 		except EnvironmentError:
 			ftails = []
 		for ftail in ftails:
@@ -1735,7 +1707,7 @@ class Torrent(ChksumType):
 				for fileinfo in self.files:
 					del fileinfo['path'][0]
 			else:
-				commonroot = cfencode(os.path.split(os_getcwdu())[1], 'UTF-8')
+				commonroot = cfencode(os.path.split(osutil.getcwdu())[1], 'UTF-8')
 			info['files'] = self.files
 			info['name'] = commonroot
 
@@ -2303,7 +2275,7 @@ def nocase_dirfiles(dir,match):
 	if not _nocase_dir_cache.has_key(dirkey):
 		d={}
 		_nocase_dir_cache[dirkey]=d
-		for a in os_listdir(dir):
+		for a in osutil.listdir(dir):
 			l=a.lower()
 			if d.has_key(l):
 				d[l].append(a)
@@ -2332,7 +2304,7 @@ def path_split(filename):
 FINDFILE=1
 FINDDIR=0
 def nocase_findfile(filename,find=FINDFILE):
-	cur=os_curdiru
+	cur=osutil.curdiru
 	parts=path_split(filename.lower())
 	#print 'nocase_findfile:',filename,parts,len(parts)
 	for i in range(0,len(parts)):
@@ -2348,7 +2320,7 @@ def nocase_findfile(filename,find=FINDFILE):
 			raise IOError, (errno.ENOENT,os.strerror(errno.ENOENT))
 		if len(matches)>1:
 			raise IOError, (errno.EEXIST,"More than one name matches %s"%path_join(cur,p))
-		if cur==os_curdiru:
+		if cur==osutil.curdiru:
 			cur=matches[0] #don't put the ./ on the front of the name
 		else:
 			cur=path_join(cur,matches[0])
@@ -2470,7 +2442,7 @@ def make(cftype,ifilename,testfiles):
 		file=IOError #just need some special value to indicate a cferror so that recursive mode still continues to work, IOError seems like a good choice ;)
 	if not testfiles:
 		tfauto=1
-		testfiles=os_listdir(os_curdiru)
+		testfiles=osutil.listdir(osutil.curdiru)
 		if config.dirsort:
 			safesort(testfiles)
 	else:
@@ -2492,7 +2464,7 @@ def make(cftype,ifilename,testfiles):
 					testdirs.append(f)
 				elif config.recursive==2:
 					try:
-						rfiles=os_listdir(f)
+						rfiles=osutil.listdir(f)
 						if config.dirsort:
 							safesort(rfiles)
 						testfiles[:i]=map(lambda x,p=f: path_join(p,x), rfiles)
@@ -2594,7 +2566,7 @@ def unverified_file(filename):
 
 def show_unverified_dir(path, unvchild=0):
 	pathcache = cache.getpathcache(path)
-	pathfiles = os_listdir(path or os_curdiru)
+	pathfiles = osutil.listdir(path or osutil.curdiru)
 	vsub = 0
 	unvsave = stats.unverified
 	unv = 0
@@ -2636,7 +2608,7 @@ def show_unverified_dir(path, unvchild=0):
 			
 def show_unverified_dir_verbose(path):
 	pathcache = cache.getpathcache(path)
-	pathfiles = os_listdir(path or os_curdiru)
+	pathfiles = osutil.listdir(path or osutil.curdiru)
 	for fn in pathfiles:
 		sfn = fn
 		if config.encoding=='raw' and strutil.is_unicode(fn):
@@ -2678,7 +2650,7 @@ def show_unverified_files(filelist):
 
 atrem=re.compile(r'md5|sha1|\.(csv|sfv|par|p[0-9][0-9]|par2|torrent|crc|vfy|verify)(\.gz)?$',re.IGNORECASE)#md5sum/sha1sum files have no standard extension, so just search for files with md5/sha1 in the name anywhere, and let the test func see if it really is one.
 def autotest(typename):
-	for a in os_listdir(os_curdiru):
+	for a in osutil.listdir(osutil.curdiru):
 		if config.recursive and visit_dir(a):
 			try:
 				chdir(a)

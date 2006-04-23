@@ -20,3 +20,31 @@ except EnvironmentError:
 except TypeError:
 	fs_nullsok=0
 
+
+if hasattr(os,'getcwdu'):
+	def getcwdu():
+		try:
+			return os.getcwdu()
+		except UnicodeError:
+			return os.getcwd()
+else:
+	def getcwdu():
+		d = os.getcwd()
+		try:
+			return unicode(d,osutil.fsencoding)
+		except UnicodeError:
+			return d
+
+curdiru=unicode(os.curdir)
+
+if sys.hexversion>=0x020300f0:
+	listdir = os.listdir
+else:
+	def listdir(path):
+		r = []
+		for fn in os.listdir(path):
+			try:
+				r.append(unicode(fn, fsencoding))
+			except UnicodeError:
+				r.append(fn)
+		return r
