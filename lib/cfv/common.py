@@ -17,6 +17,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from binascii import hexlify, unhexlify
 import getopt, re, os, sys, errno, time, copy, struct
 import codecs
 from stat import *
@@ -605,13 +606,6 @@ __homepage__='http://cfv.sourceforge.net/'
 
 _hassymlinks=hasattr(os,'symlink')
 
-try:
-	from binascii import hexlify, unhexlify # only in python >= 2.0
-except ImportError:
-	def hexlify(d):
-		return "%02x"*len(d) % tuple(map(ord, d))
-	def unhexlify(s, _splitre=re.compile('..',re.DOTALL)):
-		return ''.join(map(chr, map(lambda a: int(a,16), _splitre.findall(s))))
 
 try:
 	if os.environ.get('CFV_NOMMAP'): raise ImportError
