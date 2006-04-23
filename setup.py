@@ -1,14 +1,21 @@
-# NOTE:  This setup.py is ONLY for building the win32 .exe of cfv
-# For all other purposes, install using the Makefile
+#! /usr/bin/env python
 
 from distutils.core import setup
-import py2exe
+try:
+	import py2exe
+	extrakws = dict(console=["bin/cfv"])
+except ImportError:
+	extrakws = {}
 
 setup(name="cfv",
-	console=["cfv.py"],
+	package_dir = {'': 'lib'},
+	packages = ['cfv'],
+	scripts = ['bin/cfv'],
+	data_files = [("man/man1", ["cfv.1"])],
 	options={"py2exe": {"packages": ["encodings"]}},
-	version="1.18.1",
+	version="2.0.x",
 	author="Matthew Mueller",
 	license="GPL",
 	url="http://cfv.sourceforge.net",
+	**extrakws
 )

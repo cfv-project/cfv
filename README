@@ -1,4 +1,4 @@
-cfv 2.x  Copyright 2000-2005 Matthew Mueller <donut AT dakotacom DOT net>
+cfv 2.x  Copyright 2000-2006 Matthew Mueller <donut AT dakotacom DOT net>
 
 
 Requirements:
@@ -15,16 +15,16 @@ Optional:
     (modules must be in the python search path to allow .torrent checking.)
 
 Unix Install:
-1) run make with no arguments to see possible installation methods
-2) run your chosen method (or manually put cfv and cfv.1 where you want)
-3) read man page, cfv -h, etc.  have fun.
-4) optional: run tests to verify correct operation: cd test; ./test.py
+1) make install (which just runs "python setup.py install --prefix=/usr/local")
+2) read man page, cfv -h, etc.  have fun.
+3) optional: run tests to verify correct operation: cd test; ./test.py
 
 Windows Install:
-1) move cfv.py to c:\python24\lib\site-packages\
+1) maybe python setup.py install will do something useful?  At least it should
+  stick the libraries in the right place.
 2) move cfv.bat to somewhere in the path
 3) Edit the cfv.bat file if your python is installed somewhere other than 
-  c:\python24 (and obviously you'll need to change the path in step 1 too.)
+  c:\python24
 
 
 Copying:
