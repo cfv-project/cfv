@@ -213,8 +213,8 @@ def all_unittests_suite():
 	except ImportError:
 		pass
 	else:
-		import cfv.common
-		for module in cfv.common,:
+		import cfv.common, cfv.strutil
+		for module in cfv.common, cfv.strutil:
 			alltests.addTest(DocTestSuite(module))
 	return alltests
 

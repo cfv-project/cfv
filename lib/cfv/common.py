@@ -18,9 +18,11 @@
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import getopt, re, os, sys, errno, time, copy, struct
-import codecs, unicodedata
+import codecs
 from stat import *
 from StringIO import StringIO
+
+from cfv import strutil
 
 import locale
 if hasattr(locale,'getpreferredencoding'):
@@ -41,14 +43,9 @@ except EnvironmentError:
 except TypeError:
 	_fs_nullsok=0
 
-def is_unicode(s, _unitype=type(u'')):
-	return type(s) == _unitype
-def is_rawstr(s, _stype=type('')):
-	return type(s) == _stype
-
 def cfencode(s, preferred=None):
 	if config.encoding=='raw':
-		if is_unicode(s):
+		if strutil.is_unicode(s):
 			return s.encode(fsencoding)
 		return s
 	else:
@@ -66,31 +63,9 @@ def cffndecode(s, preferred=None):
 	return s
 
 def showfn(s):
-	if is_rawstr(s):
+	if strutil.is_rawstr(s):
 		return unicode(s, 'ascii', 'replace')
 	return s
-
-def codecs_getreader(e):
-	return codecs.lookup(e)[2] #codecs.getreader is only in python2.2+
-def codecs_getwriter(e):
-	return codecs.lookup(e)[3] #codecs.getwriter is only in python2.2+
-
-def codec_supports_readline(e):
-	"""Figure out whether the given codec's StreamReader supports readline.
-
-	Some (utf-16) raise NotImplementedError(py2.3) or UnicodeError(py<2.3),
-	others (cp500) are just broken.
-	With recent versions of python (cvs as of 20050203), readline seems to
-	work on all codecs.  Yay.
-	"""
-	testa=u'a'*80 + u'\n'
-	testb=u'b'*80 + u'\n'
-	test=testa+testb
-	r=codecs_getreader(e)(StringIO(test.encode(e)))
-	try:
-		return r.readline(100)==testa and r.readline(100)==testb
-	except (NotImplementedError, UnicodeError):
-		return 0
 
 cftypes={}
 _cf_fn_exts, _cf_fn_matches, _cf_fn_searches = [], [], []
@@ -106,129 +81,6 @@ class Data:
 	def __init__(self, **kw):
 		self.__dict__.update(kw)
 
-def chomp(line):
-	if line[-2:] == '\r\n': return line[:-2]
-	elif line[-1:] in '\r\n': return line[:-1]
-	return line
-
-def chompnulls(line):
-	p = line.find('\0')
-	if p < 0: return line
-	else:     return line[:p]
-
-try:
-	_unicodedata_east_asian_width = unicodedata.east_asian_width # unicodedata.east_asian_width only in python >= 2.4
-except AttributeError:
-	def _unicodedata_east_asian_width(c):
-		# Not a true replacement, only suitable for our width calculations.
-		# Adapted from http://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c version 2003-05-20
-		ucs = ord(c)
-		if (ucs >= 0x1100 and
-				(ucs <= 0x115f or                    # Hangul Jamo init. consonants */
-					ucs == 0x2329 or ucs == 0x232a or
-					(ucs >= 0x2e80 and ucs <= 0xa4cf and
-						ucs != 0x303f) or                  # CJK ... Yi */
-					(ucs >= 0xac00 and ucs <= 0xd7a3) or # Hangul Syllables */
-					(ucs >= 0xf900 and ucs <= 0xfaff) or # CJK Compatibility Ideographs */
-					(ucs >= 0xfe30 and ucs <= 0xfe6f) or # CJK Compatibility Forms */
-					(ucs >= 0xff00 and ucs <= 0xff60) or # Fullwidth Forms */
-					(ucs >= 0xffe0 and ucs <= 0xffe6) or
-					(ucs >= 0x20000 and ucs <= 0x2fffd) or
-					(ucs >= 0x30000 and ucs <= 0x3fffd))):
-			return 'W'
-		return 'Na'
-
-def uwidth(u):
-	#TODO: should it return -1 or something for control chars, like wcswidth?
-	# see http://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c for a sample implementation
-	#if is_rawstr(u):
-	#	return len(u)
-	w = 0
-	#for c in unicodedata.normalize('NFC', u):
-	for c in u:
-		if c in (u'\u0000', u'\u200B'): # null, ZERO WIDTH SPACE
-			continue
-		ccat = unicodedata.category(c)
-		if ccat in ('Mn', 'Me', 'Cf'): # "Mark, nonspacing", "Mark, enclosing", "Other, format"
-			continue
-		cwidth = _unicodedata_east_asian_width(c)
-		if cwidth in ('W', 'F'): # "East Asian Wide", "East Asian Full-width"
-			w += 2
-		else:
-			w += 1
-	return w
-
-def lchoplen(line, max):
-	"""Return line cut on left so it takes at most max character cells when printed, and width of result.
-
-	>>> lchoplen(u'hello world',6)
-	(u'...rld', 6)
-	"""
-	if is_rawstr(line):
-		if len(line)>max:
-			return '...'+line[-(max-3):], max
-		return line, len(line)
-	chars = ['']
-	w = 0
-	for c in reversed(line):
-		cw = uwidth(c)
-		if w+cw > max:
-			while w > max - 3:
-				w -= uwidth(chars.pop(0))
-			w += 3
-			chars.insert(0,'...')
-			break
-		w += cw
-		chars[0] = c + chars[0]
-		if cw != 0:
-			chars.insert(0,'')
-	return ''.join(chars), w
-
-def rchoplen(line, max):
-	"""Return line cut on right so it takes at most max character cells when printed, and width of result.
-
-	>>> rchoplen(u'hello world',6)
-	(u'hel...', 6)
-	"""
-	if is_rawstr(line):
-		if len(line)>max:
-			return line[:max-3]+'...', max
-		return line, len(line)
-	chars = ['']
-	w = 0
-	for c in line:
-		cw = uwidth(c)
-		if w+cw > max:
-			while w > max - 3:
-				w -= uwidth(chars.pop())
-			chars.append('...')
-			w += 3
-			break
-		w += cw
-		if cw == 0:
-			chars[-1] += c
-		else:
-			chars.append(c)
-	return ''.join(chars), w
-
-
-try:
-	''.lstrip('a') #str.lstrip(arg) only in python>=2.2
-	def lstrip(s,c):
-		return s.lstrip(c)
-	def rstrip(s,c):
-		return s.rstrip(c)
-except TypeError:
-	def lstrip(s, c):
-		for i in range(0,len(s)):
-			if s[i]!=c:
-				break
-		return s[i:]
-	def rstrip(s, c):
-		for i in range(len(s)-1,-1,-1):
-			if s[i]!=c:
-				return s[:i+1]
-		return ''
 
 try:
 	reversed #reversed(seq) only in python>=2.4
@@ -291,13 +143,13 @@ else:
 def path_join(*paths):
 	#The assumption here is that the only reason a raw string path component can get here is that it cannot be represented in unicode (Ie, it is not a valid encoded string)
 	#In that case, we convert the parts that are valid back to raw strings and join them together.  If the unicode can't be represented in the fsencoding, then there's nothing that can be done, and this will blow up.  Oh well.
-	if filter(is_rawstr, paths):
+	if filter(strutil.is_rawstr, paths):
 		#import traceback;traceback.print_stack() ####
 		#perror("path_join: non-unicode args "+repr(paths))
 
 		npaths = []
 		for p in paths:
-			if is_unicode(p):
+			if strutil.is_unicode(p):
 				npaths.append(p.encode(fsencoding))
 			else:
 				npaths.append(p)
@@ -305,8 +157,8 @@ def path_join(*paths):
 	return os.path.join(*paths)
 
 def safesort(l):
-	sl = filter(is_rawstr, l)
-	ul = filter(lambda e: not is_rawstr(e), l)
+	sl = filter(strutil.is_rawstr, l)
+	ul = filter(lambda e: not strutil.is_rawstr(e), l)
 	sl.sort()
 	ul.sort()
 	l[:] = ul+sl
@@ -362,22 +214,6 @@ def set_stdout_special():
 	_stdout_special = 1
 	stdinfo = stderr
 
-class CodecWriter:
-	"""Similar to codecs.StreamWriter, but str objects are decoded (as ascii) before then being passed to the the output encoder.
-	This is necessary as some codecs barf on trying to encode ascii strings.
-	"""
-	def __init__(self, encoding, stream, errors='strict'):
-		self.__stream = codecs_getwriter(encoding)(stream, errors)
-	def write(self, obj):
-		if is_rawstr(obj):
-			obj = unicode(obj,'ascii')
-		self.__stream.write(obj)
-	def writelines(self, list):
-		self.write(''.join(list))
-	def __getattr__(self, name, getattr=getattr):
-		""" Inherit all other methods from the underlying stream.
-		"""
-		return getattr(self.__stream, name)
 
 codec_error_handler = 'backslashreplace'
 try:
@@ -387,8 +223,8 @@ except:
 
 def setup_output():
 	global stdinfo,stdprogress,stdout,stderr
-	stdout = CodecWriter(getattr(sys.stdout,'encoding',None) or preferredencoding, sys.stdout, errors=codec_error_handler)
-	stderr = CodecWriter(getattr(sys.stderr,'encoding',None) or getattr(sys.stdout,'encoding',None) or preferredencoding, sys.stderr, errors=codec_error_handler)
+	stdout = strutil.CodecWriter(getattr(sys.stdout,'encoding',None) or preferredencoding, sys.stdout, errors=codec_error_handler)
+	stderr = strutil.CodecWriter(getattr(sys.stderr,'encoding',None) or getattr(sys.stdout,'encoding',None) or preferredencoding, sys.stderr, errors=codec_error_handler)
 	stdinfo = _stdout_special and stderr or stdout
 	# if one of stdinfo (usually stdout) or stderr is a tty, use it.  Otherwise use stdinfo.
 	stdprogress = stdinfo.isatty() and stdinfo or stderr.isatty() and stderr or stdinfo
@@ -440,7 +276,7 @@ class ProgressMeter:
 		if size is None:
 			if name != '' and os.path.isfile(name):
 				size = os.path.getsize(name)
-		self.name, self.namewidth = lchoplen(perhaps_showpath(name), scrwidth - self.steps - 4)
+		self.name, self.namewidth = strutil.lchoplen(perhaps_showpath(name), scrwidth - self.steps - 4)
 		if not size: #if stdin or device file, we don't know the size, so just use a spinner.  If the file is actually zero bytes, it doesn't matter either way.
 			self.stepsize = INF
 			self.steps = 1
@@ -515,7 +351,7 @@ class FileInfoCache:
 			fn = path_join(reldir[-1], fn)
 			if config.ignorecase:
 				fn = fn.lower()
-			if config.encoding=='raw' and is_unicode(fn):
+			if config.encoding=='raw' and strutil.is_unicode(fn):
 				try: fn = fn.encode(fsencoding)
 				except UnicodeError: pass
 			self.testfiles[fn] = 1
@@ -831,7 +667,7 @@ class Config:
 					break #end of file
 				if s[0]=="#":
 					continue #ignore lines starting with #
-				s=chomp(s)
+				s=strutil.chomp(s)
 				if not s:
 					continue #ignore blank lines
 				x = s.split(' ',1)
@@ -937,7 +773,7 @@ try:
 				f = sys.stdin
 			else:
 				f = open(filename, 'rb')
-			if is_unicode(filename):
+			if strutil.is_unicode(filename):
 				sname = filename.encode(fsencoding, 'replace')
 			else:
 				sname = filename
@@ -953,7 +789,7 @@ try:
 				f = sys.stdin
 			else:
 				f = open(filename, 'rb')
-			if is_unicode(filename):
+			if strutil.is_unicode(filename):
 				sname = filename.encode(fsencoding, 'replace')
 			else:
 				sname = filename
@@ -1031,8 +867,8 @@ class PeekFile:
 	def _reset_decodeobj(self):
 		self.fileobj.seek(self._decode_start)
 		if self._encoding:
-			self.decodeobj = codecs_getreader(self._encoding)(self.fileobj, errors='markbadbytes')
-			if not codec_supports_readline(self._encoding):
+			self.decodeobj = codecs.getreader(self._encoding)(self.fileobj, errors='markbadbytes')
+			if not strutil.codec_supports_readline(self._encoding):
 				#print "codec %s doesn't support readline, hacking it." % self._encoding
 				try:
 					self.decodeobj = StringIO(self.decodeobj.read())
@@ -1148,7 +984,7 @@ def doopen_write(filename):
 	if config.encoding=='raw':
 		return doopen_write_raw(filename)
 	else:
-		return CodecWriter(config.getencoding(), doopen_write_raw(filename))
+		return strutil.CodecWriter(config.getencoding(), doopen_write_raw(filename))
 
 def auto_filename_match(*names):
 	for searchfunc, cftype in config.user_cf_fn_regexs + _cf_fn_matches + _cf_fn_exts + _cf_fn_searches:
@@ -1206,7 +1042,7 @@ class ChksumType:
 	def do_test_chksumfile_print_testingline(self, file, comment=None):
 		if comment:
 			comment = ', ' + comment
-			comment,_ = rchoplen(comment, 102) #limit the length in case its a really long one.
+			comment,_ = strutil.rchoplen(comment, 102) #limit the length in case its a really long one.
 		else:
 			comment = ''
 		pverbose('testing from %s (%s%s)'%(showfn(file.name), self.__class__.__name__.lower(), comment))
@@ -1668,7 +1504,7 @@ class PAR2(ChksumType, MD5_MixIn):
 					return None
 				magic, pkt_len, pkt_md5, set_id, pkt_type = struct.unpack(pkt_header_fmt, d)
 				if pkt_type == 'PAR 2.0\0Creator\0':
-					return chompnulls(file.read(pkt_len - pkt_header_size))
+					return strutil.chompnulls(file.read(pkt_len - pkt_header_size))
 				else:
 					file.seek(pkt_len - pkt_header_size, 1)
 				
@@ -1702,7 +1538,7 @@ class PAR2(ChksumType, MD5_MixIn):
 				file_id, file_md5, file_md5_16k, file_size = struct.unpack(file_pkt_fmt, d[:file_pkt_size])
 				if seen_file_ids.get(file_id) is None:
 					seen_file_ids[file_id] = 1
-					filename = chompnulls(d[file_pkt_size:])
+					filename = strutil.chompnulls(d[file_pkt_size:])
 					try:
 						filename = cffndecode(filename)
 					except (UnicodeError, FilenameError), e:
@@ -2067,7 +1903,7 @@ def xs_dateTime(t=None):
 		t = time.time()
 	tstr = time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime(t))
 	tsubsec = ('%0.6f'%(t - int(t))).split('.')[1]
-	tsubsec = rstrip(tsubsec, '0')
+	tsubsec = strutil.rstrip(tsubsec, '0')
 	if tsubsec:
 		tstr += '.' + tsubsec
 	tstr += 'Z'
@@ -2470,7 +2306,7 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 		
 		#override the default testing line to show first comment line, if any
 		comment = ', ' + file.peekline().strip()
-		comment,_ = rchoplen(comment, 102) #but limit the length in case its a really long one.
+		comment,_ = strutil.rchoplen(comment, 102) #but limit the length in case its a really long one.
 		pverbose('testing from %s (crc%s)'%(showfn(file.name), comment))
 
 	_commentboundary=re.compile(r'^-+(\s+-+){1,4}\s*$')
@@ -2644,7 +2480,7 @@ def strippath(filename, num='a', _splitdrivere=re.compile(r"[a-z]:[/\\]",re.I)):
 	if _splitdrivere.match(filename,0,3): #we can't use os.path.splitdrive, since we want to get rid of it even if we are not on a dos system.
 		filename=filename[3:]
 	if filename[0]==os.sep:
-		filename=lstrip(filename, os.sep)
+		filename=strutil.lstrip(filename, os.sep)
 	
 	if num==0:#only split drive letter/root slash off
 		return filename
@@ -2782,12 +2618,12 @@ def make(cftype,ifilename,testfiles):
 		if file==IOError:
 			continue
 		if config.encoding!='raw':
-			if is_rawstr(f):
+			if strutil.is_rawstr(f):
 				stats.ferror = stats.ferror + 1
 				perror('%s : undecodable filename'%perhaps_showpath(f))
 				continue
 		else:
-			if is_unicode(f):
+			if strutil.is_unicode(f):
 				try:
 					f = f.encode(fsencoding)
 				except UnicodeError, e:
@@ -2876,7 +2712,7 @@ def show_unverified_dir(path, unvchild=0):
 	unv_sub_dirs = []
 	for fn in pathfiles:
 		sfn = fn
-		if config.encoding=='raw' and is_unicode(fn):
+		if config.encoding=='raw' and strutil.is_unicode(fn):
 			try: sfn = fn.encode(fsencoding)
 			except UnicodeError: pass
 		filename = path_join(path, fn)
@@ -2914,7 +2750,7 @@ def show_unverified_dir_verbose(path):
 	pathfiles = os_listdir(path or os_curdiru)
 	for fn in pathfiles:
 		sfn = fn
-		if config.encoding=='raw' and is_unicode(fn):
+		if config.encoding=='raw' and strutil.is_unicode(fn):
 			try: sfn = fn.encode(fsencoding)
 			except UnicodeError: pass
 		filename = path_join(path, fn)
@@ -3035,7 +2871,7 @@ progress=TimedProgressMeter()
 
 
 def decode_arg(a):
-	if is_unicode(a):
+	if strutil.is_unicode(a):
 		return a
 	try:
 		return unicode(a,preferredencoding)

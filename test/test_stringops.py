@@ -20,7 +20,7 @@
 import cfvtest
 from cfvtest import TestCase
 
-from cfv import uwidth, lchoplen, rchoplen
+from cfv.strutil import uwidth, lchoplen, rchoplen
 
 
 class uwidthTestCase(TestCase):
