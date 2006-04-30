@@ -248,23 +248,20 @@ class FileInfoCache:
 		ofinfo.clear()
 
 		
-def getfilesha1(filename):
+def getfilehash(filename, hashname, hashfunc):
 	finfo = cache.getfinfo(filename)
-	if not finfo.has_key('sha1'):
-		finfo['sha1'],finfo['size'] = _getfilesha1(filename)
-	return finfo['sha1'],finfo['size']
+	if not finfo.has_key(hashname):
+		finfo[hashname],finfo['size'] = hashfunc(filename)
+	return finfo[hashname],finfo['size']
+
+def getfilesha1(filename):
+	return getfilehash(filename, 'sha1', _getfilesha1)
 
 def getfilemd5(filename):
-	finfo = cache.getfinfo(filename)
-	if not finfo.has_key('md5'):
-		finfo['md5'],finfo['size'] = _getfilemd5(filename)
-	return finfo['md5'],finfo['size']
+	return getfilehash(filename, 'md5', _getfilemd5)
 
 def getfilecrc(filename):
-	finfo = cache.getfinfo(filename)
-	if not finfo.has_key('crc'):
-		finfo['crc'],finfo['size'] = _getfilecrc(filename)
-	return finfo['crc'],finfo['size']
+	return getfilehash(filename, 'crc', _getfilecrc)
 	
 def rename(oldfn, newfn):
 	os.rename(oldfn, newfn)
