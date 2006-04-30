@@ -251,7 +251,9 @@ class FileInfoCache:
 def getfilehash(filename, hashname, hashfunc):
 	finfo = cache.getfinfo(filename)
 	if not finfo.has_key(hashname):
-		finfo[hashname],finfo['size'] = hashfunc(filename)
+		hash, size = hashfunc(filename)
+		finfo[hashname],finfo['size'] = hash, size
+		stats.bytesread += size
 	return finfo[hashname],finfo['size']
 
 def getfilesha1(filename):
@@ -567,7 +569,6 @@ def _getfilechecksum(filename, hasher):
 			while 1:
 				x=f.read(65536)
 				if not x:
-					stats.bytesread=stats.bytesread+s
 					return m.digest(),s
 				s=s+len(x)
 				m.update(x)
@@ -586,7 +587,6 @@ def _getfilechecksum(filename, hasher):
 			m = hasher(dommap(f.fileno(), mmapsize))
 			f.seek(mmapsize)
 			return finish(m,mmapsize) #unfortunatly, python's mmap module doesn't support the offset parameter, so we just have to do the rest of the file the old fashioned way.
-		stats.bytesread = stats.bytesread+s
 		return m.digest(),s
 
 import sha
@@ -613,7 +613,6 @@ try:
 			else:
 				sname = filename
 			c,s=fchksum.fmd5(sname, progress and progress.update or None, 0.03, fileno=f.fileno())
-			stats.bytesread=stats.bytesread+s
 		finally:
 			if progress: progress.cleanup()
 		return c,s
@@ -629,7 +628,6 @@ try:
 			else:
 				sname = filename
 			c,s=fchksum.fcrc32d(sname, progress and progress.update or None, 0.03, fileno=f.fileno())
-			stats.bytesread=stats.bytesread+s
 		finally:
 			if progress: progress.cleanup()
 		return c,s
