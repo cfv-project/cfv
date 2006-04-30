@@ -555,9 +555,9 @@ try:
 		def dommap(fileno, len):#windows mmap.
 			if len==0: return ''
 			return mmap.mmap(fileno, len)
-	nommap=0
+	_nommap=0
 except ImportError:
-	nommap=1
+	_nommap=1
 
 def _getfilechecksum(filename, hasher):
 	if filename=='':
@@ -578,7 +578,7 @@ def _getfilechecksum(filename, hasher):
 		finally:
 			if progress: progress.cleanup()
 
-	if f==sys.stdin or nommap or progress:
+	if f==sys.stdin or _nommap or progress:
 		return finish(hasher(),0L)
 	else:
 		s = os.path.getsize(filename)
@@ -2857,7 +2857,7 @@ def main(argv=None):
 			elif o=='--version':
 				print 'cfv %s'%__version__
 				try:
-					if not nommap: print '+mmap'
+					if not _nommap: print '+mmap'
 				except NameError: pass
 				try: print 'fchksum %s'%fchksum.version()
 				except NameError: pass
