@@ -253,7 +253,7 @@ def getfilehash(filename, hashname, hashfunc):
 	if not finfo.has_key(hashname):
 		if progress: progress.init(filename)
 		try:
-			hash, size = hashfunc(filename)
+			hash, size = hashfunc(filename, progress and progress.update or None)
 		finally:
 			if progress: progress.cleanup()
 		finfo[hashname],finfo['size'] = hash, size
@@ -562,7 +562,7 @@ try:
 except ImportError:
 	_nommap=1
 
-def _getfilechecksum(filename, hasher):
+def _getfilechecksum(filename, hasher, callback):
 	if filename=='':
 		f=sys.stdin
 	else:
@@ -574,7 +574,7 @@ def _getfilechecksum(filename, hasher):
 				return m.digest(),s
 			s += len(x)
 			m.update(x)
-			if progress: progress.update(s)
+			if callback: callback(s)
 
 	if f==sys.stdin or _nommap or progress:
 		return finish(hasher(),0L)
@@ -590,8 +590,8 @@ def _getfilechecksum(filename, hasher):
 		return m.digest(),s
 
 import sha
-def _getfilesha1(filename):
-	return _getfilechecksum(filename, sha.new)
+def _getfilesha1(filename, callback):
+	return _getfilechecksum(filename, sha.new, callback)
 			
 try:
 	if os.environ.get('CFV_NOFCHKSUM'): raise ImportError
@@ -601,7 +601,7 @@ try:
 	except:
 		stderr.write("old fchksum version installed, using std python modules. please update.\n") #can't use perror yet since config hasn't been done..
 		raise ImportError
-	def _getfilemd5(filename):
+	def _getfilemd5(filename, callback):
 		if filename=='':
 			f = sys.stdin
 		else:
@@ -610,9 +610,9 @@ try:
 			sname = filename.encode(osutil.fsencoding, 'replace')
 		else:
 			sname = filename
-		c,s=fchksum.fmd5(sname, progress and progress.update or None, 0.03, fileno=f.fileno())
+		c,s=fchksum.fmd5(sname, callback, 0.03, fileno=f.fileno())
 		return c,s
-	def _getfilecrc(filename):
+	def _getfilecrc(filename, callback):
 		if filename=='':
 			f = sys.stdin
 		else:
@@ -621,7 +621,7 @@ try:
 			sname = filename.encode(osutil.fsencoding, 'replace')
 		else:
 			sname = filename
-		c,s=fchksum.fcrc32d(sname, progress and progress.update or None, 0.03, fileno=f.fileno())
+		c,s=fchksum.fcrc32d(sname, callback, 0.03, fileno=f.fileno())
 		return c,s
 except ImportError:
 	import md5
@@ -638,11 +638,11 @@ except ImportError:
 		def digest(self):
 			return struct.pack('>I',self.value)
 
-	def _getfilemd5(filename):
-		return _getfilechecksum(filename, md5.new)
+	def _getfilemd5(filename, callback):
+		return _getfilechecksum(filename, md5.new, callback)
 			
-	def _getfilecrc(filename):
-		return _getfilechecksum(filename, CRC32)
+	def _getfilecrc(filename, callback):
+		return _getfilechecksum(filename, CRC32, callback)
 
 
 _badbytesmarker = u'\ufffe'
