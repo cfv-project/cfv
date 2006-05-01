@@ -192,7 +192,7 @@ def test_log_finish(cmd,s,r):
 		print "failed test:",cmd
 		result="FAILED";
 		if type(r)!=type(1) or r!=1:
-			result=result+" (%s)"%r
+			result += " (%s)"%r
 	else:
 		stats.ok=stats.ok+1
 		result="OK";
@@ -456,7 +456,7 @@ def cfv_nooutput_test(s,o,expected=0):
 def T_test(f, extra=None):
 	cmd=cfvcmd
 	if extra:
-		cmd=cmd+" "+extra
+		cmd += " "+extra
 	test_generic(cmd+" -T -f test"+f,cfv_test)
 	test_generic(cmd+" -i -T -f test"+f,cfv_test) #all tests should work with -i
 	test_generic(cmd+" -m -T -f test"+f,cfv_test) #all tests should work with -m
@@ -504,7 +504,7 @@ def gzC_test(f,extra=None,verify=None,t=None,d=None):
 	f2='test.C.'+f+'.tmp.gz'
 	f='test.C.'+f+'.gz'
 	if extra:
-		cmd=cmd+" "+extra
+		cmd += " "+extra
 	try:
 		test_generic("%s -q -C -t %s -zz -f - %s"%(cmd,t,d), status_test, stdout=f2)
 		test_generic("%s -C -f %s %s"%(cmd,f,d),cfv_test)
@@ -555,7 +555,7 @@ def C_test(f,extra=None,verify=None,t=None,d='data?'):
 	fgz=f+'.gz'
 	try:
 		if extra:
-			cmd=cmd+" "+extra
+			cmd += " "+extra
 		test_generic("%s -C -f %s %s"%(cmd,f,d),cfv_test)
 		test_generic("%s -T -f %s"%(cmd,f),cfv_test)
 		test_generic("%s -T -f -"%(cmd),cfv_test,stdin=f)
@@ -576,7 +576,7 @@ def C_test(f,extra=None,verify=None,t=None,d='data?'):
 	finally:
 		os.rmdir(dir)
 	
-	def C_test_encoding(enc, t=t):
+	def C_test_encoding(enc):
 		d = mkdtemp()
 		try:
 			open(os.path.join(d,'aoeu'),'w').write('a')
@@ -604,7 +604,7 @@ def create_funkynames(t, d, chr, deep):
 		####if t == 'torrent' and n in ('~',): n = 'foo'+n; #same
 		####if n == os.curdir: n = 'foo'+n # can't create a file of name '.', but 'foo.' is ok.
 		####if t in ('sfv','sfvmd5') and n==';': n = 'foo'+n; # ';' is comment character in sfv files, filename cannot start with it.
-		if t == 'crc' and n.isspace(): n = n + 'foo'; # crc format can't handle trailing whitespace in filenames
+		if t == 'crc' and n.isspace(): n += 'foo'; # crc format can't handle trailing whitespace in filenames
 		if t == 'verify' and i < 0x20: continue #XML doesn't like control chars.  (and tab,NL,CR get turned into space.)  arg.
 		n = '%02x'%i + n
 		try:
@@ -623,13 +623,13 @@ def create_funkynames(t, d, chr, deep):
 		except (EnvironmentError, UnicodeError):
 			pass # stupid filesystem doesn't allow the character we wanted, oh well.
 		else:
-			num = num + 1
+			num += 1
 	return num
 
 def C_funkynames_test(t):
 	def is_fmtencodable(s,enc=fmt_preferredencoding(t)):
 		return is_encodable(s,enc)
-	def is_fmtokfn(s,t=t,enc=fmt_preferredencoding(t)):
+	def is_fmtokfn(s,enc=fmt_preferredencoding(t)):
 		if fmt_istext(t):
 			if is_rawstr(s):
 				try:
@@ -691,15 +691,15 @@ def C_funkynames_test(t):
 					os.rename(os.path.join(d3,fn), os.path.join(d3,newfn))
 					if deep:
 						os.rename(os.path.join(d3,newfn,fn), os.path.join(d3,newfn,newfn))
-					numrenamed = numrenamed + 1
+					numrenamed += 1
 				# cfv -T, correct filenames on disk, undecodable filenames in CF: check with -s, with --encoding=raw, read CF as raw strings and be happy
 				if t!='torrent':
 					test_generic(cfvcmd+" --encoding=raw -v -s -T -p %s -f %s"%(d3,dcfn), rcurry(cfv_all_test,ok=cnum,misnamed=numrenamed))
 				if fmt_hassize(t):
 					test_generic(cfvcmd+" --encoding=raw -v -m -s -T -p %s -f %s"%(d3,dcfn), rcurry(cfv_all_test,ok=cnum,misnamed=numrenamed))
 
-				cnum = cnum + 1
-				#okcnum = okcnum + 1
+				cnum += 1
+				#okcnum += 1
 				ulist=os.listdir(unicode(d3))
 				okcnum = len(filter(is_fmtencodable, ulist))
 				numerr = len(ulist)-okcnum
@@ -742,7 +742,7 @@ def ren_test(f,extra=None,verify=None,t=None):
 	dir2=join('n.test','d2')
 	basecmd=cfvcmd+' -r -p '+dir
 	if extra:
-		basecmd=basecmd+" "+extra
+		basecmd += " "+extra
 	cmd=basecmd+' --renameformat="%(name)s-%(count)i%(ext)s"'
 	try:
 		os.mkdir(dir)
@@ -759,7 +759,7 @@ def ren_test(f,extra=None,verify=None,t=None):
 			join(dir,'test2.foo-%i'),
 			join(dir2,'test4.foo-%i')]
 		flsf_2=[join(dir,'test3-%i')]
-		def flsw(t,fls=fls):
+		def flsw(t):
 			for fl in fls:
 				open(fl,'wb').write(t)
 		def flscmp(t,n,fls=flsf):
@@ -805,7 +805,7 @@ def search_test(t,test_nocrc=0,extra=None):
 		hascrc = fmt_hascrc(t)
 		cmd = cfvcmd
 	if extra:
-		cmd = cmd + " " + extra
+		cmd += " " + extra
 	
 	if not hascrc and not hassize:
 		# if using -m and type doesn't have size, make sure -s doesn't do anything silly
@@ -1114,9 +1114,9 @@ def test_encoding_detection():
 			try:
 				shutil.copyfile(srcfn, os.path.join(datad,destfn))
 			except (EnvironmentError,UnicodeError):
-				fnerrs=fnerrs+1
+				fnerrs += 1
 			else:
-				fnok=fnok+1
+				fnok += 1
 		for t in allcreatablefmts():
 			if fmt_istext(t):
 				utf8cfn = os.path.join(d,'utf8nobom.'+t)
@@ -1157,9 +1157,9 @@ def test_encoding2():
 			try:
 				shutil.copyfile(srcfn, os.path.join(d2,destfn))
 			except (EnvironmentError,UnicodeError):
-				fnerrs=fnerrs+1
+				fnerrs += 1
 			else:
-				fnok=fnok+1
+				fnok += 1
 		
 		test_generic(cfvcmd+" -q -T -p "+d, rcurry(cfv_status_test,notfound=fnok,ferror=fnerrs))
 		test_generic(cfvcmd+" -v -T -p "+d, rcurry(cfv_all_test,ok=0,notfound=fnok,ferror=fnerrs))
@@ -1184,7 +1184,7 @@ def test_encoding2():
 		raw_files_fnok=raw_files_fnerrs=0
 		dirn = filter(lambda s: not s.endswith('torrent'), os.listdir(d))[0]
 		try:
-			files = map(lambda s,dirn=dirn: os.path.join(dirn,s), os.listdir(os.path.join(d,dirn)))
+			files = map(lambda s: os.path.join(dirn,s), os.listdir(os.path.join(d,dirn)))
 		except EnvironmentError:
 			files = []
 		else:
@@ -1192,19 +1192,19 @@ def test_encoding2():
 				flag_ok_raw = flag_ok_files = 0
 				for srcfn,destfn in datafns:
 					if os.path.join(u'\u3070\u304B',destfn).encode('utf-8')==fn:
-						raw_fnok=raw_fnok+1
+						raw_fnok += 1
 						flag_ok_raw = 1
 				try:
 					open(os.path.join(d,fn),'rb')
 				except (EnvironmentError,UnicodeError), e:
-					files_fnerrs = files_fnerrs + 1
+					files_fnerrs += 1
 				else:
-					files_fnok = files_fnok + 1
+					files_fnok += 1
 					flag_ok_files = 1
 				if flag_ok_files and flag_ok_raw:
-					raw_files_fnok = raw_files_fnok + 1
+					raw_files_fnok += 1
 				else:
-					raw_files_fnerrs = raw_files_fnerrs + 1
+					raw_files_fnerrs += 1
 		
 
 		raw_fnerrs = len(datafns)-raw_fnok

@@ -509,7 +509,7 @@ class Config:
 			f=open(filename,"r")
 			l=0
 			while 1:
-				l=l+1
+				l += 1
 				s=f.readline()
 				if not s:
 					break #end of file
@@ -567,12 +567,12 @@ def _getfilechecksum(filename, hasher):
 		f=sys.stdin
 	else:
 		f=open(filename,'rb')
-	def finish(m,s,f=f,filename=filename):
+	def finish(m,s):
 		while 1:
 			x=f.read(65536)
 			if not x:
 				return m.digest(),s
-			s=s+len(x)
+			s += len(x)
 			m.update(x)
 			if progress: progress.update(s)
 
@@ -969,7 +969,7 @@ class TextChksumType(ChksumType):
 		self.do_test_chksumfile_print_testingline(file)
 		line=0
 		while 1:
-			line=line+1
+			line += 1
 			try:
 				l=file.readline()
 			except UnicodeError,e:
@@ -1203,7 +1203,7 @@ def ver2str(v):
 	vers=[]
 	while v or len(vers)<3:
 		vers.insert(0, str(v&0xFF))
-		v = v >> 8
+		v >>= 8
 	return '.'.join(vers)
 
 try: #support for 64bit ints in struct module was only added in python 2.2
@@ -1219,11 +1219,11 @@ except struct.error:
 			for f in fmt.split(' '):
 				if f=='Q':
 					ret.append(long(unpacked[upos])+long(unpacked[upos+1])*2**32L)
-					upos = upos + 2
+					upos += 2
 				elif f=='<':pass
 				else:
 					ret.append(unpacked[upos])
-					upos = upos + 1
+					upos += 1
 			return tuple(ret)
 		pack = struct.pack
 	struct = _Struct()
@@ -1308,7 +1308,7 @@ class PAR2(ChksumType, MD5_MixIn):
 		main_pkt_fmt = '< Q I'
 		main_pkt_size = struct.calcsize(main_pkt_fmt)
 
-		def get_creator(file, pkt_header_fmt=pkt_header_fmt, pkt_header_size=pkt_header_size):#nested scopes not supported until python 2.1
+		def get_creator(file):
 			if not config.verbose>0:
 				return None #avoid doing the work if we aren't going to use it anyway.
 			while 1:
@@ -1430,10 +1430,10 @@ class Torrent(ChksumType):
 				pass
 		self.do_test_chksumfile_print_testingline(file, ', '.join(comments))
 
-		def init_file(filenameparts, ftotpos, filesize, encoding=encoding, file=file, self=self):
+		def init_file(filenameparts, ftotpos, filesize):
 			done = 0
 			try:
-				filenameparts = map(lambda p,encoding=encoding: cffndecode(p,encoding), filenameparts)
+				filenameparts = map(lambda p: cffndecode(p,encoding), filenameparts)
 			except LookupError, e: #lookup error is raised when specified encoding isn't found.
 				raise EnvironmentError, str(e)
 			except (UnicodeError, FilenameError), e:
@@ -1503,13 +1503,13 @@ class Torrent(ChksumType):
 			for finfo in info['files']:
 				flength = finfo['length']
 				files.append(init_file(dirpart+finfo['path'], total_len, flength))
-				total_len = total_len + flength
+				total_len += flength
 		
 		if not config.docrcchecks:
 			return
 
 		curfh = Data(fh=None, f=None)
-		def readfpiece(f, pos, size, curfh=curfh):
+		def readfpiece(f, pos, size):
 			if f.l_filename is None:
 				return None
 			try:
@@ -1542,13 +1542,13 @@ class Torrent(ChksumType):
 			wanttest = 0
 			while curpos < curend:
 				while curpos >= files[curf].totpos+files[curf].size:
-					curf = curf + 1
+					curf += 1
 				f=files[curf]
 				fcurpos = curpos-f.totpos
 				assert fcurpos >= 0
 				fpiecelen = min(curend-curpos, f.size-fcurpos)
 				piecefiles.append((f,fcurpos,fpiecelen))
-				curpos = curpos + fpiecelen
+				curpos += fpiecelen
 				if not f.done:
 					wanttest = 1
 			if wanttest:
@@ -1628,7 +1628,7 @@ class Torrent(ChksumType):
 			self.sh.update(d)
 			s = len(d)
 			stats.bytesread=stats.bytesread+s
-			fs = fs + s
+			fs += s
 			if progress: progress.update(fs)
 			self.piece_done = self.piece_done + s
 			if self.piece_done == self.piece_length:
@@ -2109,10 +2109,10 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 		
 		crcre = r'(?P<name>.*\S)\s+'
 		if self.has_size:
-			crcre = crcre + r'(?P<size>[0-9.,]+)\s+'
+			crcre += r'(?P<size>[0-9.,]+)\s+'
 		if self.has_dimensions:
-			crcre = crcre + r'\S+\s*x\s*\S+\s+'
-		crcre = crcre + r'(?P<crc>[0-9a-fA-F]{8})\b'
+			crcre += r'\S+\s*x\s*\S+\s+'
+		crcre += r'(?P<crc>[0-9a-fA-F]{8})\b'
 		self._crcrem = re.compile(crcre, re.I)
 		
 		self.in_comments = 1
@@ -2160,7 +2160,7 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 	
 	def make_chksumfile_finish(self, file):
 		flens = self._fieldlens
-		def writedata(data, self=self, flens=flens, file=file):
+		def writedata(data):
 			file.write(data[0].ljust(flens[0]) + '  ' + data[1].rjust(flens[1]))
 			if self.use_dimensions:
 				file.write('  ' + data[2].rjust(flens[2]) + ' x ' + data[3].rjust(flens[3]))
@@ -2172,8 +2172,8 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 		
 		boundary = '-'*flens[0] + '  ' + '-'*flens[1] + '  '
 		if self.use_dimensions:
-			boundary = boundary + '-'*(flens[2]+flens[3]+3) + '  '
-		boundary = boundary + '-'*flens[4] + '  ' + '-'*flens[5] + os.linesep
+			boundary += '-'*(flens[2]+flens[3]+3) + '  '
+		boundary += '-'*flens[4] + '  ' + '-'*flens[5] + os.linesep
 		
 		writedata(header)
 		file.write(boundary)
@@ -2265,9 +2265,9 @@ def nocase_findfile(filename,find=FINDFILE):
 		matches=nocase_dirfiles(cur,p) #nice and speedy :)
 		#print 'i:',i,' cur:',cur,' p:',p,' matches:',matches
 		if i==len(parts)-find:#if we are on the last part of the path and using FINDFILE, we want to match a file
-			matches=filter(lambda f,cur=cur: os.path.isfile(path_join(cur,f)), matches)
+			matches=filter(lambda f: os.path.isfile(path_join(cur,f)), matches)
 		else:#otherwise, we want to match a dir
-			matches=filter(lambda f,cur=cur: os.path.isdir(path_join(cur,f)), matches)
+			matches=filter(lambda f: os.path.isdir(path_join(cur,f)), matches)
 		if not matches:
 			raise IOError, (errno.ENOENT,os.strerror(errno.ENOENT))
 		if len(matches)>1:
@@ -2383,7 +2383,7 @@ def make(cftype,ifilename,testfiles):
 	else:
 		filename=cftype.make_std_filename(os.path.basename(curdir))
 		if config.gzip==1 and filename[-3:]!='.gz': #if user does -zz, perhaps they want to force the filename to be kept?
-			filename=filename+'.gz'
+			filename += '.gz'
 	if not hasattr(cftype, "make_addfile"):
 		perror("%s : %s not supported in create mode"%(showfn(filename), cftype.__name__.lower()))
 		stats.cferror=stats.cferror+1
@@ -2407,7 +2407,7 @@ def make(cftype,ifilename,testfiles):
 	i=0
 	while i<len(testfiles):
 		f=testfiles[i]
-		i=i+1
+		i += 1
 		if not tfauto and f=='-':
 			f=u''
 		elif not os.path.isfile(f):
@@ -2534,7 +2534,7 @@ def show_unverified_dir(path, unvchild=0):
 			if S_ISDIR(st[ST_MODE]) and visit_dir(filename,st,noisy=0):
 				dunvsave = stats.unverified
 				dv = show_unverified_dir(filename,not pathcache)
-				vsub = vsub + dv
+				vsub += dv
 				if stats.unverified - dunvsave and not dv: #if this directory (and its subdirs) had unverified files and no verified files
 					unv_sub_dirs.append(filename)
 			elif pathcache:
@@ -2544,7 +2544,7 @@ def show_unverified_dir(path, unvchild=0):
 			else:
 				if S_ISREG(st[ST_MODE]):
 					unverified_file(filename)
-					unv = unv + 1
+					unv += 1
 		except OSError:
 			pass
 	if not pathcache and pathfiles:
@@ -2669,7 +2669,7 @@ def printhelp():
 def printcftypehelp(err):
 	phelp = err and perror or pinfo
 	phelp('Valid types:')
-	def printtypeinfo(typename, info, desc, phelp=phelp):
+	def printtypeinfo(typename, info, desc):
 		phelp(' %-8s %-26s %s'%(typename,desc,info))
 	printtypeinfo('TYPE', 'FILE INFO STORED', 'DESCRIPTION')
 	printtypeinfo('auto', '', 'autodetect type (default)')

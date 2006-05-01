@@ -65,9 +65,9 @@ def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None):
 		if stdin:
 			runcmd = 'cat '+stdin+' | '+runcmd
 		if stdout:
-			runcmd = runcmd + ' > '+stdout
+			runcmd += ' > '+stdout
 		if stderr:
-			runcmd = runcmd + ' 2> '+stderr
+			runcmd += ' 2> '+stderr
 		s,o = getstatusoutput(runcmd)
 		if os.WIFSIGNALED(s):
 			s = -os.WTERMSIG(s)
@@ -120,7 +120,7 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
 	obuf = StringIO()
 	saved = sys.stdin,sys.stdout,sys.stderr,sys.argv
 	cwd = os.getcwd()
-	def open_output(file,obuf=obuf):
+	def open_output(file):
 		if file:
 			if file=="/dev/null":
 				return nullfile
