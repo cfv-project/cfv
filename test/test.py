@@ -1629,9 +1629,11 @@ all_tests()
 if cfvtest.ver_fchksum:
 	print 'testing without fchksum...'
 	cfvtest.setenv('CFV_NOFCHKSUM','x')
+	assert not cfvtest.ver_fchksum
 	all_tests()
 if cfvtest.ver_mmap:
 	print 'testing without mmap...'
 	cfvtest.setenv('CFV_NOMMAP','x')
+	assert not cfvtest.ver_mmap
 	all_tests()
 
