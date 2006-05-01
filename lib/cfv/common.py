@@ -251,7 +251,11 @@ class FileInfoCache:
 def getfilehash(filename, hashname, hashfunc):
 	finfo = cache.getfinfo(filename)
 	if not finfo.has_key(hashname):
-		hash, size = hashfunc(filename)
+		if progress: progress.init(filename)
+		try:
+			hash, size = hashfunc(filename)
+		finally:
+			if progress: progress.cleanup()
 		finfo[hashname],finfo['size'] = hash, size
 		stats.bytesread += size
 	return finfo[hashname],finfo['size']
@@ -564,17 +568,13 @@ def _getfilechecksum(filename, hasher):
 	else:
 		f=open(filename,'rb')
 	def finish(m,s,f=f,filename=filename):
-		if progress: progress.init(filename)
-		try:
-			while 1:
-				x=f.read(65536)
-				if not x:
-					return m.digest(),s
-				s=s+len(x)
-				m.update(x)
-				if progress: progress.update(s)
-		finally:
-			if progress: progress.cleanup()
+		while 1:
+			x=f.read(65536)
+			if not x:
+				return m.digest(),s
+			s=s+len(x)
+			m.update(x)
+			if progress: progress.update(s)
 
 	if f==sys.stdin or _nommap or progress:
 		return finish(hasher(),0L)
@@ -602,34 +602,26 @@ try:
 		stderr.write("old fchksum version installed, using std python modules. please update.\n") #can't use perror yet since config hasn't been done..
 		raise ImportError
 	def _getfilemd5(filename):
-		if progress: progress.init(filename)
-		try:
-			if filename=='':
-				f = sys.stdin
-			else:
-				f = open(filename, 'rb')
-			if strutil.is_unicode(filename):
-				sname = filename.encode(osutil.fsencoding, 'replace')
-			else:
-				sname = filename
-			c,s=fchksum.fmd5(sname, progress and progress.update or None, 0.03, fileno=f.fileno())
-		finally:
-			if progress: progress.cleanup()
+		if filename=='':
+			f = sys.stdin
+		else:
+			f = open(filename, 'rb')
+		if strutil.is_unicode(filename):
+			sname = filename.encode(osutil.fsencoding, 'replace')
+		else:
+			sname = filename
+		c,s=fchksum.fmd5(sname, progress and progress.update or None, 0.03, fileno=f.fileno())
 		return c,s
 	def _getfilecrc(filename):
-		if progress: progress.init(filename)
-		try:
-			if filename=='':
-				f = sys.stdin
-			else:
-				f = open(filename, 'rb')
-			if strutil.is_unicode(filename):
-				sname = filename.encode(osutil.fsencoding, 'replace')
-			else:
-				sname = filename
-			c,s=fchksum.fcrc32d(sname, progress and progress.update or None, 0.03, fileno=f.fileno())
-		finally:
-			if progress: progress.cleanup()
+		if filename=='':
+			f = sys.stdin
+		else:
+			f = open(filename, 'rb')
+		if strutil.is_unicode(filename):
+			sname = filename.encode(osutil.fsencoding, 'replace')
+		else:
+			sname = filename
+		c,s=fchksum.fcrc32d(sname, progress and progress.update or None, 0.03, fileno=f.fileno())
 		return c,s
 except ImportError:
 	import md5
