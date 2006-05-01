@@ -135,6 +135,8 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
 		sys.argv = [cfvfn] + expand_cmdline(cmd)
 		import cfv.common
 		reload(cfv.common) # XXX: hack until I can get all the global state storage factored out.
+		import cfv.hash
+		reload(cfv.hash) # XXX: hack for environment variable changing
 		cfv_ns = default_ns.copy()
 		try:
 			exec cfv_compiled in cfv_ns
