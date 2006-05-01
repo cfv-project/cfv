@@ -2,6 +2,8 @@ import codecs
 import unicodedata
 from StringIO import StringIO
 
+from cfv.compat import *
+
 def is_unicode(s, _unitype=type(u'')):
 	return type(s) == _unitype
 def is_rawstr(s, _stype=type('')):
