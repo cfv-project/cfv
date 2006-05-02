@@ -55,7 +55,7 @@ class ProgressMeter:
 			self.needrefresh = 0
 		elif self.nextstep < cursize:
 			updsteps = (cursize-self.nextstep)/self.stepsize + 1
-			self.nextstep = self.nextstep + self.stepsize*updsteps
+			self.nextstep += self.stepsize*updsteps
 			self.fd.write('#'*updsteps); self.fd.flush()
 		else:
 			self.fd.write(self.spinnerchars[self.spinneridx]+'\b'); self.fd.flush()

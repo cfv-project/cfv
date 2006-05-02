@@ -188,13 +188,13 @@ def test_log_start(cmd,kw):
 	log("*** testing "+cmd + (kw and ' '+str(kw) or ''));
 def test_log_finish(cmd,s,r):
 	if r:
-		stats.failed=stats.failed+1
+		stats.failed += 1
 		print "failed test:",cmd
 		result="FAILED";
 		if type(r)!=type(1) or r!=1:
 			result += " (%s)"%r
 	else:
-		stats.ok=stats.ok+1
+		stats.ok += 1
 		result="OK";
 	log("%s (%s)"%(result,s));
 	if r:

@@ -300,7 +300,7 @@ class Stats:
 	def sub_stats_end(self, end):
 		for v in 'badcrc', 'badsize', 'bytesread', 'cferror', 'diffcase', 'misnamed', 'ferror', 'notfound', 'num', 'ok', 'quoted', 'unverified', 'textmode':
 			setattr(self, v, getattr(end, v) - getattr(self, v))
-		end.subcount = end.subcount + 1
+		end.subcount += 1
 
 	def print_stats(self):
 		pinfo('%i files'%self.num,'')
@@ -746,7 +746,7 @@ class ChksumType:
 				pinfo(perhaps_showpath(filename)+': ','')
 				cf_stats.print_stats()
 		except EnvironmentError, a:
-			stats.cferror=stats.cferror+1
+			stats.cferror += 1
 			perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
 
 	def do_test_chksumfile_print_testingline(self, file, comment=None):
@@ -813,7 +813,7 @@ class ChksumType:
 		if cache.testfiles:
 			if not cache.should_test(filename):
 				return
-		stats.num=stats.num+1
+		stats.num += 1
 		l_filename = filename
 		try:
 			l_filename = find_local_filename(filename)
@@ -870,13 +870,13 @@ class TextChksumType(ChksumType):
 			try:
 				l=file.readline()
 			except UnicodeError,e:
-				stats.cferror=stats.cferror+1
+				stats.cferror += 1
 				perror('%s : line %i: %s (CF)'%(perhaps_showpath(file.name),line,e))
 				continue
 			if not l:
 				break
 			if self.do_test_chksumline(l):
-				stats.cferror=stats.cferror+1
+				stats.cferror += 1
 				perror('%s : unrecognized line %i (CF)'%(perhaps_showpath(file.name),line))
 	
 	def filename_ok(fn):
@@ -888,22 +888,22 @@ def do_f_enverror(l_filename, ex, foundok=0):
 	if ex[0]==errno.ENOENT:
 		if foundok:
 			return
-		stats.notfound=stats.notfound+1
+		stats.notfound += 1
 		if config.list&LISTNOTFOUND:
 			plistf(l_filename)
 	else:
 		#if not foundok:
-		stats.ferror=stats.ferror+1
+		stats.ferror += 1
 	perror('%s : %s'%(perhaps_showpath(l_filename),enverrstr(ex)))
 
 def do_f_badsize(l_filename, expected, actual, foundok=0):
 	if not foundok:
-		stats.badsize=stats.badsize+1
+		stats.badsize += 1
 	do_f_verifyerror(l_filename, 'file size does not match (%s!=%i)'%(expected,actual), foundok=foundok)
 
 def do_f_badcrc(l_filename, msg, foundok=0):
 	if not foundok:
-		stats.badcrc=stats.badcrc+1
+		stats.badcrc += 1
 	do_f_verifyerror(l_filename, msg, foundok=foundok)
 
 def do_f_verifyerror(l_filename, a, foundok=0):
@@ -957,7 +957,7 @@ def do_f_found(filename, found_fn, filesize, filecrct, alreadyok=0):
 				rename(found_fn, filename)
 		except EnvironmentError, e:
 			action='but error %r occured %s %s'%(enverrstr(e),verb[1],prep)
-			stats.ferror=stats.ferror+1
+			stats.ferror += 1
 		else:
 			action='%s %s'%(verb[0],prep)
 			l_filename = filename
@@ -965,12 +965,12 @@ def do_f_found(filename, found_fn, filesize, filecrct, alreadyok=0):
 		action="found"
 	if config.showunverified:
 		cache.set_verified(l_filename)
-	stats.misnamed=stats.misnamed+1
+	stats.misnamed += 1
 	do_f_ok(filename, filesize, filecrct, msg="OK(%s %s)"%(action,showfn(found_fn)), l_filename=l_filename)
 
 def do_f_ok(filename, filesize, filecrct, msg="OK", l_filename=None):
 	cache.set_flag(l_filename or filename, '_ok')
-	stats.ok=stats.ok+1
+	stats.ok += 1
 	if config.list&LISTOK:
 		plistf(filename)
 	if filesize>=0:
@@ -999,7 +999,7 @@ class FooSum_Base(TextChksumType):
 		if x.group(2)==' ':
 			if stats.textmode==0:
 				perror('warning: file(s) tested in textmode')
-			stats.textmode = stats.textmode + 1
+			stats.textmode += 1
 		self.test_file(x.group(3),unhexlify(x.group(1)))
 
 
@@ -1146,7 +1146,7 @@ class PAR(ChksumType, MD5_MixIn):
 			import md5
 			control_md5 = md5.new()
 			control_md5.update(d[0x20:])
-			stats.bytesread=stats.bytesread+len(d)
+			stats.bytesread += len(d)
 		if version not in (0x00000900, 0x00010000): #ver 0.9 and 1.0 are the same, as far as we care.  Future versions (if any) may very likey have incompatible changes, so don't accept them either.
 			raise EnvironmentError, (errno.EINVAL,"can't handle PAR version %s"%ver2str(version))
 
@@ -1160,11 +1160,11 @@ class PAR(ChksumType, MD5_MixIn):
 			d = file.read(size - par_entry_fmtsize)
 			if config.docrcchecks:
 				control_md5.update(d)
-				stats.bytesread=stats.bytesread+size
+				stats.bytesread += size
 			try:
 				filename = cffndecode(d, 'utf-16-le')
 			except (UnicodeError, FilenameError), e:
-				stats.cferror=stats.cferror+1
+				stats.cferror += 1
 				perror('%s : file %i: %s (CF)'%(perhaps_showpath(file.name), i, e))
 				continue
 			self.test_file(filename, md5, file_size)
@@ -1176,7 +1176,7 @@ class PAR(ChksumType, MD5_MixIn):
 					if control_md5.digest() != control_hash:
 						raise EnvironmentError, (errno.EINVAL,"corrupt par file - bad control hash")
 					break
-				stats.bytesread=stats.bytesread+len(d)
+				stats.bytesread += len(d)
 				control_md5.update(d)
 
 	#we don't support PAR in create mode, but add these methods so that we can get error messages that are probaby more user friendly.
@@ -1235,10 +1235,10 @@ class PAR2(ChksumType, MD5_MixIn):
 				import md5
 				control_md5 = md5.new()
 				control_md5.update(d[0x20:])
-				stats.bytesread=stats.bytesread+len(d)
+				stats.bytesread += len(d)
 				d = file.read(pkt_len - pkt_header_size)
 				control_md5.update(d)
-				stats.bytesread=stats.bytesread+len(d)
+				stats.bytesread += len(d)
 				if control_md5.digest() != pkt_md5:
 					raise EnvironmentError, (errno.EINVAL,"corrupt par2 file - bad packet hash")
 
@@ -1252,7 +1252,7 @@ class PAR2(ChksumType, MD5_MixIn):
 					try:
 						filename = cffndecode(filename)
 					except (UnicodeError, FilenameError), e:
-						stats.cferror=stats.cferror+1
+						stats.cferror += 1
 						perror('%s : file %s: %s (CF)'%(perhaps_showpath(file.name), hexlify(file_id), e))
 						continue
 					self.test_file(filename, file_md5, file_size)
@@ -1335,7 +1335,7 @@ class Torrent(ChksumType):
 			except LookupError, e: #lookup error is raised when specified encoding isn't found.
 				raise EnvironmentError, str(e)
 			except (UnicodeError, FilenameError), e:
-				stats.cferror=stats.cferror+1
+				stats.cferror += 1
 				perror('%s : error decoding filename %r : %s (CF)'%(perhaps_showpath(file.name),filenameparts,str(e)))
 				done = 1
 				l_filename = filename = None
@@ -1347,7 +1347,7 @@ class Torrent(ChksumType):
 				filename = mangle_filename(filename)
 				done = cache.testfiles and not cache.should_test(filename) #if we don't want to test this file, just pretending its done already has the desired effect.
 				if not done:
-					stats.num=stats.num+1
+					stats.num += 1
 				try:
 					l_filename = find_local_filename(filename)
 					if not os.path.exists(l_filename):
@@ -1379,7 +1379,7 @@ class Torrent(ChksumType):
 				try:
 					dirname = cffndecode(dirname, encoding)
 				except (LookupError, UnicodeError, FilenameError), e: #lookup error is raised when specified encoding isn't found.
-					stats.cferror=stats.cferror+1
+					stats.cferror += 1
 					raise EnvironmentError, e
 					
 				dirname = strippath(dirname, 0)
@@ -1424,7 +1424,7 @@ class Torrent(ChksumType):
 					do_f_enverror(f.l_filename, e)
 					f.done=1
 				return None
-			stats.bytesread=stats.bytesread+len(d)
+			stats.bytesread += len(d)
 			if len(d)<size:
 				return None
 			return d
@@ -1525,10 +1525,10 @@ class Torrent(ChksumType):
 				break
 			self.sh.update(d)
 			s = len(d)
-			stats.bytesread=stats.bytesread+s
+			stats.bytesread += s
 			fs += s
 			if progress: progress.update(fs)
-			self.piece_done = self.piece_done + s
+			self.piece_done += s
 			if self.piece_done == self.piece_length:
 				self.pieces.append(self.sh.digest())
 				self.sh = sha.sha()
@@ -1724,7 +1724,7 @@ class VerifyXML(ChksumType):
 
 						self.test_file(fn, fhashes, fsize)
 					except CFError, e:
-						stats.cferror=stats.cferror+1
+						stats.cferror += 1
 						perror('%s : %s (CF)'%(perhaps_showpath(file.name),e))
 
 					elem.clear()
@@ -2079,8 +2079,8 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 			try:
 				writedata(fdata)
 			except UnicodeError, e:
-				stats.ferror = stats.ferror + 1
-				stats.ok = stats.ok - 1 #ugly hack, since this is incremented after make_addfile returns, since we don't know then that it will cause an error
+				stats.ferror += 1
+				stats.ok -= 1 #ugly hack, since this is incremented after make_addfile returns, since we don't know then that it will cause an error
 				perror('%s : unencodable filename: %s'%(perhaps_showpath(fdata[0]), e))
 		file.write(boundary)
 		file.write(os.linesep+'Count of files: %i'%len(self._flist)+os.linesep)
@@ -2098,7 +2098,7 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 		for i in range(0, len(fdata)):
 			self._fieldlens[i] = max(self._fieldlens[i], len(fdata[i]))
 		self._flist.append(fdata)
-		self._ftotal = self._ftotal + size
+		self._ftotal += size
 		
 		#we cheat and do all writing in make_chksumfile_finish since it needs to be properly formatted, and we can't do that until we have seen the max lengths for all fields
 		return (crc, size), ''
@@ -2179,7 +2179,7 @@ def nocase_findfile(filename,find=FINDFILE):
 def nocase_findfile_updstats(filename):
 	cur = nocase_findfile(filename)
 	if filename != cur:
-		stats.diffcase = stats.diffcase + 1
+		stats.diffcase += 1
 	return cur
 	
 def strippath(filename, num='a', _splitdrivere=re.compile(r"[a-z]:[/\\]",re.I)):
@@ -2210,7 +2210,7 @@ def fixpath(filename):
 def mangle_filename(filename):
 	if config.unquote and len(filename)>1 and filename[0]=='"' and filename[-1]=='"':
 		filename = filename[1:-1] #work around buggy sfv encoders that quote filenames
-		stats.quoted = stats.quoted + 1
+		stats.quoted += 1
 	if config.fixpaths:
 		filename=fixpath(filename)
 	filename=os.path.normpath(filename)
@@ -2265,14 +2265,14 @@ def test(filename, typename, restrict_typename='auto'):
 			cf.test_chksumfile(file, filename)
 			return
 	except EnvironmentError, a:
-		stats.cferror=stats.cferror+1
+		stats.cferror += 1
 		perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
 		return -1
 	if file._decode_errs:
 		perror("I don't recognize the type or encoding of %s"%showfn(filename))
 	else:
 		perror("I don't recognize the type of %s"%showfn(filename))
-	stats.cferror=stats.cferror+1
+	stats.cferror += 1
 
 def make(cftype,ifilename,testfiles):
 	file=None
@@ -2284,11 +2284,11 @@ def make(cftype,ifilename,testfiles):
 			filename += '.gz'
 	if not hasattr(cftype, "make_addfile"):
 		perror("%s : %s not supported in create mode"%(showfn(filename), cftype.__name__.lower()))
-		stats.cferror=stats.cferror+1
+		stats.cferror += 1
 		return
 	if os.path.exists(filename):
 		perror("%s already exists"%perhaps_showpath(filename))
-		stats.cferror=stats.cferror+1
+		stats.cferror += 1
 		file=IOError #just need some special value to indicate a cferror so that recursive mode still continues to work, IOError seems like a good choice ;)
 	if not testfiles:
 		tfauto=1
@@ -2321,16 +2321,16 @@ def make(cftype,ifilename,testfiles):
 						i=0
 					except EnvironmentError, a:
 						perror('%s%s : %s'%(showfn(f), os.sep, enverrstr(a)))
-						stats.ferror=stats.ferror+1
+						stats.ferror += 1
 				continue
 			if tfauto:#if user isn't specifying files, don't even try to add dirs and stuff, and don't print errors about it.
 				continue
-		stats.num=stats.num+1
+		stats.num += 1
 		if file==IOError:
 			continue
 		if config.encoding!='raw':
 			if strutil.is_rawstr(f):
-				stats.ferror = stats.ferror + 1
+				stats.ferror += 1
 				perror('%s : undecodable filename'%perhaps_showpath(f))
 				continue
 		else:
@@ -2338,11 +2338,11 @@ def make(cftype,ifilename,testfiles):
 				try:
 					f = f.encode(osutil.fsencoding)
 				except UnicodeError, e:
-					stats.ferror = stats.ferror + 1
+					stats.ferror += 1
 					perror('%s : %s'%(perhaps_showpath(f), e))
 					continue
 		if not cftype.filename_ok(f):
-			stats.ferror = stats.ferror + 1
+			stats.ferror += 1
 			perror('%s : filename invalid for this cftype'%(perhaps_showpath(f)))
 			continue
 		if file==None:
@@ -2350,7 +2350,7 @@ def make(cftype,ifilename,testfiles):
 				cf = cftype()
 				file = cf.make_chksumfile_create(filename)
 			except EnvironmentError, a:
-				stats.cferror=stats.cferror+1
+				stats.cferror += 1
 				perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
 				file=IOError
 				continue
@@ -2358,32 +2358,32 @@ def make(cftype,ifilename,testfiles):
 			(filecrc,filesize),dat = cf.make_addfile(f)
 		except EnvironmentError, a:
 			if a[0]==errno.ENOENT:
-				stats.notfound=stats.notfound+1
+				stats.notfound += 1
 			else:
-				stats.ferror=stats.ferror+1
+				stats.ferror += 1
 			perror('%s : %s'%(perhaps_showpath(f),enverrstr(a)))
 			continue
 		try:
 			cf.make_writefile(dat, file)
 		except EnvironmentError, a:
-			stats.cferror=stats.cferror+1
+			stats.cferror += 1
 			perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
 			file=IOError
 			continue
 		except UnicodeError, e:
-			stats.ferror = stats.ferror + 1
+			stats.ferror += 1
 			perror('%s : unencodable filename: %s'%(perhaps_showpath(f), e))
 			continue
 		if filesize>=0:
 			pverbose('%s : OK (%i,%s)'%(perhaps_showpath(f),filesize,filecrc))
 		else:
 			pverbose('%s : OK (%s)'%(perhaps_showpath(f),filecrc))
-		stats.ok=stats.ok+1
+		stats.ok += 1
 	if file and file!=IOError:
 		try:
 			cf.make_chksumfile_finish(file)
 		except EnvironmentError, a:
-			stats.cferror=stats.cferror+1
+			stats.cferror += 1
 			perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
 		else:
 			if config.verbose>=0 or config.verbose==-3:
@@ -2396,7 +2396,7 @@ def make(cftype,ifilename,testfiles):
 			chdir(f)
 		except EnvironmentError, a:
 			perror('%s%s : %s'%(showfn(f), os.sep, enverrstr(a)))
-			stats.ferror=stats.ferror+1
+			stats.ferror += 1
 		else:
 			make(cftype,ifilename,None)
 			cdup()
@@ -2412,7 +2412,7 @@ def show_unverified_file(filename):
 def unverified_file(filename):
 	if config.list&LISTUNVERIFIED:
 		plistf(filename)
-	stats.unverified=stats.unverified+1
+	stats.unverified += 1
 
 def show_unverified_dir(path, unvchild=0):
 	pathcache = cache.getpathcache(path)
@@ -2506,7 +2506,7 @@ def autotest(typename):
 				chdir(a)
 			except EnvironmentError, e:
 				perror('%s%s : %s'%(showfn(a), os.sep, enverrstr(e)))
-				stats.ferror=stats.ferror+1
+				stats.ferror += 1
 			else:
 				autotest(typename)
 				cdup()
