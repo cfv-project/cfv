@@ -31,7 +31,7 @@ else:
 	def getcwdu():
 		d = os.getcwd()
 		try:
-			return unicode(d,osutil.fsencoding)
+			return unicode(d, fsencoding)
 		except UnicodeError:
 			return d
 
