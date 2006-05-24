@@ -19,10 +19,10 @@
 
 import re,os,sys,string,operator,shutil,getopt,gzip,zlib,stat,traceback,time
 from glob import glob
+import tempfile
 try: # tempfile.mkdtemp is only in python 2.3+
 	from tempfile import mkdtemp
 except ImportError:
-	import tempfile
 	def mkdtemp():
 		d = tempfile.mktemp()
 		os.mkdir(d)
@@ -1393,7 +1393,7 @@ from cfvtest import runcfv
 #set everything to default in case user has different in config file
 cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url'
 
-logfile=open("test.log","w")
+logfile=open(os.path.join(tempfile.gettempdir(), "cfv_%s_test-%s.log"%(cfvtest.ver_cfv, time.strftime('%Y%m%dT%H%M%S'))), "w")
 
 def all_tests():
 	stats.ok = stats.failed = 0

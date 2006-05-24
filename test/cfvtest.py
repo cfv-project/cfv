@@ -32,7 +32,7 @@ import imp
 cfvenv=''
 
 cfvfn=None
-ver_mmap=ver_fchksum=None
+ver_cfv=ver_mmap=ver_fchksum=None
 runcfv=None
 
 
@@ -165,8 +165,12 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
 
 
 def get_version_flags():
-	global ver_fchksum, ver_mmap
+	global ver_cfv, ver_fchksum, ver_mmap
 	s,o=runcfv("--version")
+	if o.find('cfv ')>=0:
+		ver_cfv = o[o.find('cfv ')+4:].splitlines()[0]
+	else:
+		ver_cfv = None
 	ver_fchksum = o.find('fchksum')>=0
 	ver_mmap = o.find('mmap')>=0
 
