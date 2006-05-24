@@ -501,11 +501,12 @@ def gzC_test(f,extra=None,verify=None,t=None,d=None):
 	cmd=cfvcmd
 	if not t:
 		t=f
-	f2='test.C.'+f+'.tmp.gz'
-	f='test.C.'+f+'.gz'
-	if extra:
-		cmd += " "+extra
+	tmpd = mkdtemp()
 	try:
+		f2 = os.path.join(tmpd, 'test.C.'+f+'.tmp.gz')
+		f = os.path.join(tmpd, 'test.C.'+f+'.gz')
+		if extra:
+			cmd += " "+extra
 		test_generic("%s -q -C -t %s -zz -f - %s"%(cmd,t,d), status_test, stdout=f2)
 		test_generic("%s -C -f %s %s"%(cmd,f,d),cfv_test)
 
@@ -541,8 +542,7 @@ def gzC_test(f,extra=None,verify=None,t=None,d=None):
 		if verify:
 			verify(f)
 	finally:
-		if os.path.exists(f2): os.unlink(f2)
-		if os.path.exists(f): os.unlink(f)
+		shutil.rmtree(tmpd)
 
 def C_test(f,extra=None,verify=None,t=None,d='data?'):
 	gzC_test(f,extra=extra,t=t,d=d)
@@ -551,9 +551,10 @@ def C_test(f,extra=None,verify=None,t=None,d='data?'):
 		t=f
 	cfv_stdin_test(cmd+" -t"+f+" -C -f-","data4")
 	cfv_stdin_progress_test(f,'data4')
-	f='test.C.'+f
-	fgz=f+'.gz'
+	tmpd = mkdtemp()
 	try:
+		f = os.path.join(tmpd, 'test.C.'+f)
+		fgz = os.path.join(tmpd, f+'.gz')
 		if extra:
 			cmd += " "+extra
 		test_generic("%s -C -f %s %s"%(cmd,f,d),cfv_test)
@@ -566,15 +567,13 @@ def C_test(f,extra=None,verify=None,t=None,d='data?'):
 		if verify:
 			verify(f)
 	finally:
-		os.unlink(f)
-		os.unlink(fgz)
+		shutil.rmtree(tmpd)
 
-	dir='Ce.test'
+	tmpd = mkdtemp()
 	try:
-		os.mkdir(dir)
-		test_generic("%s -p %s -C -f %s"%(cmd,dir,f),rcurry(cfv_test,op_eq,0))
+		test_generic("%s -p %s -C -f %s"%(cmd,tmpd,f),rcurry(cfv_test,op_eq,0))
 	finally:
-		os.rmdir(dir)
+		os.rmdir(tmpd)
 	
 	def C_test_encoding(enc):
 		d = mkdtemp()
@@ -738,14 +737,13 @@ def C_funkynames_test(t):
 
 def ren_test(f,extra=None,verify=None,t=None):
 	join=os.path.join
-	dir='n.test'
-	dir2=join('n.test','d2')
-	basecmd=cfvcmd+' -r -p '+dir
-	if extra:
-		basecmd += " "+extra
-	cmd=basecmd+' --renameformat="%(name)s-%(count)i%(ext)s"'
+	dir=mkdtemp()
 	try:
-		os.mkdir(dir)
+		dir2=join(dir,'d2')
+		basecmd=cfvcmd+' -r -p '+dir
+		if extra:
+			basecmd += " "+extra
+		cmd=basecmd+' --renameformat="%(name)s-%(count)i%(ext)s"'
 		os.mkdir(dir2)
 		fls=[join(dir,'test.ext.end'),
 			join(dir,'test2.foo'),
@@ -992,11 +990,10 @@ def quoted_search_test():
 		shutil.rmtree(d)
 
 def symlink_test():
-	dir='s.test'
+	dir=mkdtemp()
 	dir1='d1'
 	dir2='d2'
 	try:
-		os.mkdir(dir)
 		os.mkdir(os.path.join(dir, dir1))
 		os.mkdir(os.path.join(dir, dir2))
 		if hasattr(os, 'symlink'):
@@ -1029,10 +1026,9 @@ def symlink_test():
 		shutil.rmtree(dir)
 
 def deep_unverified_test():
-	dir='dunv.test'
+	dir=mkdtemp()
 	try:
 		join = os.path.join
-		os.mkdir(dir)
 		a = 'a'
 		a_C = join(a, 'C')
 		B = 'B'
