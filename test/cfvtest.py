@@ -105,7 +105,7 @@ def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None):
 			elif o[-1:] in '\r\n': o = o[:-1]
 		return s, o
 
-def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
+def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
 	if stdin is not None and ver_fchksum:
 		fileno =  os.open(stdin, os.O_RDONLY | getattr(os,'O_BINARY', 0))
 		assert fileno >= 0
@@ -135,8 +135,9 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
 		sys.argv = [cfvfn] + expand_cmdline(cmd)
 		import cfv.common
 		reload(cfv.common) # XXX: hack until I can get all the global state storage factored out.
-		import cfv.hash
-		reload(cfv.hash) # XXX: hack for environment variable changing
+		if need_reload:
+			import cfv.hash
+			reload(cfv.hash) # XXX: hack for environment variable changing
 		cfv_ns = default_ns.copy()
 		try:
 			exec cfv_compiled in cfv_ns
@@ -166,7 +167,7 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None):
 
 def get_version_flags():
 	global ver_cfv, ver_fchksum, ver_mmap
-	s,o=runcfv("--version")
+	s,o=runcfv("--version", need_reload=1)
 	if o.find('cfv ')>=0:
 		ver_cfv = o[o.find('cfv ')+4:].splitlines()[0]
 	else:
