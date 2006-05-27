@@ -77,25 +77,9 @@ def get_path_key(path):
 	if st[ST_INO]:
 		dk = (st[ST_DEV],  st[ST_INO])
 	else:
-		dk = _realpath(path_join(curdir, path))
+		dk = _realpath(osutil.path_join(curdir, path))
 	_path_key_cache[path] = dk
 	return dk
-
-def path_join(*paths):
-	#The assumption here is that the only reason a raw string path component can get here is that it cannot be represented in unicode (Ie, it is not a valid encoded string)
-	#In that case, we convert the parts that are valid back to raw strings and join them together.  If the unicode can't be represented in the fsencoding, then there's nothing that can be done, and this will blow up.  Oh well.
-	if filter(strutil.is_rawstr, paths):
-		#import traceback;traceback.print_stack() ####
-		#perror("path_join: non-unicode args "+repr(paths))
-
-		npaths = []
-		for p in paths:
-			if strutil.is_unicode(p):
-				npaths.append(p.encode(osutil.fsencoding))
-			else:
-				npaths.append(p)
-		paths = npaths
-	return os.path.join(*paths)
 
 
 curdir=osutil.getcwdu()
@@ -105,7 +89,7 @@ def chdir(d):
 	global curdir,_path_key_cache
 	os.chdir(d)
 	prevdir.append((curdir,_path_key_cache))
-	reldir.append(path_join(reldir[-1], d))
+	reldir.append(osutil.path_join(reldir[-1], d))
 	curdir=osutil.getcwdu()
 	_path_key_cache = {}
 def cdup():
@@ -189,7 +173,7 @@ class FileInfoCache:
 	
 	def set_testfiles(self, testfiles):
 		for fn in testfiles:
-			fn = path_join(reldir[-1], fn)
+			fn = osutil.path_join(reldir[-1], fn)
 			if config.ignorecase:
 				fn = fn.lower()
 			if config.encoding=='raw' and strutil.is_unicode(fn):
@@ -198,7 +182,7 @@ class FileInfoCache:
 			self.testfiles[fn] = 1
 			
 	def should_test(self, fn):
-		fn = path_join(reldir[-1], fn)
+		fn = osutil.path_join(reldir[-1], fn)
 		if config.ignorecase:
 			fn = fn.lower()
 		return self.testfiles.get(fn,0)
@@ -754,14 +738,14 @@ class ChksumType:
 			if fpath:
 				if config.ignorecase:
 					fpath = nocase_findfile(fpath, FINDDIR)
-					filename = path_join(fpath,filenametail) #fix the dir the orig filename is in, so that the do_f_found can rename it correctly
+					filename = osutil.path_join(fpath,filenametail) #fix the dir the orig filename is in, so that the do_f_found can rename it correctly
 			else:
 				fpath = osutil.curdiru
 			ftails = osutil.listdir(fpath)
 		except EnvironmentError:
 			ftails = []
 		for ftail in ftails:
-			fn = path_join(fpath,ftail)
+			fn = osutil.path_join(fpath,ftail)
 			try:
 				if filesize>=0:
 					fs=os.path.getsize(fn)
@@ -1300,7 +1284,7 @@ class Torrent(ChksumType):
 				done = 1
 				l_filename = filename = None
 			if not done:
-				filename = path_join(*filenameparts)
+				filename = osutil.path_join(*filenameparts)
 				if not config.docrcchecks: #if we aren't testing checksums, just use the standard test_file function, so that -s and such will work.
 					self.test_file(filename, None, filesize)
 					return
@@ -1884,7 +1868,7 @@ class CSV4(TextChksumType, CRC_MixIn):
 		if not x: return -1
 		name = csvunquote(x.group(1),x.group(2))
 		path = csvunquote(x.group(5),x.group(6))
-		self.test_file(path_join(fixpath(path),name),unhexlify(x.group(4)),int(x.group(3))) #we need to fixpath before path.join since path_join looks for path.sep
+		self.test_file(osutil.path_join(fixpath(path),name),unhexlify(x.group(4)),int(x.group(3))) #we need to fixpath before path.join since osutil.path_join looks for path.sep
 	
 	def make_std_filename(filename):
 		return filename+'.csv'
@@ -2075,7 +2059,7 @@ def perhaps_showpath(filename):
 			dir=curdir
 		else:
 			dir=reldir[-1]
-		return path_join(showfn(dir),showfn(filename))
+		return osutil.path_join(showfn(dir),showfn(filename))
 	return showfn(filename)
 
 _nocase_dir_cache = {}
@@ -2123,17 +2107,17 @@ def nocase_findfile(filename,find=FINDFILE):
 		matches=nocase_dirfiles(cur,p) #nice and speedy :)
 		#print 'i:',i,' cur:',cur,' p:',p,' matches:',matches
 		if i==len(parts)-find:#if we are on the last part of the path and using FINDFILE, we want to match a file
-			matches=filter(lambda f: os.path.isfile(path_join(cur,f)), matches)
+			matches=filter(lambda f: os.path.isfile(osutil.path_join(cur,f)), matches)
 		else:#otherwise, we want to match a dir
-			matches=filter(lambda f: os.path.isdir(path_join(cur,f)), matches)
+			matches=filter(lambda f: os.path.isdir(osutil.path_join(cur,f)), matches)
 		if not matches:
 			raise IOError, (errno.ENOENT,os.strerror(errno.ENOENT))
 		if len(matches)>1:
-			raise IOError, (errno.EEXIST,"More than one name matches %s"%path_join(cur,p))
+			raise IOError, (errno.EEXIST,"More than one name matches %s"%osutil.path_join(cur,p))
 		if cur==osutil.curdiru:
 			cur=matches[0] #don't put the ./ on the front of the name
 		else:
-			cur=path_join(cur,matches[0])
+			cur=osutil.path_join(cur,matches[0])
 	return cur
 
 def nocase_findfile_updstats(filename):
@@ -2277,7 +2261,7 @@ def make(cftype,ifilename,testfiles):
 						rfiles=osutil.listdir(f)
 						if config.dirsort:
 							strutil.safesort(rfiles)
-						testfiles[:i]=map(lambda x,p=f: path_join(p,x), rfiles)
+						testfiles[:i]=map(lambda x,p=f: osutil.path_join(p,x), rfiles)
 						i=0
 					except EnvironmentError, a:
 						perror('%s%s : %s'%(showfn(f), os.sep, enverrstr(a)))
@@ -2386,7 +2370,7 @@ def show_unverified_dir(path, unvchild=0):
 		if config.encoding=='raw' and strutil.is_unicode(fn):
 			try: sfn = fn.encode(osutil.fsencoding)
 			except UnicodeError: pass
-		filename = path_join(path, fn)
+		filename = osutil.path_join(path, fn)
 		try:
 			st = os.stat(filename)
 			if S_ISDIR(st[ST_MODE]) and visit_dir(filename,st,noisy=0):
@@ -2408,12 +2392,12 @@ def show_unverified_dir(path, unvchild=0):
 	if not pathcache and pathfiles:
 		if vsub: # if sub directories do have verified files
 			if unv: # and this directory does have unverified files
-				print_unverified(path_join(path,u'*'))
+				print_unverified(osutil.path_join(path,u'*'))
 			for unvpath in unv_sub_dirs: # print sub dirs that had unverified files and no verified files
-				print_unverified(path_join(unvpath,u'**'))
+				print_unverified(osutil.path_join(unvpath,u'**'))
 		elif not unvchild: # if this is the root of a tree with no verified files
 			if stats.unverified - unvsave: # and there were unverified files in the tree
-				print_unverified(path_join(path,u'**'))
+				print_unverified(osutil.path_join(path,u'**'))
 	return vsub + (not not pathcache)
 			
 def show_unverified_dir_verbose(path):
@@ -2424,7 +2408,7 @@ def show_unverified_dir_verbose(path):
 		if config.encoding=='raw' and strutil.is_unicode(fn):
 			try: sfn = fn.encode(osutil.fsencoding)
 			except UnicodeError: pass
-		filename = path_join(path, fn)
+		filename = osutil.path_join(path, fn)
 		try:
 			st = os.stat(filename)
 			if S_ISDIR(st[ST_MODE]) and visit_dir(filename,st,noisy=0):

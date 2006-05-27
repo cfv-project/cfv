@@ -2,6 +2,8 @@ import locale
 import os
 import sys
 
+from cfv import strutil
+
 if hasattr(locale,'getpreferredencoding'):
 	preferredencoding = locale.getpreferredencoding() or 'ascii'
 else:
@@ -48,6 +50,22 @@ else:
 			except UnicodeError:
 				r.append(fn)
 		return r
+
+def path_join(*paths):
+	#The assumption here is that the only reason a raw string path component can get here is that it cannot be represented in unicode (Ie, it is not a valid encoded string)
+	#In that case, we convert the parts that are valid back to raw strings and join them together.  If the unicode can't be represented in the fsencoding, then there's nothing that can be done, and this will blow up.  Oh well.
+	if filter(strutil.is_rawstr, paths):
+		#import traceback;traceback.print_stack() ####
+		#perror("path_join: non-unicode args "+repr(paths))
+
+		npaths = []
+		for p in paths:
+			if strutil.is_unicode(p):
+				npaths.append(p.encode(fsencoding))
+			else:
+				npaths.append(p)
+		paths = npaths
+	return os.path.join(*paths)
 
 
 def fcmp(f1, f2):
