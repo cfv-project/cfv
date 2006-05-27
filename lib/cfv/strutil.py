@@ -17,13 +17,6 @@ def safesort(l):
 	l[:] = ul+sl
 
 
-try:
-	codecs.getreader
-	codecs.getwriter
-except NameError:
-	codecs.getreader = lambda e: codecs.lookup(e)[2] #codecs.getreader is only in python2.2+
-	codecs.getwriter = lambda e: codecs.lookup(e)[3] #codecs.getwriter is only in python2.2+
-
 def codec_supports_readline(e):
 	"""Figure out whether the given codec's StreamReader supports readline.
 
@@ -146,25 +139,6 @@ def rchoplen(line, max):
 		else:
 			chars.append(c)
 	return ''.join(chars), w
-
-
-try:
-	''.lstrip('a') #str.lstrip(arg) only in python>=2.2
-	def lstrip(s,c):
-		return s.lstrip(c)
-	def rstrip(s,c):
-		return s.rstrip(c)
-except TypeError:
-	def lstrip(s, c):
-		for i in range(0,len(s)):
-			if s[i]!=c:
-				break
-		return s[i:]
-	def rstrip(s, c):
-		for i in range(len(s)-1,-1,-1):
-			if s[i]!=c:
-				return s[:i+1]
-		return ''
 
 
 class CodecWriter:

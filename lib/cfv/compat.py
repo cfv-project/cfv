@@ -14,9 +14,3 @@ except NameError:
 		l.sort()
 		return l
 
-try:
-	staticmethod #new in python 2.2
-except NameError:
-	class staticmethod:
-		def __init__(self, anycallable):
-			self.__call__ = anycallable

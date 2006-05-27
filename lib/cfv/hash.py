@@ -9,18 +9,9 @@ try:
 	# mmap is broken in python 2.4.2 and leaks file descriptors
 	if sys.version_info[:3] == (2, 4, 2): raise ImportError
 	import mmap
-	if hasattr(mmap, 'ACCESS_READ'):
-		def dommap(fileno, len):#generic mmap.  python2.2 adds ACCESS_* args that work on both nix and win.
-			if len==0: return '' #mmap doesn't like length=0
-			return mmap.mmap(fileno, len, access=mmap.ACCESS_READ)
-	elif hasattr(mmap, 'PROT_READ'):
-		def dommap(fileno, len):#unix mmap.  python default is PROT_READ|PROT_WRITE, but we open readonly.
-			if len==0: return '' #mmap doesn't like length=0
-			return mmap.mmap(fileno, len, mmap.MAP_SHARED, mmap.PROT_READ)
-	else:
-		def dommap(fileno, len):#windows mmap.
-			if len==0: return ''
-			return mmap.mmap(fileno, len)
+	def dommap(fileno, len):#generic mmap.  ACCESS_* args work on both nix and win.
+		if len==0: return '' #mmap doesn't like length=0
+		return mmap.mmap(fileno, len, access=mmap.ACCESS_READ)
 	_nommap=0
 except ImportError:
 	_nommap=1

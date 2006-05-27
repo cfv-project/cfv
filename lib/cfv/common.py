@@ -68,7 +68,6 @@ class Data:
 	def __init__(self, **kw):
 		self.__dict__.update(kw)
 
-_realpath = getattr(os.path, 'realpath', os.path.abspath) #realpath is only in Python>=2.2
 _path_key_cache = {}
 def get_path_key(path):
 	dk = _path_key_cache.get(path)
@@ -402,9 +401,6 @@ class Config:
 			raise CFVValueError, "invalid bool type '%s' for %s"%(v,o)
 		self.__dict__[o]=x
 	def setyesnoauto(self,o,v):
-		#ugly work around for bug in python < 2.2: str.startswith(unicode) was buggy
-		try: v = str(v)
-		except UnicodeError: pass
 		if 'yes'.startswith(v.lower()):
 			self.__dict__[o]='y'
 		elif 'auto'.startswith(v.lower()):
@@ -440,9 +436,6 @@ class Config:
 		elif o=="showpaths":
 			p=0
 			a=0
-			#ugly work around for bug in python < 2.2: str.startswith(unicode) was buggy
-			try: v = str(v)
-			except UnicodeError: pass
 			for v in v.split('-'):
 				if not p:
 					if 'none'.startswith(v.lower()) or v=='0':
@@ -463,9 +456,6 @@ class Config:
 						a=1; continue
 				raise CFVValueError, "invalid showpaths option '%s', must be 'none', 'auto', 'yes', 'absolute', or 'relative'"%v
 		elif o=="strippaths":
-			#ugly work around for bug in python < 2.2: str.startswith(unicode) was buggy
-			try: v = str(v)
-			except UnicodeError: pass
 			if 'none'.startswith(v.lower()):
 				self.strippaths='n'
 			elif 'all'.startswith(v.lower()):
@@ -780,18 +770,15 @@ class ChksumType:
 				if filesize>=0:
 					fs=os.path.getsize(fn)
 					if fs!=filesize:
-						#continue
-						raise EnvironmentError #can't continue in try: until python 2.1+
+						continue
 				if config.docrcchecks and filecrc!=None:
 					c = self.do_test_file(fn, filecrc)
 					if c:
-						#continue
-						raise EnvironmentError #can't continue in try: until python 2.1+
+						continue
 					filecrct=self.textify_crc(filecrc)
 				else:
 					if not os.path.isfile(fn):
-						#continue
-						raise EnvironmentError #can't continue in try: until python 2.1+
+						continue
 					filecrct='exists'
 			except EnvironmentError:
 				continue
@@ -1102,28 +1089,6 @@ def ver2str(v):
 		vers.insert(0, str(v&0xFF))
 		v >>= 8
 	return '.'.join(vers)
-
-try: #support for 64bit ints in struct module was only added in python 2.2
-	struct.calcsize('< Q')
-except struct.error:
-	class _Struct:
-		def calcsize(self, fmt, _calcsize=struct.calcsize):
-			return _calcsize(fmt.replace('Q','II'))
-		def unpack(self, fmt, data, _unpack=struct.unpack):
-			unpacked = _unpack(fmt.replace('Q','II'), data)
-			upos = 0
-			ret = []
-			for f in fmt.split(' '):
-				if f=='Q':
-					ret.append(long(unpacked[upos])+long(unpacked[upos+1])*2**32L)
-					upos += 2
-				elif f=='<':pass
-				else:
-					ret.append(unpacked[upos])
-					upos += 1
-			return tuple(ret)
-		pack = struct.pack
-	struct = _Struct()
 
 class PAR(ChksumType, MD5_MixIn):
 	description = 'Parchive v1 (test-only)'
@@ -1614,7 +1579,7 @@ def xs_dateTime(t=None):
 		t = time.time()
 	tstr = time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime(t))
 	tsubsec = ('%0.6f'%(t - int(t))).split('.')[1]
-	tsubsec = strutil.rstrip(tsubsec, '0')
+	tsubsec = tsubsec.rstrip('0')
 	if tsubsec:
 		tstr += '.' + tsubsec
 	tstr += 'Z'
@@ -2191,7 +2156,7 @@ def strippath(filename, num='a', _splitdrivere=re.compile(r"[a-z]:[/\\]",re.I)):
 	if _splitdrivere.match(filename,0,3): #we can't use os.path.splitdrive, since we want to get rid of it even if we are not on a dos system.
 		filename=filename[3:]
 	if filename[0]==os.sep:
-		filename=strutil.lstrip(filename, os.sep)
+		filename=filename.lstrip(os.sep)
 	
 	if num==0:#only split drive letter/root slash off
 		return filename

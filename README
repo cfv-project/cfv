@@ -2,7 +2,7 @@ cfv 2.x  Copyright 2000-2006 Matthew Mueller <donut AT dakotacom DOT net>
 
 
 Requirements:
-  Python >= 2.0           http://www.python.org/
+  Python >= 2.2           http://www.python.org/
     (Python >= 2.3 is recommended for best unicode support)
 
 Optional:
