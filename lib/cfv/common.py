@@ -782,11 +782,11 @@ class ChksumType:
 				alreadyok=(fn,filecrct)
 				continue
 			errfunc(foundok=1,*errargs)
-			do_f_found(filename, fn, filesize, filecrct)
+			self.do_f_found(filename, fn, filesize, filecrct)
 			return 0
 		if alreadyok:
 			errfunc(foundok=1,*errargs)
-			do_f_found(filename,alreadyok[0],filesize,alreadyok[1],alreadyok=1)
+			self.do_f_found(filename,alreadyok[0],filesize,alreadyok[1],alreadyok=1)
 			return 0
 		errfunc(*errargs)
 		return -1
@@ -804,14 +804,14 @@ class ChksumType:
 				fs=os.path.getsize(l_filename)
 				if fs!=filesize:
 					self.search_file(filename, filecrc, filesize,
-						do_f_badsize, (l_filename, filesize, fs))
+						self.do_f_badsize, (l_filename, filesize, fs))
 					return -2
 			if config.docrcchecks and filecrc:
 				c=self.do_test_file(l_filename, filecrc)
 				filecrct = self.textify_crc(filecrc)
 				if c:
 					self.search_file(filename, filecrc, filesize,
-						do_f_badcrc, (l_filename, 'crc does not match (%s!=%s)'%(filecrct,self.textify_crc(c))))
+						self.do_f_badcrc, (l_filename, 'crc does not match (%s!=%s)'%(filecrct,self.textify_crc(c))))
 					return -2
 			else:
 				if not os.path.exists(l_filename):
@@ -821,9 +821,9 @@ class ChksumType:
 				filecrct="exists" #since we didn't actually test the crc, make verbose mode merely say it exists
 		except (EnvironmentError, UnicodeError), a: #UnicodeError can occur if python can't map the filename to the filesystem's encoding
 			self.search_file(filename, filecrc, filesize,
-				do_f_enverror, (l_filename, a))
+				self.do_f_enverror, (l_filename, a))
 			return -1
-		do_f_ok(l_filename, filesize, filecrct)
+		self.do_f_ok(l_filename, filesize, filecrct)
 	
 	def textify_crc(crc):
 		return hexlify(crc)
@@ -842,6 +842,100 @@ class ChksumType:
 	def filename_ok(fn):
 		return 1
 	filename_ok = staticmethod(filename_ok)
+
+	def do_f_enverror(self, l_filename, ex, foundok=0):
+		if ex[0]==errno.ENOENT:
+			if foundok:
+				return
+			stats.notfound += 1
+			if config.list&LISTNOTFOUND:
+				plistf(l_filename)
+		else:
+			#if not foundok:
+			stats.ferror += 1
+		perror('%s : %s'%(perhaps_showpath(l_filename),enverrstr(ex)))
+
+	def do_f_badsize(self, l_filename, expected, actual, foundok=0):
+		if not foundok:
+			stats.badsize += 1
+		self.do_f_verifyerror(l_filename, 'file size does not match (%s!=%i)'%(expected,actual), foundok=foundok)
+
+	def do_f_badcrc(self, l_filename, msg, foundok=0):
+		if not foundok:
+			stats.badcrc += 1
+		self.do_f_verifyerror(l_filename, msg, foundok=foundok)
+
+	def do_f_verifyerror(self, l_filename, a, foundok=0):
+		reninfo=''
+		if not foundok:
+			if config.list&LISTBAD:
+				plistf(l_filename)
+		if config.rename:
+			formatmap=make_rename_formatmap(l_filename)
+			for count in xrange(0,sys.maxint):
+				formatmap['count']=count
+				newfilename=config.renameformat%formatmap
+				if config.renameformatnocount and count>0:
+					newfilename='%s-%i'%(newfilename,count)
+				if l_filename==newfilename:
+					continue #if the filenames are the same they would cmp the same and be deleted. (ex. when renameformat="%(fullname)s")
+				if os.path.exists(newfilename):
+					if osutil.fcmp(l_filename, newfilename):
+						os.unlink(l_filename)
+						reninfo=' (dupe of %s removed)'%showfn(newfilename)
+						break
+				else:
+					rename(l_filename, newfilename)
+					reninfo=' (renamed to %s)'%showfn(newfilename)
+					break
+		perror('%s : %s%s'%(perhaps_showpath(l_filename),a,reninfo))
+
+	def do_f_found(self, filename, found_fn, filesize, filecrct, alreadyok=0):
+		l_filename = found_fn
+		if config.rename:
+			try:
+				if os.path.exists(filename):
+					verb=None,"fixing name"
+					prep="of"
+					raise EnvironmentError, "File exists"
+				if alreadyok:
+					verb="linked","linking"
+					prep="to"
+					try:
+						os.link(found_fn, filename)
+					except (EnvironmentError, AttributeError), e:
+						if isinstance(e, EnvironmentError) and e[0] not in (errno.EXDEV, errno.EPERM):
+							raise
+						verb="copied","copying"
+						prep="from"
+						import shutil
+						shutil.copyfile(found_fn, filename)
+				else:
+					verb="renamed","renaming"
+					prep="from"
+					rename(found_fn, filename)
+			except EnvironmentError, e:
+				action='but error %r occured %s %s'%(enverrstr(e),verb[1],prep)
+				stats.ferror += 1
+			else:
+				action='%s %s'%(verb[0],prep)
+				l_filename = filename
+		else:
+			action="found"
+		if config.showunverified:
+			cache.set_verified(l_filename)
+		stats.misnamed += 1
+		self.do_f_ok(filename, filesize, filecrct, msg="OK(%s %s)"%(action,showfn(found_fn)), l_filename=l_filename)
+
+	def do_f_ok(self, filename, filesize, filecrct, msg="OK", l_filename=None):
+		cache.set_flag(l_filename or filename, '_ok')
+		stats.ok += 1
+		if config.list&LISTOK:
+			plistf(filename)
+		if filesize>=0:
+			pverbose('%s : %s (%i,%s)'%(perhaps_showpath(filename),msg,filesize,filecrct))
+		else:
+			pverbose('%s : %s (%s)'%(perhaps_showpath(filename),msg,filecrct))
 
 
 class TextChksumType(ChksumType):
@@ -865,101 +959,6 @@ class TextChksumType(ChksumType):
 	def filename_ok(fn):
 		return len((fn+'a').splitlines())==1
 	filename_ok = staticmethod(filename_ok)
-
-
-def do_f_enverror(l_filename, ex, foundok=0):
-	if ex[0]==errno.ENOENT:
-		if foundok:
-			return
-		stats.notfound += 1
-		if config.list&LISTNOTFOUND:
-			plistf(l_filename)
-	else:
-		#if not foundok:
-		stats.ferror += 1
-	perror('%s : %s'%(perhaps_showpath(l_filename),enverrstr(ex)))
-
-def do_f_badsize(l_filename, expected, actual, foundok=0):
-	if not foundok:
-		stats.badsize += 1
-	do_f_verifyerror(l_filename, 'file size does not match (%s!=%i)'%(expected,actual), foundok=foundok)
-
-def do_f_badcrc(l_filename, msg, foundok=0):
-	if not foundok:
-		stats.badcrc += 1
-	do_f_verifyerror(l_filename, msg, foundok=foundok)
-
-def do_f_verifyerror(l_filename, a, foundok=0):
-	reninfo=''
-	if not foundok:
-		if config.list&LISTBAD:
-			plistf(l_filename)
-	if config.rename:
-		formatmap=make_rename_formatmap(l_filename)
-		for count in xrange(0,sys.maxint):
-			formatmap['count']=count
-			newfilename=config.renameformat%formatmap
-			if config.renameformatnocount and count>0:
-				newfilename='%s-%i'%(newfilename,count)
-			if l_filename==newfilename:
-				continue #if the filenames are the same they would cmp the same and be deleted. (ex. when renameformat="%(fullname)s")
-			if os.path.exists(newfilename):
-				if osutil.fcmp(l_filename, newfilename):
-					os.unlink(l_filename)
-					reninfo=' (dupe of %s removed)'%showfn(newfilename)
-					break
-			else:
-				rename(l_filename, newfilename)
-				reninfo=' (renamed to %s)'%showfn(newfilename)
-				break
-	perror('%s : %s%s'%(perhaps_showpath(l_filename),a,reninfo))
-
-def do_f_found(filename, found_fn, filesize, filecrct, alreadyok=0):
-	l_filename = found_fn
-	if config.rename:
-		try:
-			if os.path.exists(filename):
-				verb=None,"fixing name"
-				prep="of"
-				raise EnvironmentError, "File exists"
-			if alreadyok:
-				verb="linked","linking"
-				prep="to"
-				try:
-					os.link(found_fn, filename)
-				except (EnvironmentError, AttributeError), e:
-					if isinstance(e, EnvironmentError) and e[0] not in (errno.EXDEV, errno.EPERM):
-						raise
-					verb="copied","copying"
-					prep="from"
-					import shutil
-					shutil.copyfile(found_fn, filename)
-			else:
-				verb="renamed","renaming"
-				prep="from"
-				rename(found_fn, filename)
-		except EnvironmentError, e:
-			action='but error %r occured %s %s'%(enverrstr(e),verb[1],prep)
-			stats.ferror += 1
-		else:
-			action='%s %s'%(verb[0],prep)
-			l_filename = filename
-	else:
-		action="found"
-	if config.showunverified:
-		cache.set_verified(l_filename)
-	stats.misnamed += 1
-	do_f_ok(filename, filesize, filecrct, msg="OK(%s %s)"%(action,showfn(found_fn)), l_filename=l_filename)
-
-def do_f_ok(filename, filesize, filecrct, msg="OK", l_filename=None):
-	cache.set_flag(l_filename or filename, '_ok')
-	stats.ok += 1
-	if config.list&LISTOK:
-		plistf(filename)
-	if filesize>=0:
-		pverbose('%s : %s (%i,%s)'%(perhaps_showpath(filename),msg,filesize,filecrct))
-	else:
-		pverbose('%s : %s (%s)'%(perhaps_showpath(filename),msg,filecrct))
 
 	
 #---------- sha1sum ----------
@@ -1318,11 +1317,11 @@ class Torrent(ChksumType):
 					fs=os.path.getsize(l_filename)
 					if fs!=filesize:
 						if not done:
-							do_f_badsize(l_filename, filesize, fs)
+							self.do_f_badsize(l_filename, filesize, fs)
 							done=1
 				except (EnvironmentError, UnicodeError), e: #UnicodeError can occur if python can't map the filename to the filesystem's encoding
 					if not done:
-						do_f_enverror(filename, e)
+						self.do_f_enverror(filename, e)
 						done=1
 					l_filename = None
 			return Data(totpos=ftotpos, size=filesize, filename=filename, l_filename=l_filename, done=done)
@@ -1382,7 +1381,7 @@ class Torrent(ChksumType):
 			except EnvironmentError, e:
 				if not f.done:
 					if progress: progress.cleanup()
-					do_f_enverror(f.l_filename, e)
+					self.do_f_enverror(f.l_filename, e)
 					f.done=1
 				return None
 			stats.bytesread += len(d)
@@ -1428,7 +1427,7 @@ class Torrent(ChksumType):
 					for f,fcurpos,fpiecelen in piecefiles:
 						if not f.done:
 							if progress: progress.cleanup()
-							do_f_badcrc(f.l_filename, 'piece %i missing data'%(piece))
+							self.do_f_badcrc(f.l_filename, 'piece %i missing data'%(piece))
 							f.done=1
 				elif sh.digest()!=hashes[piece]:
 					if curfh.fh:
@@ -1437,14 +1436,14 @@ class Torrent(ChksumType):
 					for f,fcurpos,fpiecelen in piecefiles:
 						if not f.done:
 							if progress: progress.cleanup()
-							do_f_badcrc(f.l_filename, 'piece %i (at %i..%i) crc does not match (%s!=%s)'%(piece,fcurpos,fcurpos+fpiecelen,hexlify(hashes[piece]), sh.hexdigest()))
+							self.do_f_badcrc(f.l_filename, 'piece %i (at %i..%i) crc does not match (%s!=%s)'%(piece,fcurpos,fcurpos+fpiecelen,hexlify(hashes[piece]), sh.hexdigest()))
 							f.done=1
 				else:
 					for f,fcurpos,fpiecelen in piecefiles:
 						if not f.done:
 							if fcurpos+fpiecelen==f.size:
 								if progress: progress.cleanup()
-								do_f_ok(f.l_filename,f.size,'all pieces ok')
+								self.do_f_ok(f.l_filename,f.size,'all pieces ok')
 								f.done=1
 
 		if progress: progress.cleanup()
@@ -1453,7 +1452,7 @@ class Torrent(ChksumType):
 			curfh.fh.close()
 		for f in files:
 			if not f.done:
-				do_f_ok(f.l_filename,f.size,'all pieces ok')
+				self.do_f_ok(f.l_filename,f.size,'all pieces ok')
 			
 	auto_filename_match = 'torrent$'
 
