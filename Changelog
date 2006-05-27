@@ -1,10 +1,10 @@
 2005-xx-xx - v2.x:	
-	* Now fully unicode aware.  Work is done internally in unicode, only translating to encoded form on input/output.  Python >= 2.3 is required for full support.
+	* Now fully unicode aware.  Work is done internally in unicode, only translating to encoded form on input/output.
 	* Added --encoding option.
 	* Specifying --encoding=raw will allow working with broken filenames. (But really, you should just fix them, if possible.)
 	* Torrent files now default to UTF-8 filename encoding, and specify the encoding field in the metainfo.
 	* The encoding of text checksum files that start with a Unicode BOM is auto detected.
-	* Python 2.0 is now the minimum supported version.
+	* Python 2.3 is now the minimum supported version.
 	* Print help output to stdout under non-error conditions. (Requested by Simon Howard)
 	* Decode the torrent comment field too.
 	* Work around mmap file descriptor leak in Python 2.4.2.

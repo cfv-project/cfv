@@ -2,8 +2,7 @@ cfv 2.x  Copyright 2000-2006 Matthew Mueller <donut AT dakotacom DOT net>
 
 
 Requirements:
-  Python >= 2.2           http://www.python.org/
-    (Python >= 2.3 is recommended for best unicode support)
+  Python >= 2.3           http://www.python.org/
 
 Optional:
   Python Imaging Library  http://www.pythonware.com/products/pil/

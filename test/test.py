@@ -20,14 +20,7 @@
 import re,os,sys,string,operator,shutil,getopt,gzip,zlib,stat,traceback,time
 from glob import glob
 import tempfile
-try: # tempfile.mkdtemp is only in python 2.3+
-	from tempfile import mkdtemp
-except ImportError:
-	def mkdtemp():
-		d = tempfile.mktemp()
-		os.mkdir(d)
-		return d
-	
+
 import cfvtest
 
 import locale
@@ -113,20 +106,6 @@ def allavailablefmts():
 	return filter(fmt_available, allfmts())
 def allcreatablefmts():
 	return filter(fmt_cancreate, allavailablefmts())
-
-try:
-	enumerate #enumerate only in python>=2.3
-except NameError:
-	def enumerate(seq):
-		seq = list(seq)
-		return zip(range(len(seq)), seq)
-
-if hasattr(operator,'gt'):
-	op_gt=operator.gt
-	op_eq=operator.eq
-else:
-	def op_gt(a,b): return a>b
-	def op_eq(a,b): return a==b
 
 
 class rcurry:
@@ -246,7 +225,7 @@ def cfv_stdin_progress_test(t,file):
 	s1=s2=None
 	o1=o2=c1=c2=''
 	r=0
-	dir = mkdtemp()
+	dir = tempfile.mkdtemp()
 	try:
 		try:
 			cf1=os.path.join(dir,'cf1.'+t)
@@ -323,7 +302,7 @@ def tail(s):
 			return line
 	return ''
 
-def cfv_test(s,o, op=op_gt, opval=0):
+def cfv_test(s,o, op=operator.gt, opval=0):
 	x=re.search(rx_Begin+rx_End,tail(o))
 	if s==0 and x and x.group(1) == x.group(2) and op(int(x.group(1)),opval):
 		return 0
@@ -501,7 +480,7 @@ def gzC_test(f,extra=None,verify=None,t=None,d=None):
 	cmd=cfvcmd
 	if not t:
 		t=f
-	tmpd = mkdtemp()
+	tmpd = tempfile.mkdtemp()
 	try:
 		f2 = os.path.join(tmpd, 'test.C.'+f+'.tmp.gz')
 		f = os.path.join(tmpd, 'test.C.'+f+'.gz')
@@ -551,7 +530,7 @@ def C_test(f,extra=None,verify=None,t=None,d='data?'):
 		t=f
 	cfv_stdin_test(cmd+" -t"+f+" -C -f-","data4")
 	cfv_stdin_progress_test(f,'data4')
-	tmpd = mkdtemp()
+	tmpd = tempfile.mkdtemp()
 	try:
 		f = os.path.join(tmpd, 'test.C.'+f)
 		fgz = os.path.join(tmpd, f+'.gz')
@@ -569,14 +548,14 @@ def C_test(f,extra=None,verify=None,t=None,d='data?'):
 	finally:
 		shutil.rmtree(tmpd)
 
-	tmpd = mkdtemp()
+	tmpd = tempfile.mkdtemp()
 	try:
-		test_generic("%s -p %s -C -f %s"%(cmd,tmpd,f),rcurry(cfv_test,op_eq,0))
+		test_generic("%s -p %s -C -f %s"%(cmd,tmpd,f),rcurry(cfv_test,operator.eq,0))
 	finally:
 		os.rmdir(tmpd)
 	
 	def C_test_encoding(enc):
-		d = mkdtemp()
+		d = tempfile.mkdtemp()
 		try:
 			open(os.path.join(d,'aoeu'),'w').write('a')
 			open(os.path.join(d,'kakexe'),'w').write('ba')
@@ -639,7 +618,7 @@ def C_funkynames_test(t):
 			return len(('a'+s+'a').splitlines())==1
 		return 1
 	for deep in (0,1):
-		d = mkdtemp()
+		d = tempfile.mkdtemp()
 		try:
 			num = create_funkynames(t, d, unichr, deep=deep)
 			#numencodable = len(filter(lambda fn: os.path.exists(os.path.join(d,fn)), os.listdir(d)))
@@ -660,7 +639,7 @@ def C_funkynames_test(t):
 		finally:
 			shutil.rmtree(unicode(d))
 
-		d3 = mkdtemp()
+		d3 = tempfile.mkdtemp()
 		try:
 			cnum = create_funkynames(t, d3, chr, deep=deep)
 			ulist=os.listdir(unicode(d3))
@@ -720,7 +699,7 @@ def C_funkynames_test(t):
 			shutil.rmtree(d3)
 
 
-		d3 = mkdtemp()
+		d3 = tempfile.mkdtemp()
 		try:
 			cnum = create_funkynames(t, d3, chr, deep=deep)
 			ulist=os.listdir(unicode(d3))
@@ -737,7 +716,7 @@ def C_funkynames_test(t):
 
 def ren_test(f,extra=None,verify=None,t=None):
 	join=os.path.join
-	dir=mkdtemp()
+	dir=tempfile.mkdtemp()
 	try:
 		dir2=join(dir,'d2')
 		basecmd=cfvcmd+' -r -p '+dir
@@ -807,7 +786,7 @@ def search_test(t,test_nocrc=0,extra=None):
 	
 	if not hascrc and not hassize:
 		# if using -m and type doesn't have size, make sure -s doesn't do anything silly
-		d = mkdtemp()
+		d = tempfile.mkdtemp()
 		try:
 			for n,n2 in zip(range(1,5),range(4,0,-1)):
 				shutil.copyfile('data%s'%n, os.path.join(d,'fOoO%s'%n2))
@@ -821,7 +800,7 @@ def search_test(t,test_nocrc=0,extra=None):
 		return
 
 
-	d = mkdtemp()
+	d = tempfile.mkdtemp()
 	try:
 		def dont_find_same_file_twice_test(s,o):
 			if not (o.count('fOoO3')==1 and o.count('fOoO4')==1):
@@ -842,7 +821,7 @@ def search_test(t,test_nocrc=0,extra=None):
 	#the following tests two things:
 	# 1) that it will copy/link to a file that is already OK rather than just renaming it again
 	# 2) that it doesn't use the old cached value of a file's checksum before it got renamed out of the way.
-	d = mkdtemp()
+	d = tempfile.mkdtemp()
 	try:
 		misnamed1=misnamed2=4
 		if hassize and hascrc:
@@ -867,7 +846,7 @@ def search_test(t,test_nocrc=0,extra=None):
 	
 	#test whether ferrors during searching are ignored
 	if hasattr(os, 'symlink'):
-		d = mkdtemp()
+		d = tempfile.mkdtemp()
 		try:
 			for n,n2 in zip([4],[2]):
 				shutil.copyfile('data%s'%n, os.path.join(d,'foo%s'%n2))
@@ -881,7 +860,7 @@ def search_test(t,test_nocrc=0,extra=None):
 			shutil.rmtree(d)
 
 	#test if an error while renaming a misnamed file is properly handled
-	d = mkdtemp()
+	d = tempfile.mkdtemp()
 	ffoo = fdata4 = None
 	try:
 		ffoo=writefile_and_reopen(os.path.join(d,'foo'), open('data4','rb').read())
@@ -904,7 +883,7 @@ def search_test(t,test_nocrc=0,extra=None):
 		shutil.rmtree(d)
 
 	#test if misnamed stuff and/or renaming stuff doesn't screw up the unverified file checking
-	d = mkdtemp()
+	d = tempfile.mkdtemp()
 	try:
 		shutil.copyfile('data4', os.path.join(d,'foo'))
 		test_generic(cmd+" -v -uu -s -T -p %s -f %s"%(d,cfn), rcurry(cfv_all_test,files=4,ok=1,misnamed=1,notfound=3,unv=0))
@@ -920,7 +899,7 @@ def search_test(t,test_nocrc=0,extra=None):
 
 	if fmt_cancreate(t):
 		#test deep handling
-		d = mkdtemp()
+		d = tempfile.mkdtemp()
 		try:
 			dcfn = os.path.join(d,'deep.'+t)
 			os.mkdir(os.path.join(d, "aOeU.AoEu"))
@@ -945,7 +924,7 @@ def search_test(t,test_nocrc=0,extra=None):
 			shutil.rmtree(d)
 
 	if fmt_cancreate(t) and hassize:
-		d = mkdtemp()
+		d = tempfile.mkdtemp()
 		try:
 			dcfn = os.path.join(d,'foo.'+t)
 			os.mkdir(os.path.join(d, "aoeu"))
@@ -964,7 +943,7 @@ def search_test(t,test_nocrc=0,extra=None):
 			shutil.rmtree(d)
 
 def quoted_search_test():
-	d = mkdtemp()
+	d = tempfile.mkdtemp()
 	try:
 		join = os.path.join
 		f = open(join(d,'foo.sfv'),'w')
@@ -990,7 +969,7 @@ def quoted_search_test():
 		shutil.rmtree(d)
 
 def symlink_test():
-	dir=mkdtemp()
+	dir=tempfile.mkdtemp()
 	dir1='d1'
 	dir2='d2'
 	try:
@@ -999,10 +978,10 @@ def symlink_test():
 		if hasattr(os, 'symlink'):
 			os.symlink(os.path.join(os.pardir, dir2), os.path.join(dir, dir1, 'l2'))
 			os.symlink(os.path.join(os.pardir, dir1), os.path.join(dir, dir2, 'l1'))
-			test_generic(cfvcmd+" -l -r -p "+dir, rcurry(cfv_test,op_eq,0))
-			test_generic(cfvcmd+" -L -r -p "+dir, rcurry(cfv_test,op_eq,0))
-			test_generic(cfvcmd+" -l -r -C -p "+dir, rcurry(cfv_test,op_eq,0))
-			test_generic(cfvcmd+" -L -r -C -p "+dir, rcurry(cfv_test,op_eq,0))
+			test_generic(cfvcmd+" -l -r -p "+dir, rcurry(cfv_test,operator.eq,0))
+			test_generic(cfvcmd+" -L -r -p "+dir, rcurry(cfv_test,operator.eq,0))
+			test_generic(cfvcmd+" -l -r -C -p "+dir, rcurry(cfv_test,operator.eq,0))
+			test_generic(cfvcmd+" -L -r -C -p "+dir, rcurry(cfv_test,operator.eq,0))
 
 		open(os.path.join(dir,dir1,'foo'),'w').close()
 		open(os.path.join(dir,dir2,'bar'),'w').close()
@@ -1026,7 +1005,7 @@ def symlink_test():
 		shutil.rmtree(dir)
 
 def deep_unverified_test():
-	dir=mkdtemp()
+	dir=tempfile.mkdtemp()
 	try:
 		join = os.path.join
 		a = 'a'
@@ -1065,7 +1044,7 @@ def deep_unverified_test():
 		f.close()
 			
 		def r_test(s,o):
-			if cfv_test(s,o,op_eq,6): return 1
+			if cfv_test(s,o,operator.eq,6): return 1
 			if string.count(o,'not verified')!=0: return 1
 			return 0
 		def r_unv_test(s,o):
@@ -1089,8 +1068,8 @@ def deep_unverified_test():
 		shutil.rmtree(dir)
 
 def test_encoding_detection():
-	datad = mkdtemp()
-	d = mkdtemp()
+	datad = tempfile.mkdtemp()
+	d = tempfile.mkdtemp()
 	try:
 		datafns = ['data1','data3','data4']
 		destfns = [
@@ -1136,8 +1115,8 @@ def test_encoding2():
 	These tests will probably always fail unless you use a unicode locale and python 2.3+."""
 	if not BitTorrent:
 		return
-	d = mkdtemp()
-	d2 = mkdtemp()
+	d = tempfile.mkdtemp()
+	d2 = tempfile.mkdtemp()
 	try:
 		cfn = os.path.join(d,u'\u3070\u304B.torrent')
 		shutil.copyfile('testencoding2.torrent.foo', cfn)
@@ -1257,7 +1236,7 @@ def manyfiles_test(t):
 		max_open = 4096
 		print 'clipping to %i.  Use --full to try the real value'%max_open
 	num = max_open + 1
-	d = mkdtemp()
+	d = tempfile.mkdtemp()
 	try:
 		for i in range(0,num):
 			n = '%04i'%i
@@ -1277,7 +1256,7 @@ def specialfile_test(cfpath):
 		import threading
 	except ImportError:
 		return
-	d = mkdtemp()
+	d = tempfile.mkdtemp()
 	cfn = os.path.split(cfpath)[1]
 	try:
 		fpath = os.path.join(d,'foo.bar')
@@ -1595,7 +1574,7 @@ def all_tests():
 			test_generic(cfvcmd+" -T --strippaths=%s -p foo2badsize -f %s foo1 foo4"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=1,badcrc=1))
 			test_generic(cfvcmd+" -T --strippaths=%s -p foo2missing -f %s"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=4,badcrc=2,notfound=1))
 			test_generic(cfvcmd+" -T --strippaths=%s -p foo2missing -f %s foo1 foo4"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=0,badcrc=2))
-		d = mkdtemp()
+		d = tempfile.mkdtemp()
 		try:
 			open(os.path.join(d,'foo'),'w').close()
 			cmd = cfvcmd.replace(' --announceurl=url','')

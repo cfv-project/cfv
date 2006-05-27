@@ -23,6 +23,7 @@ default_ns['__name__']='__main__'
 import os,sys
 import traceback
 from glob import glob
+import shlex
 
 import unittest
 from unittest import TestCase, main
@@ -47,8 +48,7 @@ nullfile = NullFile()
 
 def expand_cmdline(cmd):
 	argv = []
-	for arg in cmd.split(' '): #bad.  shlex.split would be perfect, but its only in python >=2.3
-		arg = arg.replace('"','') # hack so --foo="bar" works.
+	for arg in shlex.split(cmd):
 		if '*' in arg or '?' in arg or '[' in arg:
 			argv.extend(glob(arg))
 		else:
@@ -203,26 +203,15 @@ def setenv(k,v):
 
 
 def all_unittests_suite():
-	try:
-		__file__
-	except NameError:
-		# In python < 2.3, __file__ isn't defined when called as a script.
-		# So just force the user to run it from the same dir in that case.
-		testpath = os.curdir
-	else:
-		testpath = os.path.split(__file__)[0] or os.curdir
+	testpath = os.path.split(__file__)[0] or os.curdir
 	modules_to_test = [os.path.splitext(f)[0] for f in os.listdir(testpath) if f.lower().startswith("test_") and f.lower().endswith(".py")]
 	alltests = unittest.TestSuite()
 	for module in map(__import__, modules_to_test):
 		alltests.addTest(unittest.findTestCases(module))
-	try:
-		from doctest import DocTestSuite #only in python >= 2.3
-	except ImportError:
-		pass
-	else:
-		import cfv.common, cfv.strutil
-		for module in cfv.common, cfv.strutil:
-			alltests.addTest(DocTestSuite(module))
+	from doctest import DocTestSuite
+	import cfv.common, cfv.strutil
+	for module in cfv.common, cfv.strutil:
+		alltests.addTest(DocTestSuite(module))
 	return alltests
 
 

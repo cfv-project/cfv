@@ -127,16 +127,12 @@ def set_stdout_special():
 	stdinfo = stderr
 
 
-codec_error_handler = 'backslashreplace'
-try:
-	codecs.lookup_error(codec_error_handler) #backslashreplace is only in python2.3+
-except:
-	codec_error_handler = 'replace'
+_codec_error_handler = 'backslashreplace'
 
 def setup_output():
 	global stdinfo,progress,stdout,stderr
-	stdout = strutil.CodecWriter(getattr(sys.stdout,'encoding',None) or osutil.preferredencoding, sys.stdout, errors=codec_error_handler)
-	stderr = strutil.CodecWriter(getattr(sys.stderr,'encoding',None) or getattr(sys.stdout,'encoding',None) or osutil.preferredencoding, sys.stderr, errors=codec_error_handler)
+	stdout = strutil.CodecWriter(getattr(sys.stdout,'encoding',None) or osutil.preferredencoding, sys.stdout, errors=_codec_error_handler)
+	stderr = strutil.CodecWriter(getattr(sys.stderr,'encoding',None) or getattr(sys.stdout,'encoding',None) or osutil.preferredencoding, sys.stderr, errors=_codec_error_handler)
 	stdinfo = _stdout_special and stderr or stdout
 	# if one of stdinfo (usually stdout) or stderr is a tty, use it.  Otherwise use stdinfo.
 	progressfd = stdinfo.isatty() and stdinfo or stderr.isatty() and stderr or stdinfo
