@@ -14,6 +14,14 @@ if hasattr(sys,'getfilesystemencoding'):
 else:
 	fsencoding = preferredencoding
 
+def getencoding(encoding, preferred=None):
+	assert encoding!='raw'
+	if encoding == 'auto':
+		if preferred: return preferred
+		return preferredencoding
+	else:
+		return encoding
+
 try:
 	os.stat(os.curdir+u'\0foobarbaz')
 	fs_nullsok=0 #if os.stat succeeded, it means the filename was cut off at the null (or the user has funny files ;)
