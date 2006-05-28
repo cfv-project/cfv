@@ -1,6 +1,7 @@
 import locale
 import os
 import sys
+import re
 
 from cfv import strutil
 
@@ -89,6 +90,26 @@ def path_split(filename):
 				parts.insert(0,head)
 			break
 	return parts
+
+	
+def strippath(filename, num='a', _splitdrivere=re.compile(r"[a-z]:[/\\]",re.I)):
+	if num=='a':#split all the path off
+		return os.path.split(filename)[1]
+	if num=='n':#split none of the path
+		return filename
+
+	if _splitdrivere.match(filename,0,3): #we can't use os.path.splitdrive, since we want to get rid of it even if we are not on a dos system.
+		filename=filename[3:]
+	if filename[0]==os.sep:
+		filename=filename.lstrip(os.sep)
+	
+	if num==0:#only split drive letter/root slash off
+		return filename
+
+	parts = path_split(filename)
+	if len(parts) <= num:
+		return parts[-1]
+	return os.path.join(*parts[num:])
 
 
 def fcmp(f1, f2):

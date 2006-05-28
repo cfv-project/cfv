@@ -1166,7 +1166,7 @@ class Torrent(ChksumType):
 					stats.cferror += 1
 					raise EnvironmentError, e
 					
-				dirname = strippath(dirname, 0)
+				dirname = osutil.strippath(dirname, 0)
 				if config.ignorecase:
 					try:
 						nocase_findfile(dirname,FINDDIR)
@@ -1951,25 +1951,6 @@ def nocase_findfile_updstats(filename):
 	if filename != cur:
 		stats.diffcase += 1
 	return cur
-	
-def strippath(filename, num='a', _splitdrivere=re.compile(r"[a-z]:[/\\]",re.I)):
-	if num=='a':#split all the path off
-		return os.path.split(filename)[1]
-	if num=='n':#split none of the path
-		return filename
-
-	if _splitdrivere.match(filename,0,3): #we can't use os.path.splitdrive, since we want to get rid of it even if we are not on a dos system.
-		filename=filename[3:]
-	if filename[0]==os.sep:
-		filename=filename.lstrip(os.sep)
-	
-	if num==0:#only split drive letter/root slash off
-		return filename
-
-	parts = osutil.path_split(filename)
-	if len(parts) <= num:
-		return parts[-1]
-	return os.path.join(*parts[num:])
 
 _os_sep_escaped = os.sep.replace('\\','\\\\')
 def fixpath(filename):
@@ -1985,7 +1966,7 @@ def mangle_filename(filename):
 		filename=fixpath(filename)
 	filename=os.path.normpath(filename)
 	if config.strippaths!='n':
-		filename=strippath(filename, config.strippaths)
+		filename = osutil.strippath(filename, config.strippaths)
 	return filename
 
 def find_local_filename(l_filename):
