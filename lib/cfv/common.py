@@ -1320,7 +1320,7 @@ class Torrent(ChksumType):
 		f.close()
 		if progress: progress.cleanup()
 		def cfencode_utf8pref(s): return cfencode(s, 'UTF-8')
-		self.files.append({'length':fs, 'path':map(cfencode_utf8pref, path_split(filename))})
+		self.files.append({'length':fs, 'path':map(cfencode_utf8pref, osutil.path_split(filename))})
 		return ('pieces %i..%i'%(firstpiece,len(self.pieces)),fs), ''
 	
 	def make_chksumfile_finish(self, file):
@@ -1921,25 +1921,11 @@ def nocase_dirfiles(dir,match):
 		return d[match]
 	return []
 
-def path_split(filename):
-	"returns a list of components of filename"
-	head=filename
-	parts=[]
-	while 1:
-		head,tail=os.path.split(head)
-		if tail:
-			parts.insert(0,tail)
-		else:
-			if head:
-				parts.insert(0,head)
-			break
-	return parts
-
 FINDFILE=1
 FINDDIR=0
 def nocase_findfile(filename,find=FINDFILE):
 	cur=osutil.curdiru
-	parts=path_split(filename.lower())
+	parts = osutil.path_split(filename.lower())
 	#print 'nocase_findfile:',filename,parts,len(parts)
 	for i in range(0,len(parts)):
 		p=parts[i]
@@ -1980,7 +1966,7 @@ def strippath(filename, num='a', _splitdrivere=re.compile(r"[a-z]:[/\\]",re.I)):
 	if num==0:#only split drive letter/root slash off
 		return filename
 
-	parts = path_split(filename)
+	parts = osutil.path_split(filename)
 	if len(parts) <= num:
 		return parts[-1]
 	return os.path.join(*parts[num:])

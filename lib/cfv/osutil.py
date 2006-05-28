@@ -76,6 +76,21 @@ def path_join(*paths):
 	return os.path.join(*paths)
 
 
+def path_split(filename):
+	"returns a list of components of filename"
+	head=filename
+	parts=[]
+	while 1:
+		head,tail=os.path.split(head)
+		if tail:
+			parts.insert(0,tail)
+		else:
+			if head:
+				parts.insert(0,head)
+			break
+	return parts
+
+
 def fcmp(f1, f2):
 	import filecmp
 	return filecmp.cmp(f1, f2, shallow=0)
