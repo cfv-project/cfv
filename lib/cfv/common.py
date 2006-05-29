@@ -167,6 +167,7 @@ class CFError(ValueError):#error in checksum file
 class FileInfoCache:
 	def __init__(self):
 		self.data = {}
+		self._nocase_dir_cache = {}
 		self.stdin = {}
 		self.testfiles = {}
 	
@@ -225,6 +226,52 @@ class FileInfoCache:
 				nfinfo[k]=v
 		#nfinfo.update(ofinfo)
 		ofinfo.clear()
+
+	def nocase_dirfiles(self, dir, match):
+		"return list of filenames in dir whose lowercase value equals match"
+		dirkey=get_path_key(dir)
+		if not self._nocase_dir_cache.has_key(dirkey):
+			d={}
+			self._nocase_dir_cache[dirkey]=d
+			for a in osutil.listdir(dir):
+				l=a.lower()
+				if d.has_key(l):
+					d[l].append(a)
+				else:
+					d[l]=[a]
+		else:
+			d=self._nocase_dir_cache[dirkey]
+		if d.has_key(match):
+			return d[match]
+		return []
+
+	_FINDFILE=1
+	_FINDDIR=0
+	def nocase_findfile(self, filename, find=_FINDFILE):
+		cur=osutil.curdiru
+		parts = osutil.path_split(filename.lower())
+		#print 'nocase_findfile:',filename,parts,len(parts)
+		for i in range(0,len(parts)):
+			p=parts[i]
+			#matches=filter(lambda f,p=p: string.lower(f)==p,dircache.listdir(cur)) #too slooow, even with dircache (though not as slow as without it ;)
+			matches=self.nocase_dirfiles(cur,p) #nice and speedy :)
+			#print 'i:',i,' cur:',cur,' p:',p,' matches:',matches
+			if i==len(parts)-find:#if we are on the last part of the path and using FINDFILE, we want to match a file
+				matches=filter(lambda f: os.path.isfile(osutil.path_join(cur,f)), matches)
+			else:#otherwise, we want to match a dir
+				matches=filter(lambda f: os.path.isdir(osutil.path_join(cur,f)), matches)
+			if not matches:
+				raise IOError, (errno.ENOENT,os.strerror(errno.ENOENT))
+			if len(matches)>1:
+				raise IOError, (errno.EEXIST,"More than one name matches %s"%osutil.path_join(cur,p))
+			if cur==osutil.curdiru:
+				cur=matches[0] #don't put the ./ on the front of the name
+			else:
+				cur=osutil.path_join(cur,matches[0])
+		return cur
+	
+	def nocase_finddir(self, filename):
+		return self.nocase_findfile(filename, self._FINDDIR)
 
 		
 def getfilehash(filename, hashname, hashfunc):
@@ -577,7 +624,7 @@ class ChksumType:
 		try:
 			if fpath:
 				if config.ignorecase:
-					fpath = nocase_findfile(fpath, FINDDIR)
+					fpath = cache.nocase_finddir(fpath)
 					filename = osutil.path_join(fpath,filenametail) #fix the dir the orig filename is in, so that the do_f_found can rename it correctly
 			else:
 				fpath = osutil.curdiru
@@ -1169,7 +1216,7 @@ class Torrent(ChksumType):
 				dirname = osutil.strippath(dirname, 0)
 				if config.ignorecase:
 					try:
-						nocase_findfile(dirname,FINDDIR)
+						cache.nocase_finddir(dirname)
 					except EnvironmentError:
 						dirpart = []
 				else:
@@ -1902,52 +1949,8 @@ def perhaps_showpath(filename):
 		return osutil.path_join(showfn(dir),showfn(filename))
 	return showfn(filename)
 
-_nocase_dir_cache = {}
-def nocase_dirfiles(dir,match):
-	"return list of filenames in dir whose lowercase value equals match"
-	dirkey=get_path_key(dir)
-	if not _nocase_dir_cache.has_key(dirkey):
-		d={}
-		_nocase_dir_cache[dirkey]=d
-		for a in osutil.listdir(dir):
-			l=a.lower()
-			if d.has_key(l):
-				d[l].append(a)
-			else:
-				d[l]=[a]
-	else:
-		d=_nocase_dir_cache[dirkey]
-	if d.has_key(match):
-		return d[match]
-	return []
-
-FINDFILE=1
-FINDDIR=0
-def nocase_findfile(filename,find=FINDFILE):
-	cur=osutil.curdiru
-	parts = osutil.path_split(filename.lower())
-	#print 'nocase_findfile:',filename,parts,len(parts)
-	for i in range(0,len(parts)):
-		p=parts[i]
-		#matches=filter(lambda f,p=p: string.lower(f)==p,dircache.listdir(cur)) #too slooow, even with dircache (though not as slow as without it ;)
-		matches=nocase_dirfiles(cur,p) #nice and speedy :)
-		#print 'i:',i,' cur:',cur,' p:',p,' matches:',matches
-		if i==len(parts)-find:#if we are on the last part of the path and using FINDFILE, we want to match a file
-			matches=filter(lambda f: os.path.isfile(osutil.path_join(cur,f)), matches)
-		else:#otherwise, we want to match a dir
-			matches=filter(lambda f: os.path.isdir(osutil.path_join(cur,f)), matches)
-		if not matches:
-			raise IOError, (errno.ENOENT,os.strerror(errno.ENOENT))
-		if len(matches)>1:
-			raise IOError, (errno.EEXIST,"More than one name matches %s"%osutil.path_join(cur,p))
-		if cur==osutil.curdiru:
-			cur=matches[0] #don't put the ./ on the front of the name
-		else:
-			cur=osutil.path_join(cur,matches[0])
-	return cur
-
 def nocase_findfile_updstats(filename):
-	cur = nocase_findfile(filename)
+	cur = cache.nocase_findfile(filename)
 	if filename != cur:
 		stats.diffcase += 1
 	return cur
@@ -2233,7 +2236,7 @@ def show_unverified_files(filelist):
 		for filename in filelist:
 			if config.ignorecase:
 				try:
-					filename = nocase_findfile(filename)
+					filename = cache.nocase_findfile(filename)
 				except IOError:
 					continue
 			else:
