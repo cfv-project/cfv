@@ -36,6 +36,7 @@ cfvfn=None
 ver_cfv=ver_mmap=ver_fchksum=None
 runcfv=None
 testpath = os.path.split(__file__)[0] or os.curdir
+datapath = os.path.join(testpath, 'testdata')
 
 
 class NullFile:

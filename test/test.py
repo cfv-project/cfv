@@ -393,7 +393,7 @@ def cfv_listdata_abs_test(s,o):
 		return 0
 	return 1
 def cfv_listdata_unv_test(s,o):
-	if s==32 and re.search('^test.py\0testfix.csv\0$',o,re.I):
+	if s==32 and re.search('^testfix.csv\0unchecked.dat\0$',o,re.I):
 		return 0
 	return 1
 def cfv_listdata_bad_test(s,o):
@@ -403,8 +403,8 @@ def cfv_listdata_bad_test(s,o):
 
 def cfv_version_test(s,o):
 	x=re.search(r'cfv v([\d.]+) -',o)
-	x2=re.search(r'cfv ([\d.]+) ',open(os.path.join(os.pardir,"README")).readline())
-	x3=re.search(r' v([\d.]+):',open(os.path.join(os.pardir,"Changelog")).readline())
+	x2=re.search(r'cfv ([\d.]+) ',open(os.path.join(cfvtest.testpath,os.pardir,"README")).readline())
+	x3=re.search(r' v([\d.]+):',open(os.path.join(cfvtest.testpath,os.pardir,"Changelog")).readline())
 	if x: log('cfv: '+x.group(1))
 	if x2: log('README: '+x2.group(1))
 	if x3: log('Changelog: '+x3.group(1))
@@ -450,7 +450,7 @@ def T_test(f, extra=None):
 	test_generic(cmd+" -T --showpaths=1-a --list0=ok -f test"+f, cfv_listdata_abs_test, stderr="/dev/null")
 	#ensure all verbose stuff goes to stderr:
 	test_generic(cmd+" -v -T --list0=ok -f test"+f, cfv_listdata_test, stderr="/dev/null")
-	test_generic(cmd+" -v -T --list0=unverified -f test"+f+" test.py testfix.csv data1", cfv_listdata_unv_test, stderr="/dev/null")
+	test_generic(cmd+" -v -T --list0=unverified -f test"+f+" unchecked.dat testfix.csv data1", cfv_listdata_unv_test, stderr="/dev/null")
 	#test progress stuff.
 	def progress_test(s,o):
 		if cfv_test(s,o): return 1
@@ -1364,7 +1364,7 @@ for o,a in optlist:
 
 cfvtest.setcfv(fn=args and args[0] or None, internal=run_internal)
 from cfvtest import runcfv
-os.chdir(cfvtest.testpath) # do this after the setcfv, since the user may have specified a relative path
+os.chdir(cfvtest.datapath) # do this after the setcfv, since the user may have specified a relative path
 
 #set everything to default in case user has different in config file
 cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url'
@@ -1552,9 +1552,9 @@ def all_tests():
 	test_generic(cfvcmd+" -m -v -T -t par", lambda s,o: cfv_typerestrict_test(s,o,'par'))
 	test_generic(cfvcmd+" -m -v -T -t par2", lambda s,o: cfv_typerestrict_test(s,o,'par2'))
 
-	test_generic(cfvcmd+" -u -t md5 -f test.md5 data* test.py test.md5",cfv_unv_test)
-	test_generic(cfvcmd+" -u -f test.md5 data* test.py",cfv_unv_test)
-	test_generic(cfvcmd+" -u -f test.md5 data* test.py test.md5",cfv_unv_test)
+	test_generic(cfvcmd+" -u -t md5 -f test.md5 data* unchecked.dat test.md5",cfv_unv_test)
+	test_generic(cfvcmd+" -u -f test.md5 data* unchecked.dat",cfv_unv_test)
+	test_generic(cfvcmd+" -u -f test.md5 data* unchecked.dat test.md5",cfv_unv_test)
 	test_generic(cfvcmd+r" -i -tcsv --fixpaths \\/ -Tu",lambda s,o: cfv_unv_test(s,o,None))
 	test_generic(cfvcmd+" -T -t md5 -f non_existant_file",cfv_cferror_test)
 	test_generic(cfvcmd+" -T -f "+os.path.join("corrupt","missingfiledesc.par2"),cfv_cferror_test)
