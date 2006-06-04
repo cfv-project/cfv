@@ -57,7 +57,7 @@ def expand_cmdline(cmd):
 	return argv
 
 
-def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None):
+def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
 	try:
 		import subprocess # subprocess module only in python >= 2.4, but it works on windows, unlike commands
 	except ImportError:
