@@ -203,18 +203,34 @@ def setenv(k,v):
 	get_version_flags()
 
 
+def my_import(name):
+	mod = __import__(name)
+	components = name.split('.')
+	for comp in components[1:]:
+		mod = getattr(mod, comp)
+	return mod
 
 def all_unittests_suite():
 	modules_to_test = [os.path.splitext(f)[0] for f in os.listdir(testpath) if f.lower().startswith("test_") and f.lower().endswith(".py")]
 	alltests = unittest.TestSuite()
 	for module in map(__import__, modules_to_test):
 		alltests.addTest(unittest.findTestCases(module))
-	from doctest import DocTestSuite
-	import cfv.common, cfv.strutil
-	for module in cfv.common, cfv.strutil:
-		alltests.addTest(DocTestSuite(module))
-	return alltests
 
+	from doctest import DocTestSuite
+	import cfv.common
+	modules_to_doctest = ['cfv.'+os.path.splitext(f)[0] for f in os.listdir(os.path.split(cfv.common.__file__)[0]) if f[0]!='_' and f.lower().endswith(".py")]
+	assert 'cfv.common' in modules_to_doctest
+	for name in modules_to_doctest:
+		module = my_import(name)
+		assert module.__name__ == name, (module, name)
+		try:
+			suite = DocTestSuite(module)
+		except ValueError, e:
+			print e
+		else:
+			alltests.addTest(suite)
+
+	return alltests
 
 
 
