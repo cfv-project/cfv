@@ -35,6 +35,7 @@ cfvenv=''
 cfvfn=None
 ver_cfv=ver_mmap=ver_fchksum=None
 runcfv=None
+testpath = os.path.split(__file__)[0] or os.curdir
 
 
 class NullFile:
@@ -182,10 +183,10 @@ def setcfv(fn=None,internal=None):
 		runcfv = internal and runcfv_py or runcfv_exe
 	
 	if fn is None:
-		fn = os.path.join(os.curdir,'cfv')
+		fn = os.path.join(testpath, 'cfv')
 
 	assert os.path.isfile(fn)
-	cfvfn = fn
+	cfvfn = os.path.abspath(fn)
 	_cfv_code = open(cfvfn,'r').read().replace('\r\n','\n').replace('\r','\n')
 	cfv_compiled = compile(_cfv_code,cfvfn,'exec')
 
@@ -203,7 +204,6 @@ def setenv(k,v):
 
 
 def all_unittests_suite():
-	testpath = os.path.split(__file__)[0] or os.curdir
 	modules_to_test = [os.path.splitext(f)[0] for f in os.listdir(testpath) if f.lower().startswith("test_") and f.lower().endswith(".py")]
 	alltests = unittest.TestSuite()
 	for module in map(__import__, modules_to_test):

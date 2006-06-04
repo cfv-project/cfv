@@ -1364,6 +1364,7 @@ for o,a in optlist:
 
 cfvtest.setcfv(fn=args and args[0] or None, internal=run_internal)
 from cfvtest import runcfv
+os.chdir(cfvtest.testpath) # do this after the setcfv, since the user may have specified a relative path
 
 #set everything to default in case user has different in config file
 cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url'
