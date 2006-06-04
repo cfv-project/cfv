@@ -1364,7 +1364,6 @@ for o,a in optlist:
 
 cfvtest.setcfv(fn=args and args[0] or None, internal=run_internal)
 from cfvtest import runcfv
-os.chdir(cfvtest.datapath) # do this after the setcfv, since the user may have specified a relative path
 
 #set everything to default in case user has different in config file
 cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url'
@@ -1599,17 +1598,42 @@ def all_tests():
 	log("\n"+donestr)
 	print donestr
 
-print 'testing...'
-all_unittest_tests()
-all_tests()
-if cfvtest.ver_fchksum:
-	print 'testing without fchksum...'
-	cfvtest.setenv('CFV_NOFCHKSUM','x')
-	assert not cfvtest.ver_fchksum
-	all_tests()
-if cfvtest.ver_mmap:
-	print 'testing without mmap...'
-	cfvtest.setenv('CFV_NOMMAP','x')
-	assert not cfvtest.ver_mmap
-	all_tests()
 
+
+def copytree(src, dst, ignore=[]):
+	for name in os.listdir(src):
+		if name in ignore:
+			continue
+		srcname = os.path.join(src, name)
+		dstname = os.path.join(dst, name)
+		if os.path.islink(srcname):
+			continue
+		elif os.path.isfile(srcname):
+			shutil.copy(srcname, dstname)
+		elif os.path.isdir(srcname):
+			os.mkdir(dstname)
+			copytree(srcname, dstname, ignore)
+		else:
+			print 'huh?', srcname
+
+#copy the testdata into a temp dir in order to avoid .svn dirs breaking some tests
+tmpdatapath = tempfile.mkdtemp()
+try:
+	copytree(cfvtest.datapath, tmpdatapath, ignore=['.svn'])
+	os.chdir(tmpdatapath) # do this after the setcfv, since the user may have specified a relative path
+
+	print 'testing...'
+	all_unittest_tests()
+	all_tests()
+	if cfvtest.ver_fchksum:
+		print 'testing without fchksum...'
+		cfvtest.setenv('CFV_NOFCHKSUM','x')
+		assert not cfvtest.ver_fchksum
+		all_tests()
+	if cfvtest.ver_mmap:
+		print 'testing without mmap...'
+		cfvtest.setenv('CFV_NOMMAP','x')
+		assert not cfvtest.ver_mmap
+		all_tests()
+finally:
+	shutil.rmtree(tmpdatapath)
