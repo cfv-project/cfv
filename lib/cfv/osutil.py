@@ -78,11 +78,19 @@ def path_join(*paths):
 
 
 def path_split(filename):
-	"returns a list of components of filename"
-	head=filename
-	parts=[]
+	"""Split a path into a list of path components.
+
+	>>> path_split(os.path.join('a1','b2','c3','d4'))
+	['a1', 'b2', 'c3', 'd4']
+	>>> path_split(os.path.join('a1','b2','c3',''))
+	['a1', 'b2', 'c3', '']
+	>>> path_split('a1')
+	['a1']
+	"""
+	head,tail = os.path.split(filename)
+	parts = [tail]
 	while 1:
-		head,tail=os.path.split(head)
+		head,tail = os.path.split(head)
 		if tail:
 			parts.insert(0,tail)
 		else:
