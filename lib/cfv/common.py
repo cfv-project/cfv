@@ -67,34 +67,21 @@ class Data:
 	def __init__(self, **kw):
 		self.__dict__.update(kw)
 
-_path_key_cache = {}
-def get_path_key(path):
-	dk = _path_key_cache.get(path)
-	if dk is not None:
-		return dk
-	st = os.stat(path or osutil.curdiru)
-	if st[ST_INO]:
-		dk = (st[ST_DEV],  st[ST_INO])
-	else:
-		dk = os.path.realpath(osutil.path_join(curdir, path))
-	_path_key_cache[path] = dk
-	return dk
-
 
 curdir=osutil.getcwdu()
 reldir=[u'']
 prevdir=[]
 def chdir(d):
-	global curdir,_path_key_cache
+	global curdir
 	os.chdir(d)
-	prevdir.append((curdir,_path_key_cache))
+	prevdir.append((curdir, cache._path_key_cache))
 	reldir.append(osutil.path_join(reldir[-1], d))
 	curdir=osutil.getcwdu()
-	_path_key_cache = {}
+	cache._path_key_cache = {}
 def cdup():
-	global curdir,_path_key_cache
+	global curdir
 	reldir.pop()
-	curdir,_path_key_cache=prevdir.pop()
+	curdir, cache._path_key_cache = prevdir.pop()
 	os.chdir(curdir)
 
 
@@ -170,6 +157,7 @@ class FileInfoCache:
 		self._nocase_dir_cache = {}
 		self.stdin = {}
 		self.testfiles = {}
+		self._path_key_cache = {}
 	
 	def set_testfiles(self, testfiles):
 		for fn in testfiles:
@@ -198,9 +186,21 @@ class FileInfoCache:
 	
 	def has_flag(self, fn, flag):
 		return self.getfinfo(fn).has_key(flag)
+
+	def get_path_key(self, path):
+		dk = self._path_key_cache.get(path)
+		if dk is not None:
+			return dk
+		st = os.stat(path or osutil.curdiru)
+		if st[ST_INO]:
+			dk = (st[ST_DEV],  st[ST_INO])
+		else:
+			dk = os.path.realpath(osutil.path_join(curdir, path))
+		self._path_key_cache[path] = dk
+		return dk
 	
 	def getpathcache(self, path):
-		pathkey = get_path_key(path)
+		pathkey = self.get_path_key(path)
 		pathcache = self.data.get(pathkey)
 		if pathcache is None:
 			self.data[pathkey] = pathcache = {}
@@ -229,7 +229,7 @@ class FileInfoCache:
 
 	def nocase_dirfiles(self, dir, match):
 		"return list of filenames in dir whose lowercase value equals match"
-		dirkey=get_path_key(dir)
+		dirkey = self.get_path_key(dir)
 		if not self._nocase_dir_cache.has_key(dirkey):
 			d={}
 			self._nocase_dir_cache[dirkey]=d
