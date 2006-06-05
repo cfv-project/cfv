@@ -106,17 +106,17 @@ def strippath(filename, num='a', _splitdrivere=re.compile(r"[a-z]:[/\\]",re.I)):
 	>>> strippath(os.path.join('c:','foo','bar','baz'))
 	'baz'
 	>>> path_split(strippath(os.path.join('c:','foo','bar','baz'), 'n'))
-    ['c:', 'foo', 'bar', 'baz']
+	['c:', 'foo', 'bar', 'baz']
 	>>> path_split(strippath(os.path.join('c:','foo','bar','baz'), 0))
-    ['foo', 'bar', 'baz']
+	['foo', 'bar', 'baz']
 	>>> path_split(strippath(os.path.join(os.sep,'foo','bar','baz'), 0))
-    ['foo', 'bar', 'baz']
+	['foo', 'bar', 'baz']
 	>>> path_split(strippath(os.path.join('c:','foo','bar','baz'), 1))
-    ['bar', 'baz']
+	['bar', 'baz']
 	>>> strippath(os.path.join('c:','foo','bar','baz'), 2)
-    'baz'
+	'baz'
 	>>> strippath(os.path.join('c:','foo','bar','baz'), 3)
-    'baz'
+	'baz'
 	"""
 	if num=='a':#split all the path off
 		return os.path.split(filename)[1]
