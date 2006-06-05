@@ -151,13 +151,11 @@ class CFError(ValueError):#error in checksum file
 	pass
 
 
-class FileInfoCache:
-	def __init__(self):
-		self.data = {}
-		self._nocase_dir_cache = {}
-		self.stdin_finfo = {}
+class FileNameFilter:
+	def __init__(self, testfiles=None):
 		self.testfiles = {}
-		self._path_key_cache = {}
+		if testfiles:
+			self.set_testfiles(testfiles)
 	
 	def set_testfiles(self, testfiles):
 		for fn in testfiles:
@@ -170,10 +168,20 @@ class FileInfoCache:
 			self.testfiles[fn] = 1
 			
 	def should_test(self, fn):
+		if not self.testfiles:
+			return 1
 		fn = osutil.path_join(reldir[-1], fn)
 		if config.ignorecase:
 			fn = fn.lower()
 		return self.testfiles.get(fn,0)
+
+
+class FileInfoCache:
+	def __init__(self):
+		self.data = {}
+		self._nocase_dir_cache = {}
+		self.stdin_finfo = {}
+		self._path_key_cache = {}
 	
 	def set_verified(self, fn):
 		self.getfinfo(fn)['_verified'] = 1
@@ -664,9 +672,8 @@ class ChksumType:
 
 	def test_file(self,filename,filecrc,filesize=-1):
 		filename = mangle_filename(filename)
-		if cache.testfiles:
-			if not cache.should_test(filename):
-				return
+		if not filenamefilter.should_test(filename):
+			return
 		stats.num += 1
 		l_filename = filename
 		try:
@@ -1176,7 +1183,7 @@ class Torrent(ChksumType):
 					self.test_file(filename, None, filesize)
 					return
 				filename = mangle_filename(filename)
-				done = cache.testfiles and not cache.should_test(filename) #if we don't want to test this file, just pretending its done already has the desired effect.
+				done = not filenamefilter.should_test(filename) #if we don't want to test this file, just pretending its done already has the desired effect.
 				if not done:
 					stats.num += 1
 				try:
@@ -2332,6 +2339,7 @@ def printcftypehelp(err):
 stats=Stats()
 config=Config()
 cache=FileInfoCache()
+filenamefilter=FileNameFilter()
 
 
 def decode_arg(a):
@@ -2395,7 +2403,7 @@ def main(argv=None):
 				setup_output()
 				manual=1 #filename selected manually, don't try to autodetect
 				if mode==0:
-					cache.set_testfiles(args)
+					filenamefilter.set_testfiles(args)
 					test(a, typename)
 				else:
 					if typename!='auto':
@@ -2511,7 +2519,7 @@ def main(argv=None):
 	
 	if not manual:
 		if mode==0:
-			cache.set_testfiles(args)
+			filenamefilter.set_testfiles(args)
 			autotest(typename)
 		else:
 			if typename=='auto':
