@@ -76,7 +76,7 @@ def get_path_key(path):
 	if st[ST_INO]:
 		dk = (st[ST_DEV],  st[ST_INO])
 	else:
-		dk = _realpath(osutil.path_join(curdir, path))
+		dk = os.path.realpath(osutil.path_join(curdir, path))
 	_path_key_cache[path] = dk
 	return dk
 
