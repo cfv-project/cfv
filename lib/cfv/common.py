@@ -19,7 +19,7 @@
 
 from binascii import hexlify, unhexlify
 import getopt, re, os, sys, errno, time, copy, struct
-from stat import *
+from stat import S_ISDIR, S_ISREG
 
 from cfv.compat import *
 from cfv import caching
@@ -1893,10 +1893,10 @@ def visit_dir(name, st=None, noisy=1):
 			st = os.stat(name)
 		except os.error:
 			return 0
-	if S_ISDIR(st[ST_MODE]):
+	if S_ISDIR(st.st_mode):
 		#the inode check is kinda a hack, but systems that don't have inode numbers probably don't have symlinks either.
-		if config.dereference and st[ST_INO]:
-			dir_key = (st[ST_DEV],  st[ST_INO])
+		if config.dereference and st.st_ino:
+			dir_key = (st.st_dev,  st.st_ino)
 			if _visited_dirs.has_key(dir_key):
 				if noisy:
 					perror("skipping already visited dir %s %s"%(perhaps_showpath(name), dir_key))
@@ -2085,7 +2085,7 @@ def show_unverified_dir(path, unvchild=0):
 		filename = osutil.path_join(path, fn)
 		try:
 			st = os.stat(filename)
-			if S_ISDIR(st[ST_MODE]) and visit_dir(filename,st,noisy=0):
+			if S_ISDIR(st.st_mode) and visit_dir(filename,st,noisy=0):
 				dunvsave = stats.unverified
 				dv = show_unverified_dir(filename,not pathcache)
 				vsub += dv
@@ -2093,10 +2093,10 @@ def show_unverified_dir(path, unvchild=0):
 					unv_sub_dirs.append(filename)
 			elif pathcache:
 				if not (pathcache.get(fn,{}).get('_verified') or pathcache.get(sfn,{}).get('_verified')):
-					if S_ISREG(st[ST_MODE]):
+					if S_ISREG(st.st_mode):
 						show_unverified_file(filename)
 			else:
-				if S_ISREG(st[ST_MODE]):
+				if S_ISREG(st.st_mode):
 					unverified_file(filename)
 					unv += 1
 		except OSError:
@@ -2123,10 +2123,10 @@ def show_unverified_dir_verbose(path):
 		filename = osutil.path_join(path, fn)
 		try:
 			st = os.stat(filename)
-			if S_ISDIR(st[ST_MODE]) and visit_dir(filename,st,noisy=0):
+			if S_ISDIR(st.st_mode) and visit_dir(filename,st,noisy=0):
 				show_unverified_dir_verbose(filename)
 			elif not (pathcache.get(fn,{}).get('_verified') or pathcache.get(sfn,{}).get('_verified')):
-				if S_ISREG(st[ST_MODE]):
+				if S_ISREG(st.st_mode):
 					show_unverified_file(filename)
 		except OSError,e:
 			pass

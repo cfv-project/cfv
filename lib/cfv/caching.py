@@ -1,6 +1,5 @@
 import errno
 import os
-from stat import *
 
 from cfv import osutil
 
@@ -29,8 +28,8 @@ class FileInfoCache:
 		if dk is not None:
 			return dk
 		st = os.stat(path or osutil.curdiru)
-		if st[ST_INO]:
-			dk = (st[ST_DEV],  st[ST_INO])
+		if st.st_ino:
+			dk = (st.st_dev,  st.st_ino)
 		else:
 			dk = os.path.realpath(osutil.path_join(curdir, path))
 		self._path_key_cache[path] = dk
