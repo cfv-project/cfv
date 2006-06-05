@@ -155,7 +155,7 @@ class FileInfoCache:
 	def __init__(self):
 		self.data = {}
 		self._nocase_dir_cache = {}
-		self.stdin = {}
+		self.stdin_finfo = {}
 		self.testfiles = {}
 		self._path_key_cache = {}
 	
@@ -208,7 +208,7 @@ class FileInfoCache:
 	
 	def getfinfo(self, fn):
 		if fn=='':
-			return self.stdin
+			return self.stdin_finfo
 		else:
 			fpath,ftail = os.path.split(fn)
 			pathdata = self.getpathcache(fpath)
