@@ -508,13 +508,13 @@ class ChksumType:
 		return -1
 
 	def test_file(self,filename,filecrc,filesize=-1):
-		filename = mangle_filename(filename)
+		filename = self.mangle_filename(filename)
 		if not filenamefilter.should_test(filename):
 			return
 		stats.num += 1
 		l_filename = filename
 		try:
-			l_filename = find_local_filename(filename)
+			l_filename = self.find_local_filename(filename)
 			if filesize>=0:
 				fs=os.path.getsize(l_filename)
 				if fs!=filesize:
@@ -644,6 +644,38 @@ class ChksumType:
 		cache.set_flag(l_filename or filename, '_ok')
 		stats.ok += 1
 		view.ev_f_ok(filename, filesize, filecrct, msg)
+
+	def nocase_findfile_updstats(self, filename):
+		cur = cache.nocase_findfile(filename)
+		if filename != cur:
+			stats.diffcase += 1
+		return cur
+
+	_os_sep_escaped = os.sep.replace('\\','\\\\')
+	def fixpath(self, filename):
+		if config.fixpaths:
+			return config.fixpaths.sub(self._os_sep_escaped, filename)
+		return filename
+
+	def mangle_filename(self, filename):
+		if config.unquote and len(filename)>1 and filename[0]=='"' and filename[-1]=='"':
+			filename = filename[1:-1] #work around buggy sfv encoders that quote filenames
+			stats.quoted += 1
+		if config.fixpaths:
+			filename = self.fixpath(filename)
+		filename=os.path.normpath(filename)
+		if config.strippaths!='n':
+			filename = osutil.strippath(filename, config.strippaths)
+		return filename
+
+	def find_local_filename(self, l_filename):
+		if config.ignorecase:
+			#we need to find the correct filename if using showunverified, even if the filename we are given works, since on FAT/etc filesystems the incorrect case will still return true from os.path.exists, but it could be the incorrect case to remove from the unverified files list.
+			if config.showunverified or not os.path.exists(l_filename):
+				l_filename = self.nocase_findfile_updstats(l_filename)
+		if config.showunverified:
+			cache.set_verified(l_filename)
+		return l_filename
 
 
 class TextChksumType(ChksumType):
@@ -1012,12 +1044,12 @@ class Torrent(ChksumType):
 				if not config.docrcchecks: #if we aren't testing checksums, just use the standard test_file function, so that -s and such will work.
 					self.test_file(filename, None, filesize)
 					return
-				filename = mangle_filename(filename)
+				filename = self.mangle_filename(filename)
 				done = not filenamefilter.should_test(filename) #if we don't want to test this file, just pretending its done already has the desired effect.
 				if not done:
 					stats.num += 1
 				try:
-					l_filename = find_local_filename(filename)
+					l_filename = self.find_local_filename(filename)
 					if not os.path.exists(l_filename):
 						raise EnvironmentError, (errno.ENOENT,"missing")
 					if not os.path.isfile(l_filename):
@@ -1592,7 +1624,7 @@ class CSV4(TextChksumType, CRC_MixIn):
 		if not x: return -1
 		name = csvunquote(x.group(1),x.group(2))
 		path = csvunquote(x.group(5),x.group(6))
-		self.test_file(osutil.path_join(fixpath(path),name),unhexlify(x.group(4)),int(x.group(3))) #we need to fixpath before path.join since osutil.path_join looks for path.sep
+		self.test_file(osutil.path_join(self.fixpath(path),name),unhexlify(x.group(4)),int(x.group(3))) #we need to fixpath before path.join since osutil.path_join looks for path.sep
 	
 	def make_std_filename(filename):
 		return filename+'.csv'
@@ -1775,38 +1807,6 @@ register_cftype('crc', JPEGSheriff_CRC)
 
 
 #---------- generic ----------
-
-def nocase_findfile_updstats(filename):
-	cur = cache.nocase_findfile(filename)
-	if filename != cur:
-		stats.diffcase += 1
-	return cur
-
-_os_sep_escaped = os.sep.replace('\\','\\\\')
-def fixpath(filename):
-	if config.fixpaths:
-		return config.fixpaths.sub(_os_sep_escaped, filename)
-	return filename
-
-def mangle_filename(filename):
-	if config.unquote and len(filename)>1 and filename[0]=='"' and filename[-1]=='"':
-		filename = filename[1:-1] #work around buggy sfv encoders that quote filenames
-		stats.quoted += 1
-	if config.fixpaths:
-		filename=fixpath(filename)
-	filename=os.path.normpath(filename)
-	if config.strippaths!='n':
-		filename = osutil.strippath(filename, config.strippaths)
-	return filename
-
-def find_local_filename(l_filename):
-	if config.ignorecase:
-		#we need to find the correct filename if using showunverified, even if the filename we are given works, since on FAT/etc filesystems the incorrect case will still return true from os.path.exists, but it could be the incorrect case to remove from the unverified files list.
-		if config.showunverified or not os.path.exists(l_filename):
-			l_filename=nocase_findfile_updstats(l_filename)
-	if config.showunverified:
-		cache.set_verified(l_filename)
-	return l_filename
 
 
 _visited_dirs = {}
