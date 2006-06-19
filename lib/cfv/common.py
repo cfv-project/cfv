@@ -27,8 +27,7 @@ from cfv import hash
 from cfv import fileutil
 from cfv import osutil
 from cfv import strutil
-from cfv import term
-from cfv.progress import TimedProgressMeter
+from cfv import ui
 
 def cfencode(s, preferred=None):
 	if config.encoding=='raw':
@@ -49,20 +48,9 @@ def cffndecode(s, preferred=None):
 		raise FilenameError, "filename contains null characters"
 	return s
 
-def showfn(s):
-	if strutil.is_rawstr(s):
-		return unicode(s, 'ascii', 'replace')
-	return s
-
 cftypes={}
 _cf_fn_exts, _cf_fn_matches, _cf_fn_searches = [], [], []
 _cf_matchers = []
-
-LISTOK=512
-LISTBAD=1024
-LISTNOTFOUND=2048
-LISTUNVERIFIED=4096
-LISTARGS={'ok':LISTOK, 'bad':LISTBAD, 'notfound':LISTNOTFOUND, 'unverified':LISTUNVERIFIED}
 
 class Data:
 	def __init__(self, **kw):
@@ -84,57 +72,6 @@ def cdup():
 	reldir.pop()
 	curdir, cache._path_key_cache = prevdir.pop()
 	os.chdir(curdir)
-
-
-stdout = sys.stdout
-stderr = sys.stderr
-_stdout_special = 0
-stdinfo = sys.stdout
-progress = None
-def set_stdout_special():
-	"""If stdout is being used for special purposes, redirect informational messages to stderr."""
-	global stdinfo, _stdout_special
-	_stdout_special = 1
-	stdinfo = stderr
-
-
-_codec_error_handler = 'backslashreplace'
-
-def setup_output():
-	global stdinfo,progress,stdout,stderr
-	stdout = strutil.CodecWriter(getattr(sys.stdout,'encoding',None) or osutil.preferredencoding, sys.stdout, errors=_codec_error_handler)
-	stderr = strutil.CodecWriter(getattr(sys.stderr,'encoding',None) or getattr(sys.stdout,'encoding',None) or osutil.preferredencoding, sys.stderr, errors=_codec_error_handler)
-	stdinfo = _stdout_special and stderr or stdout
-	# if one of stdinfo (usually stdout) or stderr is a tty, use it.  Otherwise use stdinfo.
-	progressfd = stdinfo.isatty() and stdinfo or stderr.isatty() and stderr or stdinfo
-	doprogress = not config.verbose==-2 and (
-			config.progress=='y' or (
-				config.progress=='a' and progressfd.isatty()
-			)
-		)
-	if doprogress:
-		progress=TimedProgressMeter(fd=progressfd, scrwidth=term.scrwidth, frobfn=perhaps_showpath)
-	else:
-		progress=None
-
-def pverbose(s,nl='\n'):
-	if config.verbose>0:
-		stdinfo.write(s+nl)
-def pinfo(s,nl='\n'):
-	if config.verbose>=0 or config.verbose==-3:
-		stdinfo.write(s+nl)
-def perror(s,nl='\n'):
-	#import traceback;traceback.print_stack()####
-	if config.verbose>=-1:
-		stdout.flush() # avoid inconsistent screen state if stdout has unflushed data
-		stderr.write(s+nl)
-
-def plistf(filename):
-	stdout.write(perhaps_showpath(filename)+config.listsep)
-
-
-def enverrstr(e):
-	return getattr(e,'strerror',None) or str(e)
 
 class CFVException(Exception):
 	pass
@@ -180,11 +117,11 @@ class FileNameFilter:
 def getfilehash(filename, hashname, hashfunc):
 	finfo = cache.getfinfo(filename)
 	if not finfo.has_key(hashname):
-		if progress: progress.init(filename)
+		if view.progress: view.progress.init(filename)
 		try:
-			hash, size = hashfunc(filename, progress and progress.update or None)
+			hash, size = hashfunc(filename, view.progress and view.progress.update or None)
 		finally:
-			if progress: progress.cleanup()
+			if view.progress: view.progress.cleanup()
 		finfo[hashname],finfo['size'] = hash, size
 		stats.bytesread += size
 	return finfo[hashname],finfo['size']
@@ -230,38 +167,41 @@ class Stats:
 			setattr(self, v, getattr(end, v) - getattr(self, v))
 		end.subcount += 1
 
-	def print_stats(self):
-		pinfo('%i files'%self.num,'')
-		pinfo(', %i OK' %self.ok,'')
+	def __str__(self):
+		counts = [
+			'%i files' % self.num,
+			'%i OK' % self.ok,
+		]
 		if self.badcrc:
-			pinfo(', %i badcrc' %self.badcrc,'')
+			counts.append('%i badcrc' % self.badcrc)
 		if self.badsize:
-			pinfo(', %i badsize' %self.badsize,'')
+			counts.append('%i badsize' % self.badsize)
 		if self.notfound:
-			pinfo(', %i not found' %self.notfound,'')
+			counts.append('%i not found' % self.notfound)
 		if self.ferror:
-			pinfo(', %i file errors' %self.ferror,'')
+			counts.append('%i file errors' % self.ferror)
 		if self.unverified:
-			pinfo(', %i unverified' %self.unverified,'')
+			counts.append('%i unverified' % self.unverified)
 		if self.cferror:
-			pinfo(', %i chksum file errors' %self.cferror,'')
+			counts.append('%i chksum file errors' % self.cferror)
 		if self.misnamed:
-			pinfo(', %i misnamed' %self.misnamed,'')
+			counts.append('%i misnamed' % self.misnamed)
 		if self.diffcase:
-			pinfo(', %i differing cases' %self.diffcase,'')
+			counts.append('%i differing cases' % self.diffcase)
 		if self.quoted:
-			pinfo(', %i quoted filenames' %self.quoted,'')
+			counts.append('%i quoted filenames' % self.quoted)
 		if self.textmode:
-			pinfo(', %i tested in textmode' %self.textmode,'')
+			counts.append('%i tested in textmode' % self.textmode)
+		s = ', '.join(counts)
 
 		elapsed=time.time()-self.starttime
-		pinfo('.  %.3f seconds, '%(elapsed),'')
+		s += '.  %.3f seconds, ' % elapsed
 		if elapsed==0.0:
-			pinfo('%.1fK'%(self.bytesread/1024.0),'')
+			s += '%.1fK' % (self.bytesread/1024.0)
 		else:
-			pinfo('%.1fK/s'%(self.bytesread/elapsed/1024.0),'')
-
-		pinfo('\n','')
+			s += '%.1fK/s' % (self.bytesread/elapsed/1024.0)
+	
+		return s
 
 class Config:
 	verbose=0 # -1=quiet  0=norm  1=noisy
@@ -444,6 +384,16 @@ class Config:
 						raise sys.exc_info()[0], "%s:%i: %s"%(filename,l,err), sys.exc_info()[2] #reuse the traceback of the original exception, but add file and line numbers to the error
 	def __init__(self):
 		self.readconfig()
+	# TODO: This really should go in View, but it depends on curdir/reldir.  So we'll just stuff it here for now. (ick)
+	def perhaps_showpath(self, filename):
+		if self.showpaths==1 or (self.showpaths==2 and self.recursive):
+			if self.showpathsabsolute:
+				dir=curdir
+			else:
+				dir=reldir[-1]
+			return osutil.path_join(strutil.showfn(dir),strutil.showfn(filename))
+		return strutil.showfn(filename)
+
 			
 			
 def make_rename_formatmap(l_filename):
@@ -496,26 +446,18 @@ class ChksumType:
 		if config.showunverified: #we can't expect the checksum file itself to be checksummed
 			cache.set_verified(filename)
 		try:
-			if config.verbose>=0 or config.verbose==-3:
-				cf_stats = stats.make_sub_stats()
+			cf_stats = stats.make_sub_stats()
 			if not file:
 				file = fileutil.open_read(filename, config)
 			self.do_test_chksumfile(file)
-			if config.verbose>=0 or config.verbose==-3:
-				cf_stats.sub_stats_end(stats)
-				pinfo(perhaps_showpath(filename)+': ','')
-				cf_stats.print_stats()
+			cf_stats.sub_stats_end(stats)
+			view.ev_test_cf_done(filename, cf_stats)
 		except EnvironmentError, a:
 			stats.cferror += 1
-			perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
+			view.ev_cf_enverror(filename, a)
 
 	def do_test_chksumfile_print_testingline(self, file, comment=None):
-		if comment:
-			comment = ', ' + comment
-			comment,_ = strutil.rchoplen(comment, 102) #limit the length in case its a really long one.
-		else:
-			comment = ''
-		pverbose('testing from %s (%s%s)'%(showfn(file.name), self.__class__.__name__.lower(), comment))
+		view.ev_test_cf_begin(self.__class__.__name__, file.name, comment)
 
 	def search_file(self, filename, filecrc, filesize, errfunc, errargs):
 		if (not config.search or
@@ -621,12 +563,10 @@ class ChksumType:
 			if foundok:
 				return
 			stats.notfound += 1
-			if config.list&LISTNOTFOUND:
-				plistf(l_filename)
 		else:
 			#if not foundok:
 			stats.ferror += 1
-		perror('%s : %s'%(perhaps_showpath(l_filename),enverrstr(ex)))
+		view.ev_f_enverror(l_filename, ex)
 
 	def do_f_badsize(self, l_filename, expected, actual, foundok=0):
 		if not foundok:
@@ -640,9 +580,6 @@ class ChksumType:
 
 	def do_f_verifyerror(self, l_filename, a, foundok=0):
 		reninfo=''
-		if not foundok:
-			if config.list&LISTBAD:
-				plistf(l_filename)
 		if config.rename:
 			formatmap=make_rename_formatmap(l_filename)
 			for count in xrange(0,sys.maxint):
@@ -655,13 +592,13 @@ class ChksumType:
 				if os.path.exists(newfilename):
 					if osutil.fcmp(l_filename, newfilename):
 						os.unlink(l_filename)
-						reninfo=' (dupe of %s removed)'%showfn(newfilename)
-						break
+						view.ev_f_verifyerror_dupe(l_filename, a, newfilename, foundok)
+						return
 				else:
 					rename(l_filename, newfilename)
-					reninfo=' (renamed to %s)'%showfn(newfilename)
-					break
-		perror('%s : %s%s'%(perhaps_showpath(l_filename),a,reninfo))
+					view.ev_f_verifyerror_renamed(l_filename, a, newfilename, foundok)
+					return
+		view.ev_f_verifyerror(l_filename, a, foundok)
 
 	def do_f_found(self, filename, found_fn, filesize, filecrct, alreadyok=0):
 		l_filename = found_fn
@@ -688,27 +625,25 @@ class ChksumType:
 					prep="from"
 					rename(found_fn, filename)
 			except EnvironmentError, e:
-				action='but error %r occured %s %s'%(enverrstr(e),verb[1],prep)
+				action='%s %s'%(verb[1],prep)
 				stats.ferror += 1
+				view.ev_f_found_renameetcerror(filename, filesize, filecrct, found_fn, action, e)
 			else:
 				action='%s %s'%(verb[0],prep)
 				l_filename = filename
+				view.ev_f_found_renameetc(filename, filesize, filecrct, found_fn, action)
 		else:
-			action="found"
+			view.ev_f_found(filename, filesize, filecrct, found_fn)
 		if config.showunverified:
 			cache.set_verified(l_filename)
+		cache.set_flag(l_filename, '_ok')
 		stats.misnamed += 1
-		self.do_f_ok(filename, filesize, filecrct, msg="OK(%s %s)"%(action,showfn(found_fn)), l_filename=l_filename)
+		stats.ok += 1
 
 	def do_f_ok(self, filename, filesize, filecrct, msg="OK", l_filename=None):
 		cache.set_flag(l_filename or filename, '_ok')
 		stats.ok += 1
-		if config.list&LISTOK:
-			plistf(filename)
-		if filesize>=0:
-			pverbose('%s : %s (%i,%s)'%(perhaps_showpath(filename),msg,filesize,filecrct))
-		else:
-			pverbose('%s : %s (%s)'%(perhaps_showpath(filename),msg,filecrct))
+		view.ev_f_ok(filename, filesize, filecrct, msg)
 
 
 class TextChksumType(ChksumType):
@@ -721,13 +656,13 @@ class TextChksumType(ChksumType):
 				l=file.readline()
 			except UnicodeError,e:
 				stats.cferror += 1
-				perror('%s : line %i: %s (CF)'%(perhaps_showpath(file.name),line,e))
+				view.ev_test_cf_lineencodingerror(file.name, line, e)
 				continue
 			if not l:
 				break
 			if self.do_test_chksumline(l):
 				stats.cferror += 1
-				perror('%s : unrecognized line %i (CF)'%(perhaps_showpath(file.name),line))
+				view.ev_test_cf_unrecognized_line(file.name, line)
 	
 	def filename_ok(fn):
 		return len((fn+'a').splitlines())==1
@@ -753,7 +688,7 @@ class FooSum_Base(TextChksumType):
 		if not x: return -1
 		if x.group(2)==' ':
 			if stats.textmode==0:
-				perror('warning: file(s) tested in textmode')
+				view.ev_generic_warning('file(s) tested in textmode')
 			stats.textmode += 1
 		self.test_file(x.group(3),unhexlify(x.group(1)))
 
@@ -883,7 +818,7 @@ class PAR(ChksumType, MD5_MixIn):
 		if version not in (0x00000900, 0x00010000): #ver 0.9 and 1.0 are the same, as far as we care.  Future versions (if any) may very likey have incompatible changes, so don't accept them either.
 			raise EnvironmentError, (errno.EINVAL,"can't handle PAR version %s"%ver2str(version))
 
-		pverbose('testing from %s (par v%s, created by %s v%s)'%(showfn(file.name),ver2str(version), prog2str(client>>24), ver2str(client&0xFFFFFF)))
+		view.ev_test_cf_begin('par v%s'%ver2str(version), file.name, 'created by %s v%s'%(prog2str(client>>24), ver2str(client&0xFFFFFF)))
 
 		for i in range(0, num_files):
 			d = file.read(par_entry_fmtsize)
@@ -898,7 +833,7 @@ class PAR(ChksumType, MD5_MixIn):
 				filename = cffndecode(d, 'utf-16-le')
 			except (UnicodeError, FilenameError), e:
 				stats.cferror += 1
-				perror('%s : file %i: %s (CF)'%(perhaps_showpath(file.name), i, e))
+				view.ev_test_cf_filenameencodingerror(file.name, i, e)
 				continue
 			self.test_file(filename, md5, file_size)
 
@@ -986,7 +921,7 @@ class PAR2(ChksumType, MD5_MixIn):
 						filename = cffndecode(filename)
 					except (UnicodeError, FilenameError), e:
 						stats.cferror += 1
-						perror('%s : file %s: %s (CF)'%(perhaps_showpath(file.name), hexlify(file_id), e))
+						view.ev_test_cf_filenameencodingerror(file.name, hexlify(file_id), e)
 						continue
 					self.test_file(filename, file_md5, file_size)
 			elif pkt_type == "PAR 2.0\0Main\0\0\0\0":
@@ -1069,7 +1004,7 @@ class Torrent(ChksumType):
 				raise EnvironmentError, str(e)
 			except (UnicodeError, FilenameError), e:
 				stats.cferror += 1
-				perror('%s : error decoding filename %r : %s (CF)'%(perhaps_showpath(file.name),filenameparts,str(e)))
+				view.ev_test_cf_filenameencodingerror(file.name, repr(filenameparts), e)
 				done = 1
 				l_filename = filename = None
 			if not done:
@@ -1153,7 +1088,7 @@ class Torrent(ChksumType):
 				d = curfh.fh.read(size)
 			except EnvironmentError, e:
 				if not f.done:
-					if progress: progress.cleanup()
+					if view.progress: view.progress.cleanup()
 					self.do_f_enverror(f.l_filename, e)
 					f.done=1
 				return None
@@ -1185,21 +1120,21 @@ class Torrent(ChksumType):
 			if wanttest:
 				sh = sha.sha()
 				for f,fcurpos,fpiecelen in piecefiles:
-					if progress and f.l_filename and f.l_filename!=progress.filename:
-						progress.cleanup()
-						progress.init(f.l_filename,f.size,fcurpos)
+					if view.progress and f.l_filename and f.l_filename!=view.progress.filename:
+						view.progress.cleanup()
+						view.progress.init(f.l_filename,f.size,fcurpos)
 					d = readfpiece(f, fcurpos, fpiecelen)
 					if d is None:
 						break
 					sh.update(d)
-					if progress and f.l_filename: progress.update(fcurpos+fpiecelen)
+					if view.progress and f.l_filename: view.progress.update(fcurpos+fpiecelen)
 				if d is None:
 					if curfh.fh:
 						#close the file in case do_f_badcrc wants to try to rename it
 						curfh.fh.close(); curfh.fh=None
 					for f,fcurpos,fpiecelen in piecefiles:
 						if not f.done:
-							if progress: progress.cleanup()
+							if view.progress: view.progress.cleanup()
 							self.do_f_badcrc(f.l_filename, 'piece %i missing data'%(piece))
 							f.done=1
 				elif sh.digest()!=hashes[piece]:
@@ -1208,18 +1143,18 @@ class Torrent(ChksumType):
 						curfh.fh.close(); curfh.fh=None
 					for f,fcurpos,fpiecelen in piecefiles:
 						if not f.done:
-							if progress: progress.cleanup()
+							if view.progress: view.progress.cleanup()
 							self.do_f_badcrc(f.l_filename, 'piece %i (at %i..%i) crc does not match (%s!=%s)'%(piece,fcurpos,fcurpos+fpiecelen,hexlify(hashes[piece]), sh.hexdigest()))
 							f.done=1
 				else:
 					for f,fcurpos,fpiecelen in piecefiles:
 						if not f.done:
 							if fcurpos+fpiecelen==f.size:
-								if progress: progress.cleanup()
+								if view.progress: view.progress.cleanup()
 								self.do_f_ok(f.l_filename,f.size,'all pieces ok')
 								f.done=1
 
-		if progress: progress.cleanup()
+		if view.progress: view.progress.cleanup()
 
 		if curfh.fh:
 			curfh.fh.close()
@@ -1249,7 +1184,7 @@ class Torrent(ChksumType):
 	def make_addfile(self, filename):
 		firstpiece = len(self.pieces)
 		f = open(filename, 'rb')
-		if progress: progress.init(filename)
+		if view.progress: view.progress.init(filename)
 		fs = 0
 		while 1:
 			piece_left = self.piece_length - self.piece_done
@@ -1260,14 +1195,14 @@ class Torrent(ChksumType):
 			s = len(d)
 			stats.bytesread += s
 			fs += s
-			if progress: progress.update(fs)
+			if view.progress: view.progress.update(fs)
 			self.piece_done += s
 			if self.piece_done == self.piece_length:
 				self.pieces.append(self.sh.digest())
 				self.sh = sha.sha()
 				self.piece_done = 0
 		f.close()
-		if progress: progress.cleanup()
+		if view.progress: view.progress.cleanup()
 		def cfencode_utf8pref(s): return cfencode(s, 'UTF-8')
 		self.files.append({'length':fs, 'path':map(cfencode_utf8pref, osutil.path_split(filename))})
 		return ('pieces %i..%i'%(firstpiece,len(self.pieces)),fs), ''
@@ -1458,7 +1393,7 @@ class VerifyXML(ChksumType):
 						self.test_file(fn, fhashes, fsize)
 					except CFError, e:
 						stats.cferror += 1
-						perror('%s : %s (CF)'%(perhaps_showpath(file.name),e))
+						view.ev_test_cf_invaliddata(file.name, e)
 
 					elem.clear()
 
@@ -1749,9 +1684,8 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 		self.in_comments = 1
 		
 		#override the default testing line to show first comment line, if any
-		comment = ', ' + file.peekline().strip()
-		comment,_ = strutil.rchoplen(comment, 102) #but limit the length in case its a really long one.
-		pverbose('testing from %s (crc%s)'%(showfn(file.name), comment))
+		comment = file.peekline().strip()
+		view.ev_test_cf_begin('crc', file.name, comment)
 
 	_commentboundary=re.compile(r'^-+(\s+-+){1,4}\s*$')
 	_nstrip=re.compile(r'[.,]')
@@ -1814,7 +1748,7 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 			except UnicodeError, e:
 				stats.ferror += 1
 				stats.ok -= 1 #ugly hack, since this is incremented after make_addfile returns, since we don't know then that it will cause an error
-				perror('%s : unencodable filename: %s'%(perhaps_showpath(fdata[0]), e))
+				view.ev_make_filenameencodingerror(fdata[0], e)
 		file.write(boundary)
 		file.write(os.linesep+'Count of files: %i'%len(self._flist)+os.linesep)
 		file.write('Total of sizes: %s'%commaize(self._ftotal)+os.linesep)
@@ -1841,15 +1775,6 @@ register_cftype('crc', JPEGSheriff_CRC)
 
 
 #---------- generic ----------
-
-def perhaps_showpath(filename):
-	if config.showpaths==1 or (config.showpaths==2 and config.recursive):
-		if config.showpathsabsolute:
-			dir=curdir
-		else:
-			dir=reldir[-1]
-		return osutil.path_join(showfn(dir),showfn(filename))
-	return showfn(filename)
 
 def nocase_findfile_updstats(filename):
 	cur = cache.nocase_findfile(filename)
@@ -1899,7 +1824,7 @@ def visit_dir(name, st=None, noisy=1):
 			dir_key = (st.st_dev,  st.st_ino)
 			if _visited_dirs.has_key(dir_key):
 				if noisy:
-					perror("skipping already visited dir %s %s"%(perhaps_showpath(name), dir_key))
+					view.ev_generic_warning("skipping already visited dir %s %s"%(view.perhaps_showpath(name), dir_key))
 				return 0
 			_visited_dirs[dir_key] = 1
 		return 1
@@ -1922,12 +1847,9 @@ def test(filename, typename, restrict_typename='auto'):
 			return
 	except EnvironmentError, a:
 		stats.cferror += 1
-		perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
+		view.ev_cf_enverror(filename, a)
 		return -1
-	if file._decode_errs:
-		perror("I don't recognize the type or encoding of %s"%showfn(filename))
-	else:
-		perror("I don't recognize the type of %s"%showfn(filename))
+	view.ev_test_cf_unrecognized(filename, file._decode_errs)
 	stats.cferror += 1
 
 def make(cftype,ifilename,testfiles):
@@ -1939,11 +1861,11 @@ def make(cftype,ifilename,testfiles):
 		if config.gzip==1 and filename[-3:]!='.gz': #if user does -zz, perhaps they want to force the filename to be kept?
 			filename += '.gz'
 	if not hasattr(cftype, "make_addfile"):
-		perror("%s : %s not supported in create mode"%(showfn(filename), cftype.__name__.lower()))
+		view.ev_make_cf_typenotsupported(filename, cftype)
 		stats.cferror += 1
 		return
 	if os.path.exists(filename):
-		perror("%s already exists"%perhaps_showpath(filename))
+		view.ev_make_cf_alreadyexists(filename)
 		stats.cferror += 1
 		file=IOError #just need some special value to indicate a cferror so that recursive mode still continues to work, IOError seems like a good choice ;)
 	if not testfiles:
@@ -1955,8 +1877,7 @@ def make(cftype,ifilename,testfiles):
 		tfauto=0
 	testdirs=[]
 
-	if config.verbose>=0 or config.verbose==-3:
-		cf_stats = stats.make_sub_stats()
+	cf_stats = stats.make_sub_stats()
 	
 	i=0
 	while i<len(testfiles):
@@ -1976,7 +1897,7 @@ def make(cftype,ifilename,testfiles):
 						testfiles[:i]=map(lambda x,p=f: osutil.path_join(p,x), rfiles)
 						i=0
 					except EnvironmentError, a:
-						perror('%s%s : %s'%(showfn(f), os.sep, enverrstr(a)))
+						view.ev_d_enverror(f, a)
 						stats.ferror += 1
 				continue
 			if tfauto:#if user isn't specifying files, don't even try to add dirs and stuff, and don't print errors about it.
@@ -1984,10 +1905,10 @@ def make(cftype,ifilename,testfiles):
 		stats.num += 1
 		if file==IOError:
 			continue
-		if config.encoding!='raw':
+		if config.encoding != 'raw':
 			if strutil.is_rawstr(f):
 				stats.ferror += 1
-				perror('%s : undecodable filename'%perhaps_showpath(f))
+				view.ev_make_filenamedecodingerror(f)
 				continue
 		else:
 			if strutil.is_unicode(f):
@@ -1995,11 +1916,11 @@ def make(cftype,ifilename,testfiles):
 					f = f.encode(osutil.fsencoding)
 				except UnicodeError, e:
 					stats.ferror += 1
-					perror('%s : %s'%(perhaps_showpath(f), e))
+					view.ev_make_filenameencodingerror(f, e)
 					continue
 		if not cftype.filename_ok(f):
 			stats.ferror += 1
-			perror('%s : filename invalid for this cftype'%(perhaps_showpath(f)))
+			view.ev_make_filenameinvalid(f)
 			continue
 		if file==None:
 			try:
@@ -2007,7 +1928,7 @@ def make(cftype,ifilename,testfiles):
 				file = cf.make_chksumfile_create(filename)
 			except EnvironmentError, a:
 				stats.cferror += 1
-				perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
+				view.ev_cf_enverror(filename, a)
 				file=IOError
 				continue
 		try:
@@ -2017,57 +1938,48 @@ def make(cftype,ifilename,testfiles):
 				stats.notfound += 1
 			else:
 				stats.ferror += 1
-			perror('%s : %s'%(perhaps_showpath(f),enverrstr(a)))
+			view.ev_f_enverror(f, a)
 			continue
 		try:
 			cf.make_writefile(dat, file)
 		except EnvironmentError, a:
 			stats.cferror += 1
-			perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
+			view.ev_cf_enverror(filename, a)
 			file=IOError
 			continue
 		except UnicodeError, e:
 			stats.ferror += 1
-			perror('%s : unencodable filename: %s'%(perhaps_showpath(f), e))
+			view.ev_make_filenameencodingerror(f, e)
 			continue
-		if filesize>=0:
-			pverbose('%s : OK (%i,%s)'%(perhaps_showpath(f),filesize,filecrc))
-		else:
-			pverbose('%s : OK (%s)'%(perhaps_showpath(f),filecrc))
+		view.ev_f_ok(f, filesize, filecrc, 'OK')
 		stats.ok += 1
 	if file and file!=IOError:
 		try:
 			cf.make_chksumfile_finish(file)
 		except EnvironmentError, a:
 			stats.cferror += 1
-			perror('%s : %s (CF)'%(perhaps_showpath(filename),enverrstr(a)))
+			view.ev_cf_enverror(filename, a)
 		else:
-			if config.verbose>=0 or config.verbose==-3:
-				cf_stats.sub_stats_end(stats)
-				pinfo(perhaps_showpath(filename)+': ','')
-				cf_stats.print_stats()
+			cf_stats.sub_stats_end(stats)
+			view.ev_make_cf_done(filename, cf_stats)
 	
 	for f in testdirs:
 		try:
 			chdir(f)
 		except EnvironmentError, a:
-			perror('%s%s : %s'%(showfn(f), os.sep, enverrstr(a)))
+			view.ev_d_enverror(f, a)
 			stats.ferror += 1
 		else:
 			make(cftype,ifilename,None)
 			cdup()
 
 
-def print_unverified(filename):
-	perror('%s : not verified'%perhaps_showpath(filename))
-
 def show_unverified_file(filename):
 	unverified_file(filename)
-	print_unverified(filename)
+	view.ev_unverified_file(filename)
 	
 def unverified_file(filename):
-	if config.list&LISTUNVERIFIED:
-		plistf(filename)
+	view.ev_unverified_file_plistf(filename)
 	stats.unverified += 1
 
 def show_unverified_dir(path, unvchild=0):
@@ -2104,12 +2016,12 @@ def show_unverified_dir(path, unvchild=0):
 	if not pathcache and pathfiles:
 		if vsub: # if sub directories do have verified files
 			if unv: # and this directory does have unverified files
-				print_unverified(osutil.path_join(path,u'*'))
+				view.ev_unverified_dir(path)
 			for unvpath in unv_sub_dirs: # print sub dirs that had unverified files and no verified files
-				print_unverified(osutil.path_join(unvpath,u'**'))
+				view.ev_unverified_dirrecursive(unvpath)
 		elif not unvchild: # if this is the root of a tree with no verified files
 			if stats.unverified - unvsave: # and there were unverified files in the tree
-				print_unverified(osutil.path_join(path,u'**'))
+				view.ev_unverified_dirrecursive(path)
 	return vsub + (not not pathcache)
 			
 def show_unverified_dir_verbose(path):
@@ -2161,7 +2073,7 @@ def autotest(typename):
 			try:
 				chdir(a)
 			except EnvironmentError, e:
-				perror('%s%s : %s'%(showfn(a), os.sep, enverrstr(e)))
+				view.ev_d_enverror(a, e)
 				stats.ferror += 1
 			else:
 				autotest(typename)
@@ -2170,7 +2082,7 @@ def autotest(typename):
 			test(a, 'auto', typename)
 
 def printusage(err=0):
-	phelp = err and perror or pinfo
+	phelp = err and view.perror or view.pinfo
 	phelp('Usage: cfv [opts] [-p dir] [-T|-C] [-t type] [-f file] [files...]')
 	phelp('  -r       recursive mode 1 (make seperate chksum files for each dir)')
 	phelp('  -rr      recursive mode 2 (make a single file with deep listing in it)')
@@ -2202,7 +2114,7 @@ def printusage(err=0):
 	phelp('  -z       make gzipped files in auto create mode')
 	phelp('  -Z       don\'t create gzipped files automatically. (default)')
 	phelp('  -ZZ      never use gzip, even if file ends in .gz')
-	phelp(' --list=<l> raw list files of type <l> (%s)'%', '.join(LISTARGS.keys()))
+	phelp(' --list=<l> raw list files of type <l> (%s)'%', '.join(ui.LISTARGS.keys()))
 	phelp(' --list0=<l> same as list, but seperate files with nulls (useful for xargs -0)')
 	phelp(' --encoding=<e>  encoding of checksum files (raw, auto(default), or...)')
 	phelp(' --unquote=VAL  handle checksum files with quoted filenames (yes or no(default))')
@@ -2218,10 +2130,10 @@ def printusage(err=0):
 	phelp(' --piece_size_pow2=N  power of two to set the piece size to (default 18)')
 	sys.exit(err)
 def printhelp():
-	pinfo('cfv v%s - Copyright (C) 2000-2005 Matthew Mueller - GPL license'%__version__)
+	view.pinfo('cfv v%s - Copyright (C) 2000-2005 Matthew Mueller - GPL license'%__version__)
 	printusage()
 def printcftypehelp(err):
-	phelp = err and perror or pinfo
+	phelp = err and view.perror or view.pinfo
 	phelp('Valid types:')
 	def printtypeinfo(typename, info, desc):
 		phelp(' %-8s %-26s %s'%(typename,desc,info))
@@ -2234,6 +2146,7 @@ def printcftypehelp(err):
 stats=Stats()
 config=Config()
 cache=caching.FileInfoCache()
+view = ui.View(config)
 filenamefilter=FileNameFilter()
 
 
@@ -2259,7 +2172,7 @@ def main(argv=None):
 				'announceurl=','piece_size_pow2=', #torrent options
 				])
 	except getopt.error, a:
-		perror("cfv: %s"%a)
+		view.perror("cfv: %s"%a)
 		printusage(1)
 	args = map(decode_arg, args)
 
@@ -2291,11 +2204,11 @@ def main(argv=None):
 				if a=='help':
 					printcftypehelp(err=0)
 				if not a in ['auto']+cftypes.keys():
-					perror('cfv: type %s not recognized'%a)
+					view.perror('cfv: type %s not recognized'%a)
 					printcftypehelp(err=1)
 				typename=a
 			elif o=='-f':
-				setup_output()
+				view.setup_output()
 				manual=1 #filename selected manually, don't try to autodetect
 				if mode==0:
 					filenamefilter.set_testfiles(args)
@@ -2373,13 +2286,13 @@ def main(argv=None):
 				else:
 					config.gzip=0
 			elif o=='--list' or o=='--list0':
-				if a not in LISTARGS.keys():
-					raise CFVValueError, 'list arg must be one of '+`LISTARGS.keys()`
-				config.list=LISTARGS[a]
+				if a not in ui.LISTARGS.keys():
+					raise CFVValueError, 'list arg must be one of '+`ui.LISTARGS.keys()`
+				config.list=ui.LISTARGS[a]
 				config.listsep = o=='--list0' and '\0' or '\n'
-				if config.list==LISTUNVERIFIED:
+				if config.list==ui.LISTUNVERIFIED:
 					config.showunverified=1
-				set_stdout_special() #redirect all messages to stderr so only the list gets on stdout
+				view.set_stdout_special() #redirect all messages to stderr so only the list gets on stdout
 			elif o=='--showpaths':
 				config.setx('showpaths', a)
 			elif o=='--strippaths':
@@ -2407,10 +2320,10 @@ def main(argv=None):
 				sys.exit(0)
 			prevopt=o
 	except CFVValueError, e:
-		perror('cfv: %s'%e)
+		view.perror('cfv: %s'%e)
 		sys.exit(1)
 	
-	setup_output()
+	view.setup_output()
 	
 	if not manual:
 		if mode==0:
@@ -2427,7 +2340,7 @@ def main(argv=None):
 	#only print total stats if more than one checksum file has been checked. (or if none have)
 	#We must also print stats here if there are unverified files or checksum file errors, since those conditions occur outside of the cf_stats section.
 	if stats.subcount != 1 or stats.unverified or stats.cferror:
-		stats.print_stats()
+		view.pinfo(str(stats))
 
 	sys.exit((stats.badcrc and 2) | (stats.badsize and 4) | (stats.notfound and 8) | (stats.ferror and 16) | (stats.unverified and 32) | (stats.cferror and 64))
 

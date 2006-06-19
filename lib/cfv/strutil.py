@@ -16,6 +16,11 @@ def safesort(l):
 	ul.sort()
 	l[:] = ul+sl
 
+def showfn(s):
+	if is_rawstr(s):
+		return unicode(s, 'ascii', 'replace')
+	return s
+
 
 def codec_supports_readline(e):
 	"""Figure out whether the given codec's StreamReader supports readline.
