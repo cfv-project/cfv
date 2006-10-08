@@ -21,7 +21,7 @@ class FileInfoCache:
 		self.getfinfo(fn)[flag] = 1
 	
 	def has_flag(self, fn, flag):
-		return self.getfinfo(fn).has_key(flag)
+		return flag in self.getfinfo(fn)
 
 	def get_path_key(self, path):
 		dk = self._path_key_cache.get(path)
@@ -66,18 +66,18 @@ class FileInfoCache:
 	def nocase_dirfiles(self, dir, match):
 		"return list of filenames in dir whose lowercase value equals match"
 		dirkey = self.get_path_key(dir)
-		if not self._nocase_dir_cache.has_key(dirkey):
+		if dirkey not in self._nocase_dir_cache:
 			d={}
 			self._nocase_dir_cache[dirkey]=d
 			for a in osutil.listdir(dir):
 				l=a.lower()
-				if d.has_key(l):
+				if l in d:
 					d[l].append(a)
 				else:
 					d[l]=[a]
 		else:
 			d=self._nocase_dir_cache[dirkey]
-		if d.has_key(match):
+		if match in d:
 			return d[match]
 		return []
 

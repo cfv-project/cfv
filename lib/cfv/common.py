@@ -115,7 +115,7 @@ class FileNameFilter:
 		
 def getfilehash(filename, hashname, hashfunc):
 	finfo = cache.getfinfo(filename)
-	if not finfo.has_key(hashname):
+	if hashname not in finfo:
 		if view.progress: view.progress.init(filename)
 		try:
 			hash, size = hashfunc(filename, view.progress and view.progress.update or None)
@@ -242,7 +242,7 @@ class Config:
 				raise CFVValueError, "invalid encoding option: %s"%(e)
 		self.encoding = v
 	def setdefault(self,cftype):
-		if cftype in cftypes.keys():
+		if cftype in cftypes:
 			self.defaulttype=cftype
 		else:
 			raise CFVValueError, "invalid default type '%s'"%cftype
@@ -346,7 +346,7 @@ class Config:
 			self.renameformat=v
 		elif o=="filename_type":
 			typename,match = v.split('=',1)
-			if not cftypes.has_key(typename):
+			if typename not in cftypes:
 				raise CFVValueError, "filename_type: invalid type '%s'"%typename
 			self.user_cf_fn_regexs.append((re.compile(match, re.I).search, cftypes[typename]))
 		elif o=='announceurl':
@@ -971,7 +971,7 @@ class PAR2(ChksumType, MD5_MixIn):
 		if expected_file_ids is None:
 			raise EnvironmentError, (errno.EINVAL,"corrupt or unsupported par2 file - no main packet found")
 		for file_id in expected_file_ids:
-			if not seen_file_ids.has_key(file_id):
+			if file_id not in seen_file_ids:
 				raise EnvironmentError, (errno.EINVAL,"corrupt or unsupported par2 file - expected file description packet not found")
 
 	#we don't support PAR2 in create mode, but add these methods so that we can get error messages that are probaby more user friendly.
@@ -1015,12 +1015,12 @@ class Torrent(ChksumType):
 		encoding = metainfo.get('encoding')
 
 		comments = []
-		if metainfo.has_key('creation date'):
+		if 'creation date' in metainfo:
 			try:
 				comments.append('created '+time.ctime(metainfo['creation date']))
 			except TypeError:
 				comments.append('created '+repr(metainfo['creation date']))
-		if metainfo.has_key('comment'):
+		if 'comment' in metainfo:
 			try:
 				comments.append(cfdecode(metainfo['comment'],encoding))
 			except UnicodeError:
@@ -1068,7 +1068,7 @@ class Torrent(ChksumType):
 		info = metainfo['info']
 		piecelen = info['piece length']
 		hashes = re.compile('.'*20, re.DOTALL).findall(info['pieces'])
-		if info.has_key('length'):
+		if 'length' in info:
 			total_len = info['length']
 			files = [init_file([info['name']], 0, total_len)]
 		else:
@@ -1331,7 +1331,7 @@ class VerifyXML(ChksumType):
 	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	def textify_crc(self, filecrcs):
-		return ', '.join(['%s %s'%(self._verifyxml_hashtype_to_cfv.get(htype,htype),hexlify(hval)) for htype,hval in filecrcs])
+		return ', '.join('%s %s'%(self._verifyxml_hashtype_to_cfv.get(htype,htype),hexlify(hval)) for htype,hval in filecrcs)
 	
 	#_hashtypemap = {'SHA1':getfilesha1, 'MD5':getfilemd5, 'CRC32':getfilecrc}
 	_hashtypemap = {'SHA1':getfilesha1, 'MD5':getfilemd5, 'CRC32_REVERSED':getfilecrc}
@@ -1821,7 +1821,7 @@ def visit_dir(name, st=None, noisy=1):
 		#the inode check is kinda a hack, but systems that don't have inode numbers probably don't have symlinks either.
 		if config.dereference and st.st_ino:
 			dir_key = (st.st_dev,  st.st_ino)
-			if _visited_dirs.has_key(dir_key):
+			if dir_key in _visited_dirs:
 				if noisy:
 					view.ev_generic_warning("skipping already visited dir %s %s"%(view.perhaps_showpath(name), dir_key))
 				return 0
@@ -2091,7 +2091,7 @@ def printusage(err=0):
 		phelp('  -L       don\'t follow symlinks')
 	phelp('  -T       test mode (default)')
 	phelp('  -C       create mode')
-	phelp('  -t <t>   set type to <t> (%s, or auto(default))'%', '.join(sorted(cftypes.keys())))
+	phelp('  -t <t>   set type to <t> (%s, or auto(default))'%', '.join(sorted(cftypes)))
 	phelp('  -f <f>   use <f> as list file')
 	phelp('  -m       check only for missing files (don\'t compare checksums)')
 	phelp('  -M       check checksums (default)')
@@ -2113,7 +2113,7 @@ def printusage(err=0):
 	phelp('  -z       make gzipped files in auto create mode')
 	phelp('  -Z       don\'t create gzipped files automatically. (default)')
 	phelp('  -ZZ      never use gzip, even if file ends in .gz')
-	phelp(' --list=<l> raw list files of type <l> (%s)'%', '.join(ui.LISTARGS.keys()))
+	phelp(' --list=<l> raw list files of type <l> (%s)'%', '.join(ui.LISTARGS))
 	phelp(' --list0=<l> same as list, but seperate files with nulls (useful for xargs -0)')
 	phelp(' --encoding=<e>  encoding of checksum files (raw, auto(default), or...)')
 	phelp(' --unquote=VAL  handle checksum files with quoted filenames (yes or no(default))')
@@ -2138,7 +2138,7 @@ def printcftypehelp(err):
 		phelp(' %-8s %-26s %s'%(typename,desc,info))
 	printtypeinfo('TYPE', 'FILE INFO STORED', 'DESCRIPTION')
 	printtypeinfo('auto', '', 'autodetect type (default)')
-	for typename in sorted(cftypes.keys()):
+	for typename in sorted(cftypes):
 		printtypeinfo(typename, cftypes[typename].descinfo, cftypes[typename].description)
 	sys.exit(err)
 
@@ -2202,7 +2202,7 @@ def main(argv=None):
 			elif o=='-t':
 				if a=='help':
 					printcftypehelp(err=0)
-				if not a in ['auto']+cftypes.keys():
+				if a != 'auto' and a not in cftypes:
 					view.perror('cfv: type %s not recognized'%a)
 					printcftypehelp(err=1)
 				typename=a
@@ -2285,8 +2285,8 @@ def main(argv=None):
 				else:
 					config.gzip=0
 			elif o=='--list' or o=='--list0':
-				if a not in ui.LISTARGS.keys():
-					raise CFVValueError, 'list arg must be one of '+`ui.LISTARGS.keys()`
+				if a not in ui.LISTARGS:
+					raise CFVValueError, 'list arg must be one of: ' + ', '.join(ui.LISTARGS)
 				config.list=ui.LISTARGS[a]
 				config.listsep = o=='--list0' and '\0' or '\n'
 				if config.list==ui.LISTUNVERIFIED:

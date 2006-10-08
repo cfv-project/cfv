@@ -140,7 +140,7 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
 			s = 1
 	finally:
 		sys.stdin,sys.stdout,sys.stderr,sys.argv = saved
-		if locals().has_key('saved_stdin_fileno'):
+		if 'saved_stdin_fileno' in locals():
 			os.dup2(saved_stdin_fileno, sys.stdin.fileno())
 			os.close(saved_stdin_fileno)
 		os.chdir(cwd)
