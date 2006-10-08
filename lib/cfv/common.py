@@ -21,7 +21,6 @@ from binascii import hexlify, unhexlify
 import getopt, re, os, sys, errno, time, copy, struct
 from stat import S_ISDIR, S_ISREG
 
-from cfv.compat import *
 from cfv import caching
 from cfv import hash
 from cfv import fileutil

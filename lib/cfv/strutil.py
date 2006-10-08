@@ -2,7 +2,6 @@ import codecs
 import unicodedata
 from StringIO import StringIO
 
-from cfv.compat import *
 
 def is_unicode(s, _unitype=type(u'')):
 	return type(s) == _unitype
@@ -50,28 +49,6 @@ def chompnulls(line):
 	if p < 0: return line
 	else:     return line[:p]
 
-try:
-	_unicodedata_east_asian_width = unicodedata.east_asian_width # unicodedata.east_asian_width only in python >= 2.4
-except AttributeError:
-	def _unicodedata_east_asian_width(c):
-		# Not a true replacement, only suitable for our width calculations.
-		# Adapted from http://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c version 2003-05-20
-		ucs = ord(c)
-		if (ucs >= 0x1100 and
-				(ucs <= 0x115f or                    # Hangul Jamo init. consonants */
-					ucs == 0x2329 or ucs == 0x232a or
-					(ucs >= 0x2e80 and ucs <= 0xa4cf and
-						ucs != 0x303f) or                  # CJK ... Yi */
-					(ucs >= 0xac00 and ucs <= 0xd7a3) or # Hangul Syllables */
-					(ucs >= 0xf900 and ucs <= 0xfaff) or # CJK Compatibility Ideographs */
-					(ucs >= 0xfe30 and ucs <= 0xfe6f) or # CJK Compatibility Forms */
-					(ucs >= 0xff00 and ucs <= 0xff60) or # Fullwidth Forms */
-					(ucs >= 0xffe0 and ucs <= 0xffe6) or
-					(ucs >= 0x20000 and ucs <= 0x2fffd) or
-					(ucs >= 0x30000 and ucs <= 0x3fffd))):
-			return 'W'
-		return 'Na'
-
 def uwidth(u):
 	#TODO: should it return -1 or something for control chars, like wcswidth?
 	# see http://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c for a sample implementation
@@ -85,7 +62,7 @@ def uwidth(u):
 		ccat = unicodedata.category(c)
 		if ccat in ('Mn', 'Me', 'Cf'): # "Mark, nonspacing", "Mark, enclosing", "Other, format"
 			continue
-		cwidth = _unicodedata_east_asian_width(c)
+		cwidth = unicodedata.east_asian_width(c)
 		if cwidth in ('W', 'F'): # "East Asian Wide", "East Asian Full-width"
 			w += 2
 		else:

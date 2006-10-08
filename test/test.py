@@ -192,6 +192,7 @@ def test_log_results(cmd,s,o,r,kw):
 	
 
 def test_external(cmd,test):
+	#TODO: replace this with subprocess
 	from commands import getstatusoutput
 	s,o = getstatusoutput(cmd)
 	r=test(s,o)

@@ -59,53 +59,37 @@ def expand_cmdline(cmd):
 
 
 def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
-	try:
-		import subprocess # subprocess module only in python >= 2.4, but it works on windows, unlike commands
-	except ImportError:
-		from commands import getstatusoutput
-		runcmd = cfvenv+cfvfn+' '+cmd
-		if stdin:
-			runcmd = 'cat '+stdin+' | '+runcmd
-		if stdout:
-			runcmd += ' > '+stdout
-		if stderr:
-			runcmd += ' 2> '+stderr
-		s,o = getstatusoutput(runcmd)
-		if os.WIFSIGNALED(s):
-			s = -os.WTERMSIG(s)
-		else:
-			s = os.WEXITSTATUS(s)
-		return s,o
+	import subprocess # subprocess module only in python >= 2.4, but it works on windows, unlike commands
+	def open_output(fn):
+		if fn=='/dev/null' and not os.path.exists(fn):
+			fn='nul'
+		return open(fn,'wb')
+
+	p_stdin = p_stdout = p_stderr = subprocess.PIPE
+	if stdin:
+		p_stdin = open(stdin,'rb')
+	if stdout:
+		p_stdout = open_output(stdout)
 	else:
-		def open_output(fn):
-			if fn=='/dev/null' and not os.path.exists(fn):
-				fn='nul'
-			return open(fn,'wb')
-		p_stdin = p_stdout = p_stderr = subprocess.PIPE
-		if stdin:
-			p_stdin = open(stdin,'rb')
-		if stdout:
-			p_stdout = open_output(stdout)
-		else:
-			p_stderr = subprocess.STDOUT
-		if stderr:
-			p_stderr = open_output(stderr)
-		argv = [cfvfn]+expand_cmdline(cmd)
-		proc = subprocess.Popen(argv, stdin=p_stdin, stdout=p_stdout, stderr=p_stderr)
-		for f in p_stdin, p_stdout, p_stderr:
-			if f not in (subprocess.PIPE, subprocess.STDOUT, None):
-				f.close()
-		obuf,ebuf = proc.communicate()
-		if ebuf or obuf is None:
-			assert not obuf
-			o = ebuf
-		else:
-			o = obuf
-		s = proc.returncode
-		if o:
-			if o[-2:] == '\r\n': o = o[:-2]
-			elif o[-1:] in '\r\n': o = o[:-1]
-		return s, o
+		p_stderr = subprocess.STDOUT
+	if stderr:
+		p_stderr = open_output(stderr)
+	argv = [cfvfn]+expand_cmdline(cmd)
+	proc = subprocess.Popen(argv, stdin=p_stdin, stdout=p_stdout, stderr=p_stderr)
+	for f in p_stdin, p_stdout, p_stderr:
+		if f not in (subprocess.PIPE, subprocess.STDOUT, None):
+			f.close()
+	obuf,ebuf = proc.communicate()
+	if ebuf or obuf is None:
+		assert not obuf
+		o = ebuf
+	else:
+		o = obuf
+	s = proc.returncode
+	if o:
+		if o[-2:] == '\r\n': o = o[:-2]
+		elif o[-1:] in '\r\n': o = o[:-1]
+	return s, o
 
 def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
 	if stdin is not None and ver_fchksum:
