@@ -90,7 +90,7 @@ class CFError(ValueError):#error in checksum file
 
 class FileNameFilter:
 	def __init__(self, testfiles=None):
-		self.testfiles = {}
+		self.testfiles = set()
 		if testfiles:
 			self.set_testfiles(testfiles)
 	
@@ -102,7 +102,7 @@ class FileNameFilter:
 			if config.encoding=='raw' and strutil.is_unicode(fn):
 				try: fn = fn.encode(osutil.fsencoding)
 				except UnicodeError: pass
-			self.testfiles[fn] = 1
+			self.testfiles.add(fn)
 			
 	def should_test(self, fn):
 		if not self.testfiles:
@@ -110,7 +110,7 @@ class FileNameFilter:
 		fn = osutil.path_join(reldir[-1], fn)
 		if config.ignorecase:
 			fn = fn.lower()
-		return self.testfiles.get(fn,0)
+		return fn in self.testfiles
 
 		
 def getfilehash(filename, hashname, hashfunc):
@@ -920,7 +920,7 @@ class PAR2(ChksumType, MD5_MixIn):
 		self.do_test_chksumfile_print_testingline(file, get_creator(file))
 		file.seek(0) # reset file position after looking for creator packet
 		
-		seen_file_ids = {}
+		seen_file_ids = set()
 		expected_file_ids = None
 
 		while 1:
@@ -945,8 +945,8 @@ class PAR2(ChksumType, MD5_MixIn):
 				if not config.docrcchecks:
 					d = file.read(pkt_len - pkt_header_size)
 				file_id, file_md5, file_md5_16k, file_size = struct.unpack(file_pkt_fmt, d[:file_pkt_size])
-				if seen_file_ids.get(file_id) is None:
-					seen_file_ids[file_id] = 1
+				if file_id not in seen_file_ids:
+					seen_file_ids.add(file_id)
 					filename = strutil.chompnulls(d[file_pkt_size:])
 					try:
 						filename = cffndecode(filename)
@@ -1808,7 +1808,7 @@ register_cftype('crc', JPEGSheriff_CRC)
 #---------- generic ----------
 
 
-_visited_dirs = {}
+_visited_dirs = set()
 def visit_dir(name, st=None, noisy=1):
 	if not config.dereference and os.path.islink(name):
 		return 0
@@ -1825,7 +1825,7 @@ def visit_dir(name, st=None, noisy=1):
 				if noisy:
 					view.ev_generic_warning("skipping already visited dir %s %s"%(view.perhaps_showpath(name), dir_key))
 				return 0
-			_visited_dirs[dir_key] = 1
+			_visited_dirs.add(dir_key)
 		return 1
 	return 0
 
