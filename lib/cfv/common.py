@@ -539,9 +539,9 @@ class ChksumType:
 			return -1
 		self.do_f_ok(l_filename, filesize, filecrct)
 	
+	@staticmethod
 	def textify_crc(crc):
 		return hexlify(crc)
-	textify_crc = staticmethod(textify_crc)
 	
 	def make_chksumfile_create(self, filename):
 		return fileutil.open_write(filename, config)
@@ -553,9 +553,9 @@ class ChksumType:
 	def make_chksumfile_finish(self, file):
 		file.close()
 	
+	@staticmethod
 	def filename_ok(fn):
 		return 1
-	filename_ok = staticmethod(filename_ok)
 
 	def do_f_enverror(self, l_filename, ex, foundok=0):
 		if ex[0]==errno.ENOENT:
@@ -695,9 +695,9 @@ class TextChksumType(ChksumType):
 				stats.cferror += 1
 				view.ev_test_cf_unrecognized_line(file.name, line)
 	
+	@staticmethod
 	def filename_ok(fn):
 		return len((fn+'a').splitlines())==1
-	filename_ok = staticmethod(filename_ok)
 
 	
 #---------- sha1sum ----------
@@ -728,21 +728,21 @@ class SHA1(FooSum_Base, SHA1_MixIn):
 	description = 'GNU sha1sum'
 	descinfo = 'SHA1,name'
 	
+	@staticmethod
 	def auto_chksumfile_match(file, _autorem=re.compile(r'[0-9a-fA-F]{40} [ *].')):
 		l = file.peekline(4096)
 		while l:
 			if l[0] not in ';#':
 				return _autorem.match(l) is not None
 			l = file.peeknextline(4096)
-	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
 
 	auto_filename_match = 'sha1'
 
 	_foosum_rem=re.compile(r'([0-9a-fA-F]{40}) ([ *])([^\r\n]+)[\r\n]*$')
 	
+	@staticmethod
 	def make_std_filename(filename):
 		return filename+'.sha1'
-	make_std_filename = staticmethod(make_std_filename)
 	
 	def make_addfile(self, filename):
 		crc=hexlify(getfilesha1(filename)[0])
@@ -763,21 +763,21 @@ class MD5(FooSum_Base, MD5_MixIn):
 	description = 'GNU md5sum'
 	descinfo = 'MD5,name'
 
+	@staticmethod
 	def auto_chksumfile_match(file, _autorem=re.compile(r'[0-9a-fA-F]{32} [ *].')):
 		l = file.peekline(4096)
 		while l:
 			if l[0] not in ';#':
 				return _autorem.match(l) is not None
 			l = file.peeknextline(4096)
-	auto_chksumfile_match=staticmethod(auto_chksumfile_match)
 
 	auto_filename_match = 'md5'
 
 	_foosum_rem=re.compile(r'([0-9a-fA-F]{32}) ([ *])([^\r\n]+)[\r\n]*$')
 	
+	@staticmethod
 	def make_std_filename(filename):
 		return filename+'.md5'
-	make_std_filename = staticmethod(make_std_filename)
 	
 	def make_addfile(self, filename):
 		crc=hexlify(getfilemd5(filename)[0])
@@ -792,9 +792,9 @@ class BSDMD5(TextChksumType, MD5_MixIn):
 	description = 'BSD md5'
 	descinfo = 'name,MD5'
 
+	@staticmethod
 	def auto_chksumfile_match(file, _autorem=re.compile(r'MD5 \(.+\) = [0-9a-fA-F]{32}'+'[\r\n]*$')):
 		return _autorem.match(file.peekline(4096)) is not None
-	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	auto_filename_match = '^md5$'
 	
@@ -804,9 +804,9 @@ class BSDMD5(TextChksumType, MD5_MixIn):
 		if not x: return -1
 		self.test_file(x.group(1),unhexlify(x.group(2)))
 	
+	@staticmethod
 	def make_std_filename(filename):
 		return filename+'.md5'
-	make_std_filename = staticmethod(make_std_filename)
 	
 	def make_addfile(self, filename):
 		crc=hexlify(getfilemd5(filename)[0])
@@ -828,9 +828,9 @@ class PAR(ChksumType, MD5_MixIn):
 	description = 'Parchive v1 (test-only)'
 	descinfo = 'name,size,MD5'
 
+	@staticmethod
 	def auto_chksumfile_match(file):
 		return file.peek(8)=='PAR\0\0\0\0\0'
-	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	def do_test_chksumfile(self, file):
 		def prog2str(v):
@@ -881,9 +881,9 @@ class PAR(ChksumType, MD5_MixIn):
 	#we don't support PAR in create mode, but add these methods so that we can get error messages that are probaby more user friendly.
 	auto_filename_match = 'par$'
 
+	@staticmethod
 	def make_std_filename(filename):
 		return filename+'.par'
-	make_std_filename = staticmethod(make_std_filename)
 
 register_cftype('par', PAR)
 
@@ -892,9 +892,9 @@ class PAR2(ChksumType, MD5_MixIn):
 	description = 'Parchive v2 (test-only)'
 	descinfo = 'name,size,MD5'
 
+	@staticmethod
 	def auto_chksumfile_match(file):
 		return file.peek(8)=='PAR2\0PKT'
-	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	def do_test_chksumfile(self, file):
 		pkt_header_fmt = '< 8s Q 16s 16s 16s'
@@ -977,9 +977,9 @@ class PAR2(ChksumType, MD5_MixIn):
 	#we don't support PAR2 in create mode, but add these methods so that we can get error messages that are probaby more user friendly.
 	auto_filename_match = 'par2$'
 
+	@staticmethod
 	def make_std_filename(filename):
 		return filename+'.par2'
-	make_std_filename = staticmethod(make_std_filename)
 
 register_cftype('par2', PAR2)
 
@@ -999,9 +999,9 @@ class Torrent(ChksumType):
 	description = 'BitTorrent metainfo'
 	descinfo = 'name,size,SHA1(piecewise)'
 
+	@staticmethod
 	def auto_chksumfile_match(file):
 		return file.peek(1)=='d' and file.peek(4096).find('8:announce')>=0
-	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	def do_test_chksumfile(self, file):
 		if _btimporterror:
@@ -1195,9 +1195,9 @@ class Torrent(ChksumType):
 			
 	auto_filename_match = 'torrent$'
 
+	@staticmethod
 	def make_std_filename(filename):
 		return filename+'.torrent'
-	make_std_filename = staticmethod(make_std_filename)
 
 	def make_chksumfile_create(self, filename):
 		if _btimporterror:
@@ -1326,9 +1326,9 @@ class VerifyXML(ChksumType):
 	_verifyxml_hashtype_to_cfv = {'CRC32_REVERSED':'CRC32', 'CRC32':'CRC32_ETHERNET'}
 	#_cfv_hashtype_to_verifyxml = dict([(v,k) for (k,v) in _verifyxml_hashtype_to_cfv.items()])
 
+	@staticmethod
 	def auto_chksumfile_match(file, _autorem=re.compile(r'<verify[^>]+version\s*=\s*"1.0"')):
 		return not not _autorem.search(file.peekdecoded(4096))
-	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	def textify_crc(self, filecrcs):
 		return ', '.join('%s %s'%(self._verifyxml_hashtype_to_cfv.get(htype,htype),hexlify(hval)) for htype,hval in filecrcs)
@@ -1430,9 +1430,9 @@ class VerifyXML(ChksumType):
 
 	auto_filename_match = '.(verify|vfy)$'
 
+	@staticmethod
 	def make_std_filename(filename):
 		return filename+'.vfy'
-	make_std_filename = staticmethod(make_std_filename)
 
 	def make_chksumfile_create(self, filename):
 		self.file = fileutil.open_write_raw(filename, config)
@@ -1515,21 +1515,21 @@ class SFV_Base(TextChksumType):
 class SFV(SFV_Base, CRC_MixIn):
 	descinfo = 'name,CRC32'
 
+	@staticmethod
 	def auto_chksumfile_match(file, _autorem=re.compile('.+ [0-9a-fA-F]{8}[\n\r]*$')):
 		l = file.peekline(4096)
 		while l:
 			if l[0]!=';':
 				return _autorem.match(l) is not None
 			l = file.peeknextline(4096)
-	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	auto_filename_match = 'sfv$'
 	
 	_sfvrem=re.compile(r'(.+) ([0-9a-fA-F]{8})[\r\n]*$')
 	
+	@staticmethod
 	def make_std_filename(filename):
 		return filename+'.sfv'
-	make_std_filename = staticmethod(make_std_filename)
 		
 	def make_addfile(self, filename):
 		crc=hexlify(getfilecrc(filename)[0])
@@ -1541,22 +1541,22 @@ register_cftype('sfv', SFV)
 class SFVMD5(SFV_Base, MD5_MixIn):
 	descinfo = 'name,MD5'
 
+	@staticmethod
 	def auto_chksumfile_match(file, _autorem=re.compile('.+ [0-9a-fA-F]{32}[\n\r]*$')):
 		l = file.peekline(4096)
 		while l:
 			if l[0]!=';':
 				return _autorem.match(l) is not None
 			l = file.peeknextline(4096)
-	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 	auto_chksumfile_order = -1 # do -1 prio since we can mistakenly match a bsdmd5 file
 
 	#auto_filename_match = 'md5$' #hm. People are probably used to .md5 making a md5sum format file, so we can't just do this.
 	
 	_sfvrem=re.compile(r'(.+) ([0-9a-fA-F]{32})[\r\n]*$')
 	
+	@staticmethod
 	def make_std_filename(filename):
 		return filename+'.md5'
-	make_std_filename = staticmethod(make_std_filename)
 		
 	def make_addfile(self, filename):
 		crc=hexlify(getfilemd5(filename)[0])
@@ -1583,9 +1583,9 @@ class CSV(TextChksumType, CRC_MixIn):
 	description = 'Comma Separated Values'
 	descinfo = 'name,size,CRC32'
 
+	@staticmethod
 	def auto_chksumfile_match(file, _autorem=re.compile(_csvfnautore+'[0-9]+,[0-9a-fA-F]{8},[\n\r]*$')):
 		return _autorem.match(file.peekline(4096)) is not None
-	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	auto_filename_match = 'csv$'
 	
@@ -1595,9 +1595,9 @@ class CSV(TextChksumType, CRC_MixIn):
 		if not x: return -1
 		self.test_file(csvunquote(x.group(1),x.group(2)), unhexlify(x.group(4)), int(x.group(3)))
 	
+	@staticmethod
 	def make_std_filename(filename):
 		return filename+'.csv'
-	make_std_filename = staticmethod(make_std_filename)
 	
 	def make_addfile(self, filename):
 		c,s=getfilecrc(filename)
@@ -1613,9 +1613,9 @@ class CSV4(TextChksumType, CRC_MixIn):
 	description = 'Comma Separated Values'
 	descinfo = 'name,size,CRC32,path'
 	
+	@staticmethod
 	def auto_chksumfile_match(file, _autorem=re.compile(r'%s[0-9]+,[0-9a-fA-F]{8},%s[\n\r]*$'%(_csvfnautore,_csvstrautore))):
 		return _autorem.match(file.peekline(4096)) is not None
-	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	_csv4rem=re.compile(r'%s([0-9]+),([0-9a-fA-F]{8}),%s'%(_csvfnre,_csvstrre))
 	def do_test_chksumline(self, l):
@@ -1625,9 +1625,9 @@ class CSV4(TextChksumType, CRC_MixIn):
 		path = csvunquote(x.group(5),x.group(6))
 		self.test_file(osutil.path_join(self.fixpath(path),name),unhexlify(x.group(4)),int(x.group(3))) #we need to fixpath before path.join since osutil.path_join looks for path.sep
 	
+	@staticmethod
 	def make_std_filename(filename):
 		return filename+'.csv'
-	make_std_filename = staticmethod(make_std_filename)
 	
 	def make_addfile(self, filename):
 		c,s=getfilecrc(filename)
@@ -1644,9 +1644,9 @@ class CSV2(TextChksumType):
 	description = 'Comma Separated Values'
 	descinfo = 'name,size'
 
+	@staticmethod
 	def auto_chksumfile_match(file, _autorem=re.compile(_csvfnautore+'[0-9]+,[\n\r]*$')):
 		return _autorem.match(file.peekline(4096)) is not None
-	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	_csv2rem=re.compile(_csvfnre+r'([0-9]+),')
 	def do_test_chksumline(self, l):
@@ -1654,9 +1654,9 @@ class CSV2(TextChksumType):
 		if not x: return -1
 		self.test_file(csvunquote(x.group(1),x.group(2)),None,int(x.group(3)))
 	
+	@staticmethod
 	def make_std_filename(filename):
 		return filename+'.csv'
-	make_std_filename = staticmethod(make_std_filename)
 	
 	def make_addfile(self, filename):
 		if filename=='':
@@ -1693,9 +1693,9 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 	description = 'JPEGSheriff'
 	descinfo = 'name,size,dimensions,CRC32'
 
+	@staticmethod
 	def auto_chksumfile_match(file, _autorem=re.compile(r'^Filename\s+(Filesize\s+)?.*?CRC-?32.*^-+(\s+-+){1,4}\s*$', re.DOTALL|re.IGNORECASE|re.MULTILINE)):
 		return _autorem.search(file.peekdecoded(1024)) is not None
-	auto_chksumfile_match = staticmethod(auto_chksumfile_match)
 
 	auto_filename_match = 'crc$'
 	
@@ -1735,9 +1735,9 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 			size = -1
 		self.test_file(x.group('name'), unhexlify(x.group('crc')), size)
 	
+	@staticmethod
 	def make_std_filename(filename):
 		return filename+'.crc'
-	make_std_filename = staticmethod(make_std_filename)
 
 	def make_chksumfile_create(self, filename):
 		file = TextChksumType.make_chksumfile_create(self, filename)
