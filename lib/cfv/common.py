@@ -147,7 +147,7 @@ class Stats:
 		self.notfound=0
 		self.ferror=0
 		self.cferror=0
-		self.bytesread=0L #use long int for size, to avoid possible overflow.
+		self.bytesread=0
 		self.unverified=0
 		self.diffcase=0
 		self.misnamed=0
@@ -1751,7 +1751,7 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 			self.use_dimensions=0
 		self._flist = []
 		self._fieldlens = [0]*6
-		self._ftotal = 0L
+		self._ftotal = 0
 		return file
 	
 	def make_chksumfile_finish(self, file):

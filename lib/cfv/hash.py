@@ -31,7 +31,7 @@ def _getfilechecksum(filename, hasher, callback):
 			if callback: callback(s)
 
 	if f==sys.stdin or _nommap or callback:
-		return finish(hasher(),0L)
+		return finish(hasher(), 0)
 	else:
 		s = os.path.getsize(filename)
 		try:
