@@ -31,7 +31,7 @@ class FileInfoCache:
 		if st.st_ino:
 			dk = (st.st_dev,  st.st_ino)
 		else:
-			dk = os.path.realpath(osutil.path_join(curdir, path))
+			dk = os.path.realpath(path)
 		self._path_key_cache[path] = dk
 		return dk
 	
