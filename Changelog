@@ -8,6 +8,7 @@
 	* Print help output to stdout under non-error conditions. (Requested by Simon Howard)
 	* Decode the torrent comment field too.
 	* Work around mmap file descriptor leak in Python 2.4.2.
+	* Changed handling of -f: Now all options are checked before testing/creating the file. (Benjamin Hohl)
 
 2005-02-04 - v1.18.1:
 	* Fix TypeError when using progress meter and checksumming stdin.

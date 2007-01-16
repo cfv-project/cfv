@@ -2160,7 +2160,7 @@ def decode_arg(a):
 def main(argv=None):
 	if argv is None:
 		argv = sys.argv[1:]
-	manual=0
+	manual=[]
 	mode=0
 	typename='auto'
 
@@ -2207,22 +2207,7 @@ def main(argv=None):
 					printcftypehelp(err=1)
 				typename=a
 			elif o=='-f':
-				view.setup_output()
-				manual=1 #filename selected manually, don't try to autodetect
-				if mode==0:
-					filenamefilter.set_testfiles(args)
-					test(a, typename)
-				else:
-					if typename!='auto':
-						make(cftypes[typename],a,args)
-					else:
-						testa=''
-						if config.gzip>=0 and a[-3:]=='.gz':
-								testa=a[:-3]
-						cftype = auto_filename_match(a, testa)
-						if not cftype:
-							raise CFVValueError, 'specify a filetype with -t, or use standard extension'
-						make(cftype,a,args)
+				manual.append(a) #filename selected manually, don't try to autodetect
 			elif o=='-U':
 				config.showunverified=0
 			elif o=='-u':
@@ -2332,6 +2317,22 @@ def main(argv=None):
 			if typename=='auto':
 				typename=config.defaulttype
 			make(cftypes[typename],None,args)
+	else:
+		for a in manual:
+			if mode==0:
+				filenamefilter.set_testfiles(args)
+				test(a, typename)
+			else:
+				if typename!='auto':
+					make(cftypes[typename],a,args)
+				else:
+					testa=''
+					if config.gzip>=0 and a[-3:]=='.gz':
+							testa=a[:-3]
+					cftype = auto_filename_match(a, testa)
+					if not cftype:
+						raise CFVValueError, 'specify a filetype with -t, or use standard extension'
+					make(cftype,a,args)
 	
 	if mode==0:
 		show_unverified_files(args)
