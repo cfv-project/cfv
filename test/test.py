@@ -59,11 +59,6 @@ def is_encodable(s, enc=preferredencoding):
 
 
 try:
-	try: import BitTorrent
-	except ImportError: import BitTornado; BitTorrent = BitTornado
-except ImportError: BitTorrent = None
-
-try:
 	from elementtree import ElementTree
 except ImportError:
 	_have_verifyxml = 0
@@ -85,7 +80,7 @@ fmt_info = {
 	'crc':    (1, 1, 1, 1,                  1, preferredencoding),
 	'par':    (1, 1, 0, 1,                  0, 'utf-16-le'),
 	'par2':   (1, 1, 0, 1,                  0, preferredencoding),
-	'torrent':(1, 1, 1, not not BitTorrent, 0, 'utf-8'),
+	'torrent':(1, 1, 1, 1,                  0, 'utf-8'),
 	'verify': (1, 1, 1, _have_verifyxml,    0, 'utf-8'),
 }
 def fmt_hascrc(f):
@@ -1114,8 +1109,6 @@ def test_encoding_detection():
 def test_encoding2():
 	"""Non-trivial (actual non-ascii characters) encoding test.
 	These tests will probably always fail unless you use a unicode locale and python 2.3+."""
-	if not BitTorrent:
-		return
 	d = tempfile.mkdtemp()
 	d2 = tempfile.mkdtemp()
 	try:
@@ -1387,15 +1380,13 @@ def all_tests():
 	ren_test('csv2')
 	ren_test('csv4')
 	ren_test('crc')
-	if BitTorrent:
-		ren_test('torrent')
+	ren_test('torrent')
 
 	for t in 'sha1', 'md5', 'bsdmd5', 'sfv', 'sfvmd5', 'csv', 'csv2', 'csv4', 'crc', 'par', 'par2':
 		search_test(t)
 		search_test(t,test_nocrc=1)
-	if BitTorrent:
-		search_test('torrent',test_nocrc=1)
-		#search_test('torrent',test_nocrc=1,extra="--strip=1")
+	search_test('torrent',test_nocrc=1)
+	#search_test('torrent',test_nocrc=1,extra="--strip=1")
 	quoted_search_test()
 
 	T_test(".sha1")
@@ -1441,19 +1432,18 @@ def all_tests():
 	T_test("crcrlf.crc")
 	if fmt_available('verify'):
 		T_test(".verify")
-	if BitTorrent:
-		for strip in (0,1):
-			T_test(".torrent",extra='--strip=%s'%strip)
-			T_test("smallpiece.torrent",extra='--strip=%s'%strip)
-			T_test("encoding.torrent",extra='--strip=%s'%strip)
-		def cfv_torrentcommentencoding_test(s,o):
-			r = cfv_all_test(s,o,ok=1)
-			if r: return r
-			tcount = o.count('Test_Comment-Text.')
-			if tcount!=1: return 'encoded text count: %s'%tcount
-			return 0
-		test_generic(cfvcmd+" -T -v -f testencodingcomment.torrent", cfv_torrentcommentencoding_test)
-		test_encoding2()
+	for strip in (0,1):
+		T_test(".torrent",extra='--strip=%s'%strip)
+		T_test("smallpiece.torrent",extra='--strip=%s'%strip)
+		T_test("encoding.torrent",extra='--strip=%s'%strip)
+	def cfv_torrentcommentencoding_test(s,o):
+		r = cfv_all_test(s,o,ok=1)
+		if r: return r
+		tcount = o.count('Test_Comment-Text.')
+		if tcount!=1: return 'encoded text count: %s'%tcount
+		return 0
+	test_generic(cfvcmd+" -T -v -f testencodingcomment.torrent", cfv_torrentcommentencoding_test)
+	test_encoding2()
 	test_encoding_detection()
 	unrecognized_cf_test()
 
@@ -1562,27 +1552,26 @@ def all_tests():
 	test_generic(cfvcmd+" -T -m -f "+os.path.join("corrupt","missingfiledesc.par2"),cfv_cferror_test)
 	test_generic(cfvcmd+" -T -m -f "+os.path.join("corrupt","missingmain.par2"),cfv_cferror_test)
 
-	if BitTorrent:
-		test_generic(cfvcmd+" -T -f foo.torrent",cfv_test)
-		test_generic(cfvcmd+" -T --strip=none -p foo -f ../foo.torrent",rcurry(cfv_all_test,notfound=7))
-		for strip in (0,1):
-			test_generic(cfvcmd+" -T --strippaths=%s -p foo -f %s"%(strip,os.path.join(os.pardir,"foo.torrent")),rcurry(cfv_all_test,ok=7))
-			test_generic(cfvcmd+" -T --strippaths=%s -p foo2err -f %s"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=4,badcrc=3))
-			test_generic(cfvcmd+" -T --strippaths=%s -p foo2err -f %s foo1 foo4"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=0,badcrc=2))
-			test_generic(cfvcmd+" -T --strippaths=%s -p foo2err1 -f %s"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=6,badcrc=1))
-			test_generic(cfvcmd+" -T --strippaths=%s -p foo2err1 -f %s foo1 foo4"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=2))
-			test_generic(cfvcmd+" -T --strippaths=%s -p foo2badsize -f %s"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=5,badsize=1,badcrc=1))
-			test_generic(cfvcmd+" -T --strippaths=%s -p foo2badsize -f %s foo1 foo4"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=1,badcrc=1))
-			test_generic(cfvcmd+" -T --strippaths=%s -p foo2missing -f %s"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=4,badcrc=2,notfound=1))
-			test_generic(cfvcmd+" -T --strippaths=%s -p foo2missing -f %s foo1 foo4"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=0,badcrc=2))
-		d = tempfile.mkdtemp()
-		try:
-			open(os.path.join(d,'foo'),'w').close()
-			cmd = cfvcmd.replace(' --announceurl=url','')
-			test_generic(cmd+" -C -p %s -f foo.torrent"%d,rcurry(cfv_all_test,files=1,cferror=1))
-			test_log_results("non-creation of empty torrent on missing announceurl?",'',repr(os.listdir(d)),len(os.listdir(d))>1,{})
-		finally:
-			shutil.rmtree(d)
+	test_generic(cfvcmd+" -T -f foo.torrent",cfv_test)
+	test_generic(cfvcmd+" -T --strip=none -p foo -f ../foo.torrent",rcurry(cfv_all_test,notfound=7))
+	for strip in (0,1):
+		test_generic(cfvcmd+" -T --strippaths=%s -p foo -f %s"%(strip,os.path.join(os.pardir,"foo.torrent")),rcurry(cfv_all_test,ok=7))
+		test_generic(cfvcmd+" -T --strippaths=%s -p foo2err -f %s"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=4,badcrc=3))
+		test_generic(cfvcmd+" -T --strippaths=%s -p foo2err -f %s foo1 foo4"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=0,badcrc=2))
+		test_generic(cfvcmd+" -T --strippaths=%s -p foo2err1 -f %s"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=6,badcrc=1))
+		test_generic(cfvcmd+" -T --strippaths=%s -p foo2err1 -f %s foo1 foo4"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=2))
+		test_generic(cfvcmd+" -T --strippaths=%s -p foo2badsize -f %s"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=5,badsize=1,badcrc=1))
+		test_generic(cfvcmd+" -T --strippaths=%s -p foo2badsize -f %s foo1 foo4"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=1,badcrc=1))
+		test_generic(cfvcmd+" -T --strippaths=%s -p foo2missing -f %s"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=4,badcrc=2,notfound=1))
+		test_generic(cfvcmd+" -T --strippaths=%s -p foo2missing -f %s foo1 foo4"%(strip,os.path.join(os.pardir,"foo.torrent")), rcurry(cfv_all_test,ok=0,badcrc=2))
+	d = tempfile.mkdtemp()
+	try:
+		open(os.path.join(d,'foo'),'w').close()
+		cmd = cfvcmd.replace(' --announceurl=url','')
+		test_generic(cmd+" -C -p %s -f foo.torrent"%d,rcurry(cfv_all_test,files=1,cferror=1))
+		test_log_results("non-creation of empty torrent on missing announceurl?",'',repr(os.listdir(d)),len(os.listdir(d))>1,{})
+	finally:
+		shutil.rmtree(d)
 
 	if run_long_tests:
 		largefile_test()

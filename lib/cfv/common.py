@@ -985,14 +985,7 @@ register_cftype('par2', PAR2)
 
 
 #---------- .torrent ----------
-_btimporterror = None
-try:
-	from BitTorrent import bencode, btformats
-except ImportError, e1:
-	try:
-		from BitTornado import bencode; from BitTornado.BT1 import btformats
-	except ImportError, e2:
-		_btimporterror = '%s and %s'%(e1,e2)
+from cfv.BitTorrent import bencode, btformats
 import sha
 
 class Torrent(ChksumType):
@@ -1004,8 +997,6 @@ class Torrent(ChksumType):
 		return file.peek(1)=='d' and file.peek(4096).find('8:announce')>=0
 
 	def do_test_chksumfile(self, file):
-		if _btimporterror:
-			raise EnvironmentError, _btimporterror
 		try:
 			metainfo = bencode.bdecode(file.read())
 			btformats.check_message(metainfo)
@@ -1200,8 +1191,6 @@ class Torrent(ChksumType):
 		return filename+'.torrent'
 
 	def make_chksumfile_create(self, filename):
-		if _btimporterror:
-			raise EnvironmentError, _btimporterror
 		if config.announceurl==None:
 			raise EnvironmentError, 'announce url required'
 		file = fileutil.open_write_raw(filename, config)
