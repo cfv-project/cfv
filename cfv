@@ -704,7 +704,7 @@ except ImportError:
 		def update(self, s):
 			self.value = _crc32(s, self.value)
 		def digest(self):
-			return struct.pack('>I',self.value)
+			return struct.pack('>I', self.value & 0xFFFFFFFF)
 
 	def _getfilemd5(file):
 		return _getfilechecksum(file, md5.new)
