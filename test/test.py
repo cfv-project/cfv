@@ -1163,6 +1163,23 @@ def specialfile_test(cfpath):
 		shutil.rmtree(d)
 	
 
+def private_torrent_test():
+	cmd=cfvcmd
+	tmpd = mkdtemp()
+	try:
+		needle = '7:privatei1'
+		f = os.path.join(tmpd, 'test.torrent')
+		test_generic("%s -C -f %s data1"%(cmd,f),cfv_test)
+		data = readfile(f)
+		test_log_results('should not contain private flag', 0, repr(data), needle in data, None)
+
+		f = os.path.join(tmpd, 'test2.torrent')
+		test_generic("%s --private_torrent -C -f %s data1"%(cmd,f),cfv_test)
+		data = readfile(f)
+		test_log_results('should contain private flag', 0, repr(data), needle not in data, None)
+	finally:
+		shutil.rmtree(tmpd)
+
 
 cfvenv=''
 cfvexe=os.path.join(os.pardir,'cfv')
@@ -1207,7 +1224,7 @@ if args:
 	cfvexe=args[0]
 
 #set everything to default in case user has different in config file
-cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url'
+cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url --noprivate_torrent'
 
 if run_internal:
 	runcfv = runcfv_py
@@ -1347,6 +1364,7 @@ def all_tests():
 	C_test("csv2","-t csv2")
 	C_test("csv4","-t csv4")
 	C_test("crc")
+	private_torrent_test()
 	#test_generic("../cfv -V -T -f test.md5",cfv_test)
 	#test_generic("../cfv -V -tcsv -T -f test.md5",cfv_test)
 	for t in allfmts():
