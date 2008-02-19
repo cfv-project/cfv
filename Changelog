@@ -11,6 +11,7 @@
 	* Changed handling of -f: Now all options are checked before testing/creating the file. (Benjamin Hohl)
 	* Torrent file handling no longer requires BitTorrent client to be installed.
 	* Fix "struct integer overflow masking is deprecated" warning.  (Reported by jjacobs2)
+	* Add --private_torrent flag. (Requested by Anders Henke)
 
 2005-02-04 - v1.18.1:
 	* Fix TypeError when using progress meter and checksumming stdin.

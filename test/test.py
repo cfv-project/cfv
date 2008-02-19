@@ -1304,6 +1304,24 @@ def unrecognized_cf_test():
 	test_generic(cfvcmd+" -T --encoding=utf-16 -f data1", cfv_unrecenc)
 
 
+def private_torrent_test():
+	cmd=cfvcmd
+	tmpd = tempfile.mkdtemp()
+	try:
+		needle = '7:privatei1'
+		f = os.path.join(tmpd, 'test.torrent')
+		test_generic("%s -C -f %s data1"%(cmd,f),cfv_test)
+		data = readfile(f)
+		test_log_results('should not contain private flag', 0, repr(data), needle in data, None)
+
+		f = os.path.join(tmpd, 'test2.torrent')
+		test_generic("%s --private_torrent -C -f %s data1"%(cmd,f),cfv_test)
+		data = readfile(f)
+		test_log_results('should contain private flag', 0, repr(data), needle not in data, None)
+	finally:
+		shutil.rmtree(tmpd)
+
+
 def all_unittest_tests():
 	if not run_internal:
 		return
@@ -1360,7 +1378,7 @@ cfvtest.setcfv(fn=args and args[0] or None, internal=run_internal)
 from cfvtest import runcfv
 
 #set everything to default in case user has different in config file
-cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url'
+cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url --noprivate_torrent'
 
 logfile=open(os.path.join(tempfile.gettempdir(), "cfv_%s_test-%s.log"%(cfvtest.ver_cfv, time.strftime('%Y%m%dT%H%M%S'))), "w")
 
@@ -1501,6 +1519,7 @@ def all_tests():
 	C_test("csv2","-t csv2")
 	C_test("csv4","-t csv4")
 	C_test("crc")
+	private_torrent_test()
 	#test_generic("../cfv -V -T -f test.md5",cfv_test)
 	#test_generic("../cfv -V -tcsv -T -f test.md5",cfv_test)
 	for t in allavailablefmts():

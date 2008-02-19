@@ -229,6 +229,7 @@ class Config:
 	progress='a'
 	announceurl=None
 	piece_size_pow2=18
+	private_torrent=False
 	encoding='auto'
 	def getencoding(self, preferred=None):
 		return osutil.getencoding(self.encoding, preferred)
@@ -277,7 +278,7 @@ class Config:
 	def setx(self,o,v):
 		if o=="default":
 			self.setdefault(v)
-		elif o in ("dirsort","cmdlinesort","ignorecase","rename","search","dereference","unquote"):
+		elif o in ("dirsort","cmdlinesort","ignorecase","rename","search","dereference","unquote","private_torrent"):
 			self.setbool(o,v)
 		elif o in ("cmdlineglob", "progress"):
 			self.setyesnoauto(o,v)
@@ -1232,6 +1233,8 @@ class Torrent(ChksumType):
 			self.pieces.append(self.sh.digest())
 
 		info = {'pieces':''.join(self.pieces), 'piece length':self.piece_length}
+		if config.private_torrent:
+			info['private'] = 1
 		if len(self.files)==1 and len(self.files[0]['path'])==1:
 			info['length'] = self.files[0]['length']
 			info['name'] = self.files[0]['path'][0]
@@ -2116,6 +2119,7 @@ def printusage(err=0):
 	phelp('torrent creation options:')
 	phelp(' --announceurl=URL    tracker announce url')
 	phelp(' --piece_size_pow2=N  power of two to set the piece size to (default 18)')
+	phelp(' --private_torrent    set private flag in torrent')
 	sys.exit(err)
 def printhelp():
 	view.pinfo('cfv v%s - Copyright (C) 2000-2005 Matthew Mueller - GPL license'%__version__)
@@ -2157,7 +2161,7 @@ def main(argv=None):
 		optlist, args = getopt.getopt(argv, 'rRlLTCt:f:mMnNsSp:uUiIvVzZqQh?',
 				['list=', 'list0=', 'fixpaths=', 'strippaths=', 'showpaths=','renameformat=','progress=','unquote=','help','version',
 				'encoding=',
-				'announceurl=','piece_size_pow2=', #torrent options
+				'announceurl=','piece_size_pow2=','private_torrent','noprivate_torrent', #torrent options
 				])
 	except getopt.error, a:
 		view.perror("cfv: %s"%a)
@@ -2280,6 +2284,10 @@ def main(argv=None):
 				config.setx('announceurl', a)
 			elif o=='--piece_size_pow2':
 				config.setx('piece_size_pow2', a)
+			elif o=='--private_torrent':
+				config.private_torrent=True
+			elif o=='--noprivate_torrent':
+				config.private_torrent=False
 			elif o=='-h' or o=='-?' or o=='--help':
 				printhelp()
 			elif o=='--version':
