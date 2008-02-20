@@ -447,7 +447,7 @@ class Config:
 	progress='a'
 	announceurl=None
 	piece_size_pow2=18
- 	private_torrent=False
+	private_torrent=False
 	def setdefault(self,cftype):
 		if cftype in cftypes.keys():
 			self.defaulttype=cftype
