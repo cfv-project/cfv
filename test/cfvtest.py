@@ -20,11 +20,13 @@
 default_ns = globals().copy()
 default_ns['__name__']='__main__'
 
+import fnmatch
 import os,sys
 import traceback
 from glob import glob
 import shlex
 
+from doctest import DocTestSuite
 import unittest
 from unittest import TestCase, main
 
@@ -194,15 +196,24 @@ def my_import(name):
 		mod = getattr(mod, comp)
 	return mod
 
+def rfind(root, match):
+	root = os.path.join(root, '')
+	for path, dirs, files in os.walk(root):
+		subpath = path.replace(root, '', 1)
+		for file in files:
+			if fnmatch.fnmatch(file, match):
+				yield os.path.join(subpath, file)
+
 def all_unittests_suite():
-	modules_to_test = [os.path.splitext(f)[0] for f in os.listdir(testpath) if f.lower().startswith("test_") and f.lower().endswith(".py")]
+	modules_to_test = [os.path.splitext(f)[0].replace(os.sep, '.') for f in rfind(testpath, 'test_*.py')]
+	assert modules_to_test
 	alltests = unittest.TestSuite()
-	for module in map(__import__, modules_to_test):
+	for module in map(my_import, modules_to_test):
 		alltests.addTest(unittest.findTestCases(module))
 
-	from doctest import DocTestSuite
 	import cfv.common
-	modules_to_doctest = ['cfv.'+os.path.splitext(f)[0] for f in os.listdir(os.path.split(cfv.common.__file__)[0]) if f[0]!='_' and f.lower().endswith(".py")]
+	libdir = os.path.split(cfv.common.__file__)[0]
+	modules_to_doctest = ['cfv.'+os.path.splitext(f)[0].replace(os.sep, '.') for f in rfind(libdir, '*.py')]
 	assert 'cfv.common' in modules_to_doctest
 	for name in modules_to_doctest:
 		module = my_import(name)
