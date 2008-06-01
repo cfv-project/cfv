@@ -1,7 +1,6 @@
 ; This is a NSIS installer script.  See http://nsis.sourceforge.net/
 
 !define VER 1.18.2
-!define PYTHONDLL python24.dll
 
 Name "cfv"
 
@@ -32,7 +31,7 @@ Section "exe and support files (required)"
   File dist\cfv.exe
   File dist\library.zip
   File dist\*.pyd
-  File dist\${PYTHONDLL}
+  File dist\*.dll
 
   ; Write the installation path into the registry
   ;WriteRegStr HKLM SOFTWARE\cfv "Install_Dir" "$INSTDIR"
@@ -95,7 +94,7 @@ Section "Uninstall"
   ; remove files
   Delete $INSTDIR\cfv.exe
   Delete $INSTDIR\library.zip
-  Delete $INSTDIR\${PYTHONDLL}
+  Delete $INSTDIR\*.dll
   Delete $INSTDIR\*.pyd
   
   Delete $INSTDIR\cfv.txt
