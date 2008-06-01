@@ -1,4 +1,4 @@
-2005-xx-xx - v1.x:
+2008-06-01 - v1.18.2:
 	* Print help output to stdout under non-error conditions. (Requested by Simon Howard)
  	* Work around mmap file descriptor leak in Python 2.4.2.
 	* Support different module layout of BitTorrent 5.x.
