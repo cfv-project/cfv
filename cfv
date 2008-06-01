@@ -2379,7 +2379,7 @@ def printusage(err=0):
 	phelp(' --private_torrent    set private flag in torrent')
 	sys.exit(err)
 def printhelp():
-	pinfo('cfv v%s - Copyright (C) 2000-2005 Matthew Mueller - GPL license'%version)
+	pinfo('cfv v%s - Copyright (C) 2000-2008 Matthew Mueller - GPL license'%version)
 	printusage()
 def printcftypehelp(err):
 	phelp = err and perror or pinfo
