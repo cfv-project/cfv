@@ -629,6 +629,8 @@ try:
 except ImportError:
 	nommap=1
 
+_MAX_MMAP = 2**32 - 1
+_FALLBACK_MMAP = 2**31 - 1
 def _getfilechecksum(file, hasher):
 	if file=='':
 		f=sys.stdin
@@ -653,9 +655,12 @@ def _getfilechecksum(file, hasher):
 	else:
 		s = os.path.getsize(file)
 		try:
+			if s > _MAX_MMAP:
+				# Work around python 2.[56] problem with md5 of large mmap objects
+				raise OverflowError
 			m = hasher(dommap(f.fileno(), s))
 		except OverflowError:
-			mmapsize = min(s, 2**31-1) #mmap size is limited by C's int type, which even on 64 bit arches is often 32 bits, so we can't use sys.maxint either.  If we get the error, just assume 32 bits. 
+			mmapsize = min(s, _FALLBACK_MMAP) #mmap size is limited by C's int type, which even on 64 bit arches is often 32 bits, so we can't use sys.maxint either.  If we get the error, just assume 32 bits. 
 			m = hasher(dommap(f.fileno(), mmapsize))
 			f.seek(mmapsize)
 			return finish(m,mmapsize) #unfortunatly, python's mmap module doesn't support the offset parameter, so we just have to do the rest of the file the old fashioned way.

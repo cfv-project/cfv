@@ -1,9 +1,10 @@
-2008-06-01 - v1.18.2:
+2008-06-22 - v1.18.2:
 	* Print help output to stdout under non-error conditions. (Requested by Simon Howard)
  	* Work around mmap file descriptor leak in Python 2.4.2.
 	* Support different module layout of BitTorrent 5.x.
 	* Fix "struct integer overflow masking is deprecated" warning.  (Reported by jjacobs2)
 	* Add --private_torrent flag. (Requested by Anders Henke)
+	* Work around bug in Python (only manifests with 64-bit Python version >= 2.5) which causes checksums of files > 4GB to be incorrectly calculated (when using mmap, eg, when the progress meter is disabled or not shown.) 
 
 2005-02-04 - v1.18.1:
 	* Fix TypeError when using progress meter and checksumming stdin.

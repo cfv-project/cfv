@@ -1080,7 +1080,22 @@ def test_encoding2():
 	shutil.rmtree(unicode(d))
 	
 
-def largefile_test():
+def largefile2GB_test():
+	# hope you have sparse file support ;)
+	fn = os.path.join('bigfile2','bigfile')
+	f = open(fn,'wb')
+	try:
+		f.write('hi')
+		f.seek(2**30)
+		f.write('foo')
+		f.seek(2**31)
+		f.write('bar')
+		f.close()
+		test_generic(cfvcmd+" -v -T -p %s"%('bigfile2'), rcurry(cfv_all_test,ok=6))
+	finally:
+		os.unlink(fn)
+
+def largefile4GB_test():
 	# hope you have sparse file support ;)
 	fn = os.path.join('bigfile','bigfile')
 	f = open(fn,'wb')
@@ -1416,7 +1431,8 @@ def all_tests():
 			shutil.rmtree(d)
 
 	if run_long_tests:
-		largefile_test()
+		largefile2GB_test()
+		largefile4GB_test()
 	
 	test_generic(cfvcmd+" -t aoeu",rcurry(cfv_cftypehelp_test,1),stdout='/dev/null')
 	test_generic(cfvcmd+" -t aoeu",rcurry(cfv_nooutput_test,1),stderr='/dev/null')
