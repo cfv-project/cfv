@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 #    cfv - Command-line File Verify
-#    Copyright (C) 2000-2008  Matthew Mueller <donut AT dakotacom DOT net>
+#    Copyright (C) 2000-2009  Matthew Mueller <donut AT dakotacom DOT net>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -667,9 +667,17 @@ def _getfilechecksum(file, hasher):
 		stats.bytesread = stats.bytesread+s
 		return m.digest(),s
 
-import sha
+try:
+	from hashlib import sha1 as sha_new
+except ImportError:
+	from sha import new as sha_new
+try:
+	from hashlib import md5 as md5_new
+except ImportError:
+	from md5 import new as md5_new
+
 def _getfilesha1(file):
-	return _getfilechecksum(file, sha.new)
+	return _getfilechecksum(file, sha_new)
 			
 try:
 	if os.environ.get('CFV_NOFCHKSUM'): raise ImportError
@@ -696,7 +704,6 @@ try:
 			if stdprogress: progress.cleanup()
 		return c,s
 except ImportError:
-	import md5
 	try:
 		import zlib
 		_crc32=zlib.crc32
@@ -713,7 +720,7 @@ except ImportError:
 			return struct.pack('>I', self.value & 0xFFFFFFFF)
 
 	def _getfilemd5(file):
-		return _getfilechecksum(file, md5.new)
+		return _getfilechecksum(file, md5_new)
 			
 	def _getfilecrc(file):
 		return _getfilechecksum(file, CRC32)
@@ -1232,8 +1239,7 @@ class PAR(ChksumType, MD5_MixIn):
 		d = file.read(struct.calcsize(par_header_fmt))
 		magic, version, client, control_hash, set_hash, vol_number, num_files, file_list_ofs, file_list_size, data_ofs, data_size = struct.unpack(par_header_fmt, d)
 		if config.docrcchecks:
-			import md5
-			control_md5 = md5.new()
+			control_md5 = md5_new()
 			control_md5.update(d[0x20:])
 			stats.bytesread=stats.bytesread+len(d)
 		if version not in (0x00000900, 0x00010000): #ver 0.9 and 1.0 are the same, as far as we care.  Future versions (if any) may very likey have incompatible changes, so don't accept them either.
@@ -1316,8 +1322,7 @@ class PAR2(ChksumType, MD5_MixIn):
 			magic, pkt_len, pkt_md5, set_id, pkt_type = struct.unpack(pkt_header_fmt, d)
 
 			if config.docrcchecks:
-				import md5
-				control_md5 = md5.new()
+				control_md5 = md5_new()
 				control_md5.update(d[0x20:])
 				stats.bytesread=stats.bytesread+len(d)
 				d = file.read(pkt_len - pkt_header_size)
@@ -1522,7 +1527,7 @@ class Torrent(ChksumType):
 				if not f.done:
 					wanttest = 1
 			if wanttest:
-				sh = sha.sha()
+				sh = sha_new()
 				for f,fcurpos,fpiecelen in piecefiles:
 					if stdprogress and f.l_filename and f.l_filename!=progress.filename:
 						progress.cleanup()
@@ -1578,7 +1583,7 @@ class Torrent(ChksumType):
 		if config.announceurl==None:
 			raise EnvironmentError, 'announce url required'
 		file = ChksumType.make_chksumfile(self, filename)
-		self.sh = sha.sha()
+		self.sh = sha_new()
 		self.files = []
 		self.pieces = []
 		self.piece_done = 0
@@ -1603,7 +1608,7 @@ class Torrent(ChksumType):
 			self.piece_done = self.piece_done + s
 			if self.piece_done == self.piece_length:
 				self.pieces.append(self.sh.digest())
-				self.sh = sha.sha()
+				self.sh = sha_new()
 				self.piece_done = 0
 		f.close()
 		if stdprogress: progress.cleanup()
@@ -2384,7 +2389,7 @@ def printusage(err=0):
 	phelp(' --private_torrent    set private flag in torrent')
 	sys.exit(err)
 def printhelp():
-	pinfo('cfv v%s - Copyright (C) 2000-2008 Matthew Mueller - GPL license'%version)
+	pinfo('cfv v%s - Copyright (C) 2000-2009 Matthew Mueller - GPL license'%version)
 	printusage()
 def printcftypehelp(err):
 	phelp = err and perror or pinfo
