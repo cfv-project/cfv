@@ -22,6 +22,7 @@ import getopt, re, os, sys, errno, time, copy, struct
 from stat import S_ISDIR, S_ISREG
 
 from cfv import caching
+from cfv import cftypes
 from cfv import hash
 from cfv import fileutil
 from cfv import osutil
@@ -46,10 +47,6 @@ def cffndecode(s, preferred=None):
 	if not osutil.fs_nullsok and '\0' in s:
 		raise FilenameError, "filename contains null characters"
 	return s
-
-cftypes={}
-_cf_fn_exts, _cf_fn_matches, _cf_fn_searches = [], [], []
-_cf_matchers = []
 
 class Data:
 	def __init__(self, **kw):
@@ -210,7 +207,7 @@ class Config:
 	cmdlineglob='a'
 	recursive=0
 	showunverified=0
-	defaulttype='sfv'
+	default_type_name='sfv'
 	ignorecase=0
 	unquote=0
 	fixpaths=None
@@ -224,7 +221,6 @@ class Config:
 	renameformatnocount=0
 	list=0
 	listsep='\n'
-	user_cf_fn_regexs=[]
 	dereference=1
 	progress='a'
 	announceurl=None
@@ -242,11 +238,11 @@ class Config:
 			except (UnicodeError, LookupError), e:
 				raise CFVValueError, "invalid encoding option: %s"%(e)
 		self.encoding = v
-	def setdefault(self,cftype):
-		if cftype in cftypes:
-			self.defaulttype=cftype
+	def setdefault(self, typename):
+		if cftypes.has_handler(typename):
+			self.default_type_name = typename
 		else:
-			raise CFVValueError, "invalid default type '%s'"%cftype
+			raise CFVValueError, "invalid default type '%s'" % typename
 	def setintr(self,o,v,min,max):
 		try:
 			x=int(v)
@@ -347,9 +343,9 @@ class Config:
 			self.renameformat=v
 		elif o=="filename_type":
 			typename,match = v.split('=',1)
-			if typename not in cftypes:
+			if not cftypes.has_handler(typename):
 				raise CFVValueError, "filename_type: invalid type '%s'"%typename
-			self.user_cf_fn_regexs.append((re.compile(match, re.I).search, cftypes[typename]))
+			cftypes.add_user_cf_fn_regex(match, typename)
 		elif o=='announceurl':
 			self.setstr(o,v)
 		elif o=='piece_size_pow2':
@@ -405,34 +401,6 @@ __homepage__='http://cfv.sourceforge.net/'
 
 _hassymlinks=hasattr(os,'symlink')
 
-
-def auto_filename_match(*names):
-	for searchfunc, cftype in config.user_cf_fn_regexs + _cf_fn_matches + _cf_fn_exts + _cf_fn_searches:
-		for name in names:
-			if searchfunc(name):
-				return cftype
-	return None
-
-def auto_chksumfile_match(file):
-	for p, matchfunc, cftype in _cf_matchers:
-		if matchfunc(file):
-			return cftype
-	return None
-
-def register_cftype(name, cftype):
-	cftypes[name] = cftype
-
-	if hasattr(cftype, 'auto_filename_match'):
-		if cftype.auto_filename_match[-1]=='$' and cftype.auto_filename_match[0]=='^':
-			_cf_fn_matches.append((re.compile(cftype.auto_filename_match, re.I).search, cftype))
-		elif cftype.auto_filename_match[-1]=='$':
-			_cf_fn_exts.append((re.compile(cftype.auto_filename_match, re.I).search, cftype))
-		else:
-			_cf_fn_searches.append((re.compile(cftype.auto_filename_match, re.I).search, cftype))
-
-	_cf_matchers.append((getattr(cftype,"auto_chksumfile_order", 0), cftype.auto_chksumfile_match, cftype))
-	_cf_matchers.sort()
-	_cf_matchers.reverse()
 
 
 def parse_commentline(comment, commentchars):
@@ -726,6 +694,7 @@ class FooSum_Base(TextChksumType):
 
 
 class SHA1(FooSum_Base, SHA1_MixIn):
+	name = 'sha1'
 	description = 'GNU sha1sum'
 	descinfo = 'SHA1,name'
 	
@@ -749,7 +718,7 @@ class SHA1(FooSum_Base, SHA1_MixIn):
 		crc=hexlify(getfilesha1(filename)[0])
 		return (crc, -1), '%s *%s'%(crc,filename)+os.linesep
 
-register_cftype('sha1', SHA1)
+cftypes.register_cftype(SHA1)
 
 
 #---------- md5 ----------
@@ -761,6 +730,7 @@ class MD5_MixIn:
 			return c
 
 class MD5(FooSum_Base, MD5_MixIn):
+	name = 'md5'
 	description = 'GNU md5sum'
 	descinfo = 'MD5,name'
 
@@ -784,12 +754,13 @@ class MD5(FooSum_Base, MD5_MixIn):
 		crc=hexlify(getfilemd5(filename)[0])
 		return (crc, -1), '%s *%s'%(crc,filename)+os.linesep
 
-register_cftype('md5', MD5)
+cftypes.register_cftype(MD5)
 
 
 #---------- bsdmd5 ----------
 
 class BSDMD5(TextChksumType, MD5_MixIn):
+	name = 'bsdmd5'
 	description = 'BSD md5'
 	descinfo = 'name,MD5'
 
@@ -813,7 +784,7 @@ class BSDMD5(TextChksumType, MD5_MixIn):
 		crc=hexlify(getfilemd5(filename)[0])
 		return (crc, -1), 'MD5 (%s) = %s'%(filename, crc)+os.linesep
 
-register_cftype('bsdmd5', BSDMD5)
+cftypes.register_cftype(BSDMD5)
 
 
 #---------- par ----------
@@ -826,6 +797,7 @@ def ver2str(v):
 	return '.'.join(vers)
 
 class PAR(ChksumType, MD5_MixIn):
+	name = 'par'
 	description = 'Parchive v1 (test-only)'
 	descinfo = 'name,size,MD5'
 
@@ -886,10 +858,11 @@ class PAR(ChksumType, MD5_MixIn):
 	def make_std_filename(filename):
 		return filename+'.par'
 
-register_cftype('par', PAR)
+cftypes.register_cftype(PAR)
 
 
 class PAR2(ChksumType, MD5_MixIn):
+	name = 'par2'
 	description = 'Parchive v2 (test-only)'
 	descinfo = 'name,size,MD5'
 
@@ -982,7 +955,7 @@ class PAR2(ChksumType, MD5_MixIn):
 	def make_std_filename(filename):
 		return filename+'.par2'
 
-register_cftype('par2', PAR2)
+cftypes.register_cftype(PAR2)
 
 
 #---------- .torrent ----------
@@ -990,6 +963,7 @@ from cfv.BitTorrent import bencode, btformats
 import sha
 
 class Torrent(ChksumType):
+	name = 'torrent'
 	description = 'BitTorrent metainfo'
 	descinfo = 'name,size,SHA1(piecewise)'
 
@@ -1262,7 +1236,7 @@ class Torrent(ChksumType):
 		file.close()
 		
 
-register_cftype('torrent', Torrent)
+cftypes.register_cftype(Torrent)
 
 
 #---------- VerifyXML ----------
@@ -1312,6 +1286,7 @@ def xs_dateTime(t=None):
 	return tstr
 
 class VerifyXML(ChksumType):
+	name = 'verify'
 	description = 'VerifyXML'
 	descinfo = 'name,size,checksum(s)'
 	
@@ -1474,7 +1449,7 @@ class VerifyXML(ChksumType):
 
 
 if os.environ.get("CFV_ENABLE_VERIFYXML"):
-	register_cftype('verify', VerifyXML)
+	cftypes.register_cftype(VerifyXML)
 
 
 #---------- sfv ----------
@@ -1505,6 +1480,7 @@ class SFV_Base(TextChksumType):
 
 
 class SFV(SFV_Base, CRC_MixIn):
+	name = 'sfv'
 	descinfo = 'name,CRC32'
 
 	@staticmethod
@@ -1527,10 +1503,11 @@ class SFV(SFV_Base, CRC_MixIn):
 		crc=hexlify(getfilecrc(filename)[0])
 		return (crc, -1), '%s %s'%(filename,crc)+os.linesep
 
-register_cftype('sfv', SFV)
+cftypes.register_cftype(SFV)
 
 
 class SFVMD5(SFV_Base, MD5_MixIn):
+	name = 'sfvmd5'
 	descinfo = 'name,MD5'
 
 	@staticmethod
@@ -1554,7 +1531,7 @@ class SFVMD5(SFV_Base, MD5_MixIn):
 		crc=hexlify(getfilemd5(filename)[0])
 		return (crc, -1), '%s %s'%(filename,crc)+os.linesep
 	
-register_cftype('sfvmd5', SFVMD5)
+cftypes.register_cftype(SFVMD5)
 
 
 #---------- csv ----------
@@ -1572,6 +1549,7 @@ def csvunquote(g1,g2):
 	return g2
 
 class CSV(TextChksumType, CRC_MixIn):
+	name = 'csv'
 	description = 'Comma Separated Values'
 	descinfo = 'name,size,CRC32'
 
@@ -1596,12 +1574,13 @@ class CSV(TextChksumType, CRC_MixIn):
 		c = hexlify(c)
 		return (c,s), '%s,%i,%s,'%(csvquote(filename),s,c)+os.linesep
 
-register_cftype('csv', CSV)
+cftypes.register_cftype(CSV)
 
 
 #---------- csv with 4 fields ----------
 
 class CSV4(TextChksumType, CRC_MixIn):
+	name = 'csv4'
 	description = 'Comma Separated Values'
 	descinfo = 'name,size,CRC32,path'
 	
@@ -1627,12 +1606,13 @@ class CSV4(TextChksumType, CRC_MixIn):
 		p=os.path.split(filename)
 		return (c,s), '%s,%i,%s,%s,'%(csvquote(p[1]),s,c,csvquote(p[0]))+os.linesep
 
-register_cftype('csv4', CSV4)
+cftypes.register_cftype(CSV4)
 
 
 #---------- csv with only 2 fields ----------
 
 class CSV2(TextChksumType):
+	name = 'csv2'
 	description = 'Comma Separated Values'
 	descinfo = 'name,size'
 
@@ -1657,7 +1637,7 @@ class CSV2(TextChksumType):
 			s=os.path.getsize(filename)
 		return (None, s), '%s,%i,'%(csvquote(filename),s)+os.linesep
 
-register_cftype('csv2', CSV2)
+cftypes.register_cftype(CSV2)
 
 
 #---------- jpegsheriff .crc ----------
@@ -1682,6 +1662,7 @@ def commaize(n):
 	return s
 
 class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
+	name = 'crc'
 	description = 'JPEGSheriff'
 	descinfo = 'name,size,dimensions,CRC32'
 
@@ -1794,7 +1775,7 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 		return (crc, size), ''
 
 
-register_cftype('crc', JPEGSheriff_CRC)
+cftypes.register_cftype(JPEGSheriff_CRC)
 
 
 #---------- generic ----------
@@ -1823,14 +1804,14 @@ def visit_dir(name, st=None, noisy=1):
 
 def test(filename, typename, restrict_typename='auto'):
 	if typename != 'auto':
-		cf = cftypes[typename]()
+		cf = cftypes.get_handler(typename)()
 		cf.test_chksumfile(None, filename)
 		return
 
 	try:
 		file = fileutil.open_read(filename, config)
-		cftype = auto_chksumfile_match(file)
-		if restrict_typename != 'auto' and cftypes[restrict_typename] != cftype:
+		cftype = cftypes.auto_chksumfile_match(file)
+		if restrict_typename != 'auto' and cftypes.get_handler(restrict_typename) != cftype:
 			return
 		if cftype:
 			cf = cftype()
@@ -2083,7 +2064,7 @@ def printusage(err=0):
 		phelp('  -L       don\'t follow symlinks')
 	phelp('  -T       test mode (default)')
 	phelp('  -C       create mode')
-	phelp('  -t <t>   set type to <t> (%s, or auto(default))'%', '.join(sorted(cftypes)))
+	phelp('  -t <t>   set type to <t> (%s, or auto(default))'%', '.join(sorted(cftypes.get_handler_names())))
 	phelp('  -f <f>   use <f> as list file')
 	phelp('  -m       check only for missing files (don\'t compare checksums)')
 	phelp('  -M       check checksums (default)')
@@ -2131,8 +2112,8 @@ def printcftypehelp(err):
 		phelp(' %-8s %-26s %s'%(typename,desc,info))
 	printtypeinfo('TYPE', 'FILE INFO STORED', 'DESCRIPTION')
 	printtypeinfo('auto', '', 'autodetect type (default)')
-	for typename in sorted(cftypes):
-		printtypeinfo(typename, cftypes[typename].descinfo, cftypes[typename].description)
+	for typename in sorted(cftypes.get_handler_names()):
+		printtypeinfo(typename, cftypes.get_handler(typename).descinfo, cftypes.get_handler(typename).description)
 	sys.exit(err)
 
 stats=Stats()
@@ -2195,7 +2176,7 @@ def main(argv=None):
 			elif o=='-t':
 				if a=='help':
 					printcftypehelp(err=0)
-				if a != 'auto' and a not in cftypes:
+				if a != 'auto' and not cftypes.has_handler(a):
 					view.perror('cfv: type %s not recognized'%a)
 					printcftypehelp(err=1)
 				typename=a
@@ -2312,8 +2293,8 @@ def main(argv=None):
 			autotest(typename)
 		else:
 			if typename=='auto':
-				typename=config.defaulttype
-			make(cftypes[typename],None,args)
+				typename=config.default_type_name
+			make(cftypes.get_handler(typename), None, args)
 	else:
 		for a in manual:
 			if mode==0:
@@ -2321,12 +2302,12 @@ def main(argv=None):
 				test(a, typename)
 			else:
 				if typename!='auto':
-					make(cftypes[typename],a,args)
+					make(cftypes.get_handler(typename), a, args)
 				else:
 					testa=''
 					if config.gzip>=0 and a[-3:]=='.gz':
 							testa=a[:-3]
-					cftype = auto_filename_match(a, testa)
+					cftype = cftypes.auto_filename_match(a, testa)
 					if not cftype:
 						raise CFVValueError, 'specify a filetype with -t, or use standard extension'
 					make(cftype,a,args)

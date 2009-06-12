@@ -121,6 +121,8 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
 		sys.stdout = open_output(stdout)
 		sys.stderr = open_output(stderr)
 		sys.argv = [cfvfn] + expand_cmdline(cmd)
+		import cfv.cftypes
+		reload(cfv.cftypes) # XXX
 		import cfv.common
 		reload(cfv.common) # XXX: hack until I can get all the global state storage factored out.
 		if need_reload:
