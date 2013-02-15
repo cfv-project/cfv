@@ -2040,7 +2040,10 @@ def show_unverified_files(filelist):
 
 atrem=re.compile(r'md5|sha1|\.(csv|sfv|par|p[0-9][0-9]|par2|torrent|crc|vfy|verify)(\.gz)?$',re.IGNORECASE)#md5sum/sha1sum files have no standard extension, so just search for files with md5/sha1 in the name anywhere, and let the test func see if it really is one.
 def autotest(typename):
-	for a in osutil.listdir(osutil.curdiru):
+	files = osutil.listdir(osutil.curdiru)
+	if config.dirsort:
+		strutil.safesort(files)
+	for a in files:
 		if config.recursive and visit_dir(a):
 			try:
 				chdir(a)
