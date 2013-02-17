@@ -4,11 +4,11 @@ import os
 from cfv import osutil
 
 
-# TODO: add unittests
 # TODO: do some benchmarking of how useful _path_key_cache is on different OS's
 # TODO: To handle hard-linked files efficiently, size and hash attributes should stored by <path key>, not by filename.  (Other attributes should still be stored by filename.)
 # TODO: Only set _verified, _ok attributes when we actually will need them.
 # TODO: stop common.py mucking with _path_key_cache member.  (Move chdir/cdup functions here, or even better don't chang directories at all.)
+# TODO: make nocase_* functions not depend on current dir
 class FileInfoCache:
 	def __init__(self):
 		# data is a mapping of <path key> -> <path cache>
