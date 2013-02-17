@@ -216,6 +216,8 @@ def all_unittests_suite():
 	import cfv.common
 	libdir = os.path.split(cfv.common.__file__)[0]
 	modules_to_doctest = ['cfv.'+os.path.splitext(f)[0].replace(os.sep, '.') for f in rfind(libdir, '*.py')]
+	# TODO: better way to add files in test/ dir to doctest suite?
+	modules_to_doctest.append('benchmark')
 	assert 'cfv.common' in modules_to_doctest
 	for name in modules_to_doctest:
 		module = my_import(name)
