@@ -1354,6 +1354,7 @@ def all_unittest_tests():
 
 run_internal = 1
 run_long_tests = 0
+run_unittests_only = 0
 
 def show_help_and_exit(err=None):
 	if err:
@@ -1363,6 +1364,7 @@ def show_help_and_exit(err=None):
 	print ' -i      run tests internally'
 	print ' -e      launch seperate cfv process for each test'
 	print ' --long  include tests that may use large amounts of CPU or disk'
+	print ' --unit  run only unittests, no integration tests'
 	print ' --help  show this help'
 	print
 	print 'default [cfv] is:', cfvtest.cfvfn
@@ -1370,7 +1372,7 @@ def show_help_and_exit(err=None):
 	sys.exit(1)
 
 try:
-	optlist, args = getopt.getopt(sys.argv[1:], 'ie',['long','help'])
+	optlist, args = getopt.getopt(sys.argv[1:], 'ie',['long','help', 'unit'])
 except getopt.error, e:
 	show_help_and_exit(e)
 
@@ -1382,6 +1384,8 @@ for o,a in optlist:
 		show_help_and_exit()
 	elif o=='--long':
 		run_long_tests = 1
+	elif o=='--unit':
+		run_unittests_only = 1
 	elif o=='-i':
 		run_internal = 1
 	elif o=='-e':
@@ -1390,6 +1394,10 @@ for o,a in optlist:
 		show_help_and_exit("bad opt %r"%o)
 
 cfvtest.setcfv(fn=args and args[0] or None, internal=run_internal)
+if run_unittests_only:
+	logfile = sys.stdout
+	all_unittest_tests()
+	sys.exit()
 from cfvtest import runcfv
 
 #set everything to default in case user has different in config file
