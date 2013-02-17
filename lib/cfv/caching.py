@@ -4,11 +4,26 @@ import os
 from cfv import osutil
 
 
+# TODO: add unittests
+# TODO: do some benchmarking of how useful _path_key_cache is on different OS's
+# TODO: To handle hard-linked files efficiently, size and hash attributes should stored by <path key>, not by filename.  (Other attributes should still be stored by filename.)
+# TODO: Only set _verified, _ok attributes when we actually will need them.
+# TODO: stop common.py mucking with _path_key_cache member.  (Move chdir/cdup functions here, or even better don't chang directories at all.)
 class FileInfoCache:
 	def __init__(self):
+		# data is a mapping of <path key> -> <path cache>
+		# <path key> is either a (dev, inode) pair or a full pathname (from os.path.realpath)
+		# <path cache> is map from filename(without path, relative to path key) -> <finfo>
+		# <finfo> is a map of <attr> -> <value>
+		# <attr> can be '_verified', '_ok', 'size', <any hash name>
 		self.data = {}
+		# map from <path key> -> <nocase map>
+		# <nocase map> is a map from <lowercase> -> [<orig name1>, <orig name2>, ...]
 		self._nocase_dir_cache = {}
+		# the <finfo> map for stdin
 		self.stdin_finfo = {}
+		# map of <path> (relative to curdir) -> <path key>
+		# this member is saved/cleared/restored by chdir and cdup functions in common.py
 		self._path_key_cache = {}
 	
 	def set_verified(self, fn):
