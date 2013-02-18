@@ -165,7 +165,10 @@ def main():
 	create_parser.add_argument('--files', type=human_int, help='total number of files to create')
 	create_parser.add_argument('--branch-factor', type=human_int, help='(max) number of files or directories at each level')
 	create_parser.add_argument('--max-size', type=human_int, help='max file size')
+	# TODO: implement hardlink (and symlink) testing
 	#create_parser.add_argument('--num-links', type=human_int, help='number of hardlinks per file')
+	# TODO: add option to specify filename length
+	# TODO: add option to specify using various unicode chars in filenames
 	create_parser.set_defaults(func=create)
 
 	run_parser = subparsers.add_parser('run', help='run benchmarks against current dir')
