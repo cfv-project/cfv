@@ -93,6 +93,7 @@ def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
 		elif o[-1:] in '\r\n': o = o[:-1]
 	return s, o
 
+# TODO: make the runcfv_* functions (optionally?) take args as a list instead of a string
 def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
 	if stdin is not None and ver_fchksum:
 		fileno =  os.open(stdin, os.O_RDONLY | getattr(os,'O_BINARY', 0))
@@ -121,6 +122,7 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
 		sys.stdout = open_output(stdout)
 		sys.stderr = open_output(stderr)
 		sys.argv = [cfvfn] + expand_cmdline(cmd)
+		# TODO: make this work with cfv 1.x as well so that we can benchmark compare them in internal mode.
 		import cfv.cftypes
 		reload(cfv.cftypes) # XXX
 		import cfv.common
