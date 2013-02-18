@@ -19,9 +19,13 @@
 
 
 import argparse
-import os
+from functools import partial
 import math
+import os
 import random
+import sys
+import timeit
+import tempfile
 
 import cfvtest
 
@@ -101,6 +105,55 @@ def create(args):
 	create_test_dir(start_path, args.files, args.branch_factor, args.max_size, verbose=args.verbose)
 
 
+def print_times(name, results, iterations, verbose=False):
+	best = min(results)
+	print '%s: best=%.4g msec' %(name, best * 1000 / iterations)
+	if verbose:
+		print '  raw results:', results
+
+
+def run_cfv(args, verbose):
+	if verbose >= 2:
+		print 'running cfv', args
+	s,o = cfvtest.runcfv(args)
+	if s or verbose >= 3:
+		print 'cfv returned', s, ', output:'
+		print o
+	if s:
+		raise RuntimeError('cfv returned %s' % s)
+
+
+def run_create_test(cftype, output_root, input_root, verbose):
+	output_fn = os.path.join(output_root, "create_test.%s.%s" % (random.randint(0, sys.maxint), cftype))
+	run_cfv("-C -rr -t %s -p %s -f %s" % (cftype, input_root, output_fn), verbose)
+
+
+def run_test_test(cftype, cfname, input_root, f_repeat, verbose):
+	f_arg = ' -f ' + cfname
+	run_cfv('-T -t %s -p %s %s' % (cftype, input_root, f_arg * f_repeat), verbose)
+
+
+def run(args):
+	cfvtest.setcfv(args.cfv, not args.run_external)
+	output_root = tempfile.mkdtemp()
+	input_root = os.getcwd()
+	if args.verbose:
+		print 'outputting temp files in', output_root
+	formatlen = int(math.ceil(math.log(args.iterations, 16)))
+
+	times = timeit.repeat(partial(run_create_test, args.type, output_root, input_root, args.verbose), repeat=args.repeats, number=args.iterations)
+	print_times('create', times, args.iterations, args.verbose)
+
+	cfname = os.path.join(output_root, os.listdir(output_root)[0])
+
+	times = timeit.repeat(partial(run_test_test, args.type, cfname, input_root, 1, args.verbose), repeat=args.repeats, number=args.iterations)
+	print_times('test', times, args.iterations, args.verbose)
+
+	if args.multitest > 1:
+		times = timeit.repeat(partial(run_test_test, args.type, cfname, input_root, args.multitest, args.verbose), repeat=args.repeats, number=args.iterations)
+		print_times('multitest', times, args.iterations, args.verbose)
+
+
 def main():
 	parser = argparse.ArgumentParser(description='Create test data and run cfv benchmarks.')
 
@@ -114,6 +167,18 @@ def main():
 	create_parser.add_argument('--max-size', type=human_int, help='max file size')
 	#create_parser.add_argument('--num-links', type=human_int, help='number of hardlinks per file')
 	create_parser.set_defaults(func=create)
+
+	run_parser = subparsers.add_parser('run', help='run benchmarks against current dir')
+	run_parser.add_argument('--cfv', help='path to the cfv executable')
+	run_parser.add_argument('--run-external', action='store_true', help='launch seperate cfv process for each test')
+	run_parser.add_argument('--iterations', default=10, type=int, help='number of iteration per run')
+	run_parser.add_argument('--multitest', default=3, type=int, help='number of checksum files in multitest run')
+	run_parser.add_argument('--repeats', default=3, type=int, help='number of repeats')
+	run_parser.add_argument('--type', default='sha1', help='checksum type')
+	run_parser.set_defaults(func=run)
+	# TODO: add args to allow specifying additional flags for running cfv
+	# TODO: run cfv with defaults (not using .cfvrc)
+	# TODO: allow running the different benchmarks (create/test/multitest) independantly, and allow testing against a specified checksum file
 
 	args = parser.parse_args()
 	args.func(args)
