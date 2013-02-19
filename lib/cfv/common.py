@@ -1875,7 +1875,7 @@ def make(cftype,ifilename,testfiles):
 			if tfauto:#if user isn't specifying files, don't even try to add dirs and stuff, and don't print errors about it.
 				continue
 		stats.num += 1
-		if file==IOError:
+		if file is IOError:
 			continue
 		if config.encoding != 'raw':
 			if isinstance(f, str):
@@ -1894,7 +1894,7 @@ def make(cftype,ifilename,testfiles):
 			stats.ferror += 1
 			view.ev_make_filenameinvalid(f)
 			continue
-		if file==None:
+		if file is None:
 			try:
 				cf = cftype()
 				file = cf.make_chksumfile_create(filename)
@@ -1925,7 +1925,7 @@ def make(cftype,ifilename,testfiles):
 			continue
 		view.ev_f_ok(f, filesize, filecrc, 'OK')
 		stats.ok += 1
-	if file and file!=IOError:
+	if file and file is not IOError:
 		try:
 			cf.make_chksumfile_finish(file)
 		except EnvironmentError, a:
