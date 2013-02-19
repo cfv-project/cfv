@@ -16,6 +16,15 @@ class INF:
 		return 0
 INF=INF()
 
+# Escape code for clearing from current cursor position to end of line.
+# This works on ANSI and vt100-descended terminals, so should be pretty portable.
+# We could also use:
+# import curses
+# curses.setupterm()
+# _CLR_TO_EOL = curses.tigetstr("el")
+# But the curses module is not available on all systems, and this seems pretty
+# heavy-weight when the ANSI code is going to work on (almost) all systems.
+_CLR_TO_EOL = '\x1b[K'
 
 class ProgressMeter:
 	spinnerchars=r'\|/-'
@@ -33,7 +42,7 @@ class ProgressMeter:
 		if size is None:
 			if name != '' and os.path.isfile(name):
 				size = os.path.getsize(name) #XXX this probably doesn't belong here..
-		self.name, self.namewidth = strutil.lchoplen(self.frobfn(name), self.scrwidth - self.steps - 4)
+		self.name, _ = strutil.lchoplen(self.frobfn(name), self.scrwidth - self.steps - 4)
 		if not size: #if stdin or device file, we don't know the size, so just use a spinner.  If the file is actually zero bytes, it doesn't matter either way.
 			self.stepsize = INF
 			self.steps = 1
@@ -63,7 +72,7 @@ class ProgressMeter:
 	
 	def cleanup(self):
 		if not self.needrefresh:
-			self.fd.write('\r'+' '*(self.namewidth+3+self.steps+1)+'\r')
+			self.fd.write('\r' + _CLR_TO_EOL)
 			self.needrefresh = 1
 
 class TimedProgressMeter(ProgressMeter):

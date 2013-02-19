@@ -231,9 +231,9 @@ def cfv_stdin_progress_test(t,file):
 			s2,o2=runcfv("%s --progress=yes -C -t %s -f %s -"%(cfvcmd,t,cf2),stdin=file)
 			if s2: raise cst_err, 3
 			if t!='csv2':#csv2 has only filesize, hence checksum never happens, so no progress
-				x=re.match(re.escape(file)+r' : (\.{20}[-\b.#\\|/]*)[ \r\n]+'+re.escape(cf1)+': (\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$',o1,re.M|re.DOTALL)
+				x=re.match(re.escape(file)+r' : (\.{20}[-\b.#\\|/]*)[ \r\n]+'+'\x1b\\[K'+re.escape(cf1)+': (\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$',o1,re.M|re.DOTALL)
 				if not x: raise cst_err, 4
-			x2=re.match(r' : (\.[-\b.#/|\\]*)[\t ]*[ \r\n]+'+re.escape(cf2)+': (\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$',o2,re.M)
+			x2=re.match(r' : (\.[-\b.#/|\\]*)[\t ]*[ \r\n]+'+'\x1b\\[K'+re.escape(cf2)+': (\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$',o2,re.M)
 			if not x2: raise cst_err, 5
 			if t=='crc':
 				c1 = readfile(cf1).replace(file,' '*len(file))
