@@ -455,7 +455,7 @@ class ChksumType:
 					c = self.do_test_file(fn, filecrc)
 					if c:
 						continue
-					filecrct=self.textify_crc(filecrc)
+					filecrct = hexlify(filecrc)
 				else:
 					if not os.path.isfile(fn):
 						continue
@@ -491,10 +491,10 @@ class ChksumType:
 					return -2
 			if config.docrcchecks and filecrc:
 				c=self.do_test_file(l_filename, filecrc)
-				filecrct = self.textify_crc(filecrc)
+				filecrct = hexlify(filecrc)
 				if c:
 					self.search_file(filename, filecrc, filesize,
-						self.do_f_badcrc, (l_filename, 'crc does not match (%s!=%s)'%(filecrct,self.textify_crc(c))))
+						self.do_f_badcrc, (l_filename, 'crc does not match (%s!=%s)'%(filecrct, hexlify(c))))
 					return -2
 			else:
 				if not os.path.exists(l_filename):
@@ -507,10 +507,6 @@ class ChksumType:
 				self.do_f_enverror, (l_filename, a))
 			return -1
 		self.do_f_ok(l_filename, filesize, filecrct)
-	
-	@staticmethod
-	def textify_crc(crc):
-		return hexlify(crc)
 	
 	def make_chksumfile_create(self, filename):
 		return fileutil.open_write(filename, config)
@@ -1239,219 +1235,6 @@ class Torrent(ChksumType):
 cftypes.register_cftype(Torrent)
 
 
-#---------- VerifyXML ----------
-_ElementTree_importerror = None
-try:
-	from elementtree import SimpleXMLWriter
-	try:
-		import cElementTree as ElementTree
-	except ImportError:
-		from elementtree import ElementTree
-	if not hasattr(ElementTree, 'iterparse'):
-		raise ImportError, 'elementtree module too old (no iterparse method)'
-except ImportError, e1:
-	_ElementTree_importerror = str(e1)
-
-if not _ElementTree_importerror:
-	#XXX
-	#if hasattr(SimpleXMLWriter, 'PrettyXMLWriter'):
-	#	XMLWriter = SimpleXMLWriter.PrettyXMLWriter
-	#else:
-	class XMLWriter(SimpleXMLWriter.XMLWriter):
-		def start(self, *args, **kwds):
-			if self.__tags:
-				self.data('\n' + ' '*len(self.__tags))
-			SimpleXMLWriter.XMLWriter.start(self, *args, **kwds)
-		def end(self, *args, **kwds):
-			if not self.__open:
-				self.data('\n' + ' '*(len(self.__tags)-1))
-			SimpleXMLWriter.XMLWriter.end(self, *args, **kwds)
-
-def xs_dateTime(t=None):
-	"""Return the time t in XML Schema dateTime format
-
-	>>> xs_dateTime(0)
-	'1970-01-01T00:00:00Z'
-	>>> xs_dateTime(1000000000.1234567)
-	'2001-09-09T01:46:40.123457Z'
-	"""
-	if t is None:
-		t = time.time()
-	tstr = time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime(t))
-	tsubsec = ('%0.6f'%(t - int(t))).split('.')[1]
-	tsubsec = tsubsec.rstrip('0')
-	if tsubsec:
-		tstr += '.' + tsubsec
-	tstr += 'Z'
-	return tstr
-
-class VerifyXML(ChksumType):
-	name = 'verify'
-	description = 'VerifyXML'
-	descinfo = 'name,size,checksum(s)'
-	
-	_verifyxml_hashtype_to_cfv = {'CRC32_REVERSED':'CRC32', 'CRC32':'CRC32_ETHERNET'}
-	#_cfv_hashtype_to_verifyxml = dict([(v,k) for (k,v) in _verifyxml_hashtype_to_cfv.items()])
-
-	@staticmethod
-	def auto_chksumfile_match(file, _autorem=re.compile(r'<verify[^>]+version\s*=\s*"1.0"')):
-		return not not _autorem.search(file.peekdecoded(4096))
-
-	def textify_crc(self, filecrcs):
-		return ', '.join('%s %s'%(self._verifyxml_hashtype_to_cfv.get(htype,htype),hexlify(hval)) for htype,hval in filecrcs)
-	
-	#_hashtypemap = {'SHA1':getfilesha1, 'MD5':getfilemd5, 'CRC32':getfilecrc}
-	_hashtypemap = {'SHA1':getfilesha1, 'MD5':getfilemd5, 'CRC32_REVERSED':getfilecrc}
-	def do_test_file(self, filename, filecrcs):
-		numtested = 0
-		for hashtype,expectedhash in filecrcs:
-			hashfun = self._hashtypemap.get(hashtype)
-			if hashfun:
-				c = hashfun(filename)[0]
-				if c!=expectedhash:
-					return '%s %s'%(hashtype, hexlify(c))
-				numtested += 1
-		if not numtested:
-			return 'no supported hashtypes'
-
-	def do_test_chksumfile(self, file):
-		if _ElementTree_importerror:
-			raise EnvironmentError, _ElementTree_importerror
-		
-		pathsep = None
-		testingline_printed=0
-		for event, elem in ElementTree.iterparse(file,events=('start','end')):
-			#print event, elem, elem.items(), repr(elem.text), repr(elem.tail)
-			if event == 'start':
-				if elem.tag == 'verify':
-					ver = elem.get('version')
-					if ver != '1.0':
-						raise EnvironmentError, (errno.EINVAL, "can't handle VerifyXML version %s"%ver)
-				elif elem.tag == 'fileset':
-					if not testingline_printed:
-						ChksumType.do_test_chksumfile_print_testingline(self, file)
-					pathsep = elem.get('pathseparator')
-			else: #event == 'end':
-				if elem.tag == 'information':
-					commentpieces = []
-					creatorpieces = []
-
-					createdby_elem = elem.find('createdby')
-					if createdby_elem is not None:
-						creatorpieces.append('by %s'%createdby_elem.text.strip())
-
-					app_elem = elem.find('application')
-					if app_elem is not None:
-						app_name_elem = app_elem.find('name')
-						if app_name_elem is not None:
-							app_name = app_name_elem.text.strip()
-							app_ver_elem = app_elem.find('version')
-							if app_ver_elem is not None:
-								app_name += ' v%s'%app_ver_elem.text.strip()
-							creatorpieces.append('with %s'%app_name)
-
-					if creatorpieces:
-						commentpieces.append('created '+' '.join(creatorpieces))
-					
-					#TODO: try to choose comment with correct language
-					comment_elem = elem.find('comment')
-					if comment_elem is not None:
-						commentpieces.append(comment_elem.text.strip())
-
-					ChksumType.do_test_chksumfile_print_testingline(self, file, ', '.join(commentpieces))
-					testingline_printed=1
-					elem.clear()
-				elif elem.tag == 'file':
-					try:
-						fn = elem.get('name')
-						if not fn:
-							raise CFError('invalid name attribute %r'%fn)
-						if pathsep and pathsep!=os.sep:
-							#if os.sep in fn:
-							#	raise CFError('filename components contain our pathsep %r'%fn) #raising an error isn't the most useful thing, since we could still find the file with -s
-							fn = fn.replace(pathsep, os.sep)
-
-						try:
-							fsize = int(elem.get('size', -1))
-						except (ValueError,TypeError):
-							raise CFError('invalid size attribute %r'%elem.get('size'))
-
-						fhashes = []
-						for hash_elem in elem:
-							if hash_elem.tag != 'hash':
-								continue
-							fhash_type = hash_elem.get('type')
-							#fhash_type = self._verifyxml_hashtype_to_cfv.get(fhash_type,fhash_type)
-							try:
-								fhash = unhexlify(hash_elem.text.strip())
-							except (TypeError,ValueError):
-								raise CFError('invalid hash %r'%hash_elem.text)
-							fhashes.append((fhash_type, fhash))
-
-						self.test_file(fn, fhashes, fsize)
-					except CFError, e:
-						stats.cferror += 1
-						view.ev_test_cf_invaliddata(file.name, e)
-
-					elem.clear()
-
-	auto_filename_match = '.(verify|vfy)$'
-
-	@staticmethod
-	def make_std_filename(filename):
-		return filename+'.vfy'
-
-	def make_chksumfile_create(self, filename):
-		self.file = fileutil.open_write_raw(filename, config)
-		writer = self.writer = XMLWriter(self.file, 'UTF-8')
-		writer.declaration()
-		#writer.data('<!DOCTYPE verify PUBLIC "-//Classless.net//DTD VerifyXML 1.0//EN" "http://www.classless.net/stds/verifyxml/1.0/verify.dtd">')
-		#doesn't work since xmlwriter.data escapes the < and >. hmm.
-		writer.start('verify',{
-				'version': "1.0",
-				'xmlns:xsi': "http://www.w3.org/2001/XMLSchema-instance",
-				'xsi:noNamespaceSchemaLocation': "http://www.classless.net/std/verifyxml/1.0/verifyxml.xsd",
-			})
-		writer.start('information')
-		writer.element('created', xs_dateTime())
-		writer.start('application')
-		writer.element('name', 'cfv')
-		writer.element('version', __version__)
-		writer.element('url', __homepage__)
-		writer.end('application')
-		writer.end('information')
-		writer.start('fileset', pathseparator=os.sep)
-		return self.file
-
-	def make_addfile(self, filename):
-		hashes = []
-		for htype, hfun in self._hashtypemap.items():
-			hash,size = hfun(filename)
-			hash = hexlify(hash)
-			hashes.append((htype,hash))
-		return (self.textify_crc(hashes),size), (filename,hashes,size)
-
-	def make_writefile(self, data, file):
-		filename,hashes,size = data
-		fattrs = {'name':filename, 'size':str(size)}
-		if filename:
-			fattrs['modified'] = xs_dateTime(os.path.getmtime(filename))
-		self.writer.start('file', fattrs)
-		for htype,hash in hashes:
-			#htype = self._cfv_hashtype_to_verifyxml.get(htype,htype)
-			self.writer.element('hash', hash, type=htype)
-		self.writer.end()
-
-	def make_chksumfile_finish(self, file):
-		self.writer.end('fileset')
-		self.writer.end('verify')
-		self.file.close()
-
-
-if os.environ.get("CFV_ENABLE_VERIFYXML"):
-	cftypes.register_cftype(VerifyXML)
-
-
 #---------- sfv ----------
 
 class CRC_MixIn:
@@ -2038,7 +1821,7 @@ def show_unverified_files(filelist):
 			show_unverified_dir(u'')
 
 
-atrem=re.compile(r'md5|sha1|\.(csv|sfv|par|p[0-9][0-9]|par2|torrent|crc|vfy|verify)(\.gz)?$',re.IGNORECASE)#md5sum/sha1sum files have no standard extension, so just search for files with md5/sha1 in the name anywhere, and let the test func see if it really is one.
+atrem=re.compile(r'md5|sha1|\.(csv|sfv|par|p[0-9][0-9]|par2|torrent|crc)(\.gz)?$',re.IGNORECASE)#md5sum/sha1sum files have no standard extension, so just search for files with md5/sha1 in the name anywhere, and let the test func see if it really is one.
 def autotest(typename):
 	files = osutil.listdir(osutil.curdiru)
 	if config.dirsort:
