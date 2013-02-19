@@ -29,12 +29,8 @@ if hasattr(locale,'getpreferredencoding'):
 else:
 	preferredencoding = 'ascii'
 
-def is_unicode(s, _unitype=type(u'')):
-	return type(s) == _unitype
-def is_rawstr(s, _stype=type('')):
-	return type(s) == _stype
 def is_undecodable(s):
-	if is_rawstr(s):
+	if isinstance(s, str):
 		try:
 			#this is for python < 2.3, where os.listdir never returns unicode.
 			unicode(s,preferredencoding)
@@ -44,7 +40,7 @@ def is_undecodable(s):
 	else:
 		return 0
 def is_encodable(s, enc=preferredencoding):
-	if not is_unicode(s):
+	if not isinstance(s, unicode):
 		try:
 			#this is for python < 2.3, where os.listdir never returns unicode.
 			unicode(s,preferredencoding) #note: using preferredencoding not enc, since this assumes the string is coming from os.listdir, and thus we should decode with the system's encoding.
@@ -605,7 +601,7 @@ def C_funkynames_test(t):
 		return is_encodable(s,enc)
 	def is_fmtokfn(s,enc=fmt_preferredencoding(t)):
 		if fmt_istext(t):
-			if is_rawstr(s):
+			if isinstance(s, str):
 				try:
 					#this is for python < 2.3, where os.listdir never returns unicode.
 					s = unicode(s,enc)

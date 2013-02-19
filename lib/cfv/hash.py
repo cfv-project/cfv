@@ -65,7 +65,7 @@ try:
 			f = sys.stdin
 		else:
 			f = open(filename, 'rb')
-		if strutil.is_unicode(filename):
+		if isinstance(filename, unicode):
 			sname = filename.encode(osutil.fsencoding, 'replace')
 		else:
 			sname = filename
@@ -76,7 +76,7 @@ try:
 			f = sys.stdin
 		else:
 			f = open(filename, 'rb')
-		if strutil.is_unicode(filename):
+		if isinstance(filename, unicode):
 			sname = filename.encode(osutil.fsencoding, 'replace')
 		else:
 			sname = filename

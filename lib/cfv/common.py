@@ -31,7 +31,7 @@ from cfv import ui
 
 def cfencode(s, preferred=None):
 	if config.encoding=='raw':
-		if strutil.is_unicode(s):
+		if isinstance(s, unicode):
 			return s.encode(osutil.fsencoding)
 		return s
 	else:
@@ -96,7 +96,7 @@ class FileNameFilter:
 			fn = osutil.path_join(reldir[-1], fn)
 			if config.ignorecase:
 				fn = fn.lower()
-			if config.encoding=='raw' and strutil.is_unicode(fn):
+			if config.encoding=='raw' and isinstance(fn, unicode):
 				try: fn = fn.encode(osutil.fsencoding)
 				except UnicodeError: pass
 			self.testfiles.add(fn)
@@ -1878,12 +1878,12 @@ def make(cftype,ifilename,testfiles):
 		if file==IOError:
 			continue
 		if config.encoding != 'raw':
-			if strutil.is_rawstr(f):
+			if isinstance(f, str):
 				stats.ferror += 1
 				view.ev_make_filenamedecodingerror(f)
 				continue
 		else:
-			if strutil.is_unicode(f):
+			if isinstance(f, unicode):
 				try:
 					f = f.encode(osutil.fsencoding)
 				except UnicodeError, e:
@@ -1963,7 +1963,7 @@ def show_unverified_dir(path, unvchild=0):
 	unv_sub_dirs = []
 	for fn in pathfiles:
 		sfn = fn
-		if config.encoding=='raw' and strutil.is_unicode(fn):
+		if config.encoding=='raw' and isinstance(fn, unicode):
 			try: sfn = fn.encode(osutil.fsencoding)
 			except UnicodeError: pass
 		filename = osutil.path_join(path, fn)
@@ -2001,7 +2001,7 @@ def show_unverified_dir_verbose(path):
 	pathfiles = osutil.listdir(path or osutil.curdiru)
 	for fn in pathfiles:
 		sfn = fn
-		if config.encoding=='raw' and strutil.is_unicode(fn):
+		if config.encoding=='raw' and isinstance(fn, unicode):
 			try: sfn = fn.encode(osutil.fsencoding)
 			except UnicodeError: pass
 		filename = osutil.path_join(path, fn)
@@ -2127,7 +2127,7 @@ filenamefilter=FileNameFilter()
 
 
 def decode_arg(a):
-	if strutil.is_unicode(a):
+	if isinstance(a, unicode):
 		return a
 	try:
 		return unicode(a,osutil.preferredencoding)

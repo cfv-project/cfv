@@ -3,20 +3,20 @@ import unicodedata
 from StringIO import StringIO
 
 
-def is_unicode(s, _unitype=type(u'')):
-	return type(s) == _unitype
-def is_rawstr(s, _stype=type('')):
-	return type(s) == _stype
-
 def safesort(l):
-	sl = filter(is_rawstr, l)
-	ul = filter(lambda e: not is_rawstr(e), l)
+	sl = []
+	ul = []
+	for s in l:
+		if isinstance(s, str):
+			sl.append(s)
+		else:
+			ul.append(s)
 	sl.sort()
 	ul.sort()
 	l[:] = ul+sl
 
 def showfn(s):
-	if is_rawstr(s):
+	if isinstance(s, str):
 		return unicode(s, 'ascii', 'replace')
 	return s
 
@@ -52,7 +52,7 @@ def chompnulls(line):
 def uwidth(u):
 	#TODO: should it return -1 or something for control chars, like wcswidth?
 	# see http://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c for a sample implementation
-	#if is_rawstr(u):
+	#if isinstance(u, str):
 	#	return len(u)
 	w = 0
 	#for c in unicodedata.normalize('NFC', u):
@@ -75,7 +75,7 @@ def lchoplen(line, max):
 	>>> lchoplen(u'hello world',6)
 	u'...rld'
 	"""
-	if is_rawstr(line):
+	if isinstance(line, str):
 		if len(line)>max:
 			return '...'+line[-(max-3):], max
 		return line
@@ -103,7 +103,7 @@ def rchoplen(line, max):
 	>>> rchoplen(u'hello world',6)
 	u'hel...'
 	"""
-	if is_rawstr(line):
+	if isinstance(line, str):
 		if len(line)>max:
 			return line[:max-3]+'...', max
 		return line
@@ -134,7 +134,7 @@ class CodecWriter:
 	def __init__(self, encoding, stream, errors='strict'):
 		self.__stream = codecs.getwriter(encoding)(stream, errors)
 	def write(self, obj):
-		if is_rawstr(obj):
+		if isinstance(obj, str):
 			obj = unicode(obj,'ascii')
 		self.__stream.write(obj)
 	def writelines(self, list):
