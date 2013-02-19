@@ -70,15 +70,17 @@ def uwidth(u):
 	return w
 
 def lchoplen(line, max):
-	"""Return line cut on left so it takes at most max character cells when printed, and width of result.
+	"""Return line cut on left so it takes at most max character cells when printed.
 
 	>>> lchoplen(u'hello world',6)
-	(u'...rld', 6)
+	u'...rld'
 	"""
 	if is_rawstr(line):
 		if len(line)>max:
 			return '...'+line[-(max-3):], max
-		return line, len(line)
+		return line
+	elif len(line) * 2 <= max:
+		return line
 	chars = ['']
 	w = 0
 	for c in reversed(line):
@@ -93,18 +95,20 @@ def lchoplen(line, max):
 		chars[0] = c + chars[0]
 		if cw != 0:
 			chars.insert(0,'')
-	return ''.join(chars), w
+	return ''.join(chars)
 
 def rchoplen(line, max):
-	"""Return line cut on right so it takes at most max character cells when printed, and width of result.
+	"""Return line cut on right so it takes at most max character cells when printed.
 
 	>>> rchoplen(u'hello world',6)
-	(u'hel...', 6)
+	u'hel...'
 	"""
 	if is_rawstr(line):
 		if len(line)>max:
 			return line[:max-3]+'...', max
-		return line, len(line)
+		return line
+	elif len(line) * 2 <= max:
+		return line
 	chars = ['']
 	w = 0
 	for c in line:
@@ -120,7 +124,7 @@ def rchoplen(line, max):
 			chars[-1] += c
 		else:
 			chars.append(c)
-	return ''.join(chars), w
+	return ''.join(chars)
 
 
 class CodecWriter:

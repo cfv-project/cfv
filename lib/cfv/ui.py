@@ -66,7 +66,7 @@ class View:
 	def ev_test_cf_begin(self, cftypename, filename, comment):
 		if comment:
 			comment = ', ' + comment
-			comment,_ = strutil.rchoplen(comment, 102) #limit the length in case its a really long one.
+			comment = strutil.rchoplen(comment, 102) #limit the length in case its a really long one.
 		else:
 			comment = ''
 		self.pverbose('testing from %s (%s%s)'%(strutil.showfn(filename), cftypename.lower(), comment))

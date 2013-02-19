@@ -42,7 +42,7 @@ class ProgressMeter:
 		if size is None:
 			if name != '' and os.path.isfile(name):
 				size = os.path.getsize(name) #XXX this probably doesn't belong here..
-		self.name, _ = strutil.lchoplen(self.frobfn(name), self.scrwidth - self.steps - 4)
+		self.name = strutil.lchoplen(self.frobfn(name), self.scrwidth - self.steps - 4)
 		if not size: #if stdin or device file, we don't know the size, so just use a spinner.  If the file is actually zero bytes, it doesn't matter either way.
 			self.stepsize = INF
 			self.steps = 1
