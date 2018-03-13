@@ -9,6 +9,9 @@
 	* Changed handling of -f: Now all options are checked before testing/creating the file. (Benjamin Hohl)
 	* Torrent file handling no longer requires BitTorrent client to be installed.
 
+2009-06-07 - v1.18.3:
+	* Fix python2.6 md5 and sha module deprecation warnings.
+
 2008-06-22 - v1.18.2:
 	* Print help output to stdout under non-error conditions. (Requested by Simon Howard)
  	* Work around mmap file descriptor leak in Python 2.4.2.

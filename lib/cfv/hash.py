@@ -48,9 +48,17 @@ def _getfilechecksum(filename, hasher, callback):
 			return finish(m,mmapsize) #unfortunatly, python's mmap module doesn't support the offset parameter, so we just have to do the rest of the file the old fashioned way.
 		return m.digest(),s
 
-import sha
+try:
+	from hashlib import sha1 as sha_new
+except ImportError:
+	from sha import new as sha_new
+try:
+	from hashlib import md5 as md5_new
+except ImportError:
+	from md5 import new as md5_new
+
 def getfilesha1(filename, callback):
-	return _getfilechecksum(filename, sha.new, callback)
+	return _getfilechecksum(filename, sha_new, callback)
 			
 try:
 	if os.environ.get('CFV_NOFCHKSUM'): raise ImportError
@@ -83,7 +91,6 @@ try:
 		c,s=fchksum.fcrc32d(sname, callback, 0.03, fileno=f.fileno())
 		return c,s
 except ImportError:
-	import md5
 	import struct
 	try:
 		from zlib import crc32 as _crc32
@@ -99,7 +106,7 @@ except ImportError:
 			return struct.pack('>I', self.value & 0xFFFFFFFF)
 
 	def getfilemd5(filename, callback):
-		return _getfilechecksum(filename, md5.new, callback)
+		return _getfilechecksum(filename, md5_new, callback)
 			
 	def getfilecrc(filename, callback):
 		return _getfilechecksum(filename, CRC32, callback)

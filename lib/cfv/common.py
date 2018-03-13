@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 #    cfv - Command-line File Verify
-#    Copyright (C) 2000-2005  Matthew Mueller <donut AT dakotacom DOT net>
+#    Copyright (C) 2000-2009  Matthew Mueller <donut AT dakotacom DOT net>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -811,8 +811,7 @@ class PAR(ChksumType, MD5_MixIn):
 		d = file.read(struct.calcsize(par_header_fmt))
 		magic, version, client, control_hash, set_hash, vol_number, num_files, file_list_ofs, file_list_size, data_ofs, data_size = struct.unpack(par_header_fmt, d)
 		if config.docrcchecks:
-			import md5
-			control_md5 = md5.new()
+			control_md5 = hash.md5_new()
 			control_md5.update(d[0x20:])
 			stats.bytesread += len(d)
 		if version not in (0x00000900, 0x00010000): #ver 0.9 and 1.0 are the same, as far as we care.  Future versions (if any) may very likey have incompatible changes, so don't accept them either.
@@ -901,8 +900,7 @@ class PAR2(ChksumType, MD5_MixIn):
 			magic, pkt_len, pkt_md5, set_id, pkt_type = struct.unpack(pkt_header_fmt, d)
 
 			if config.docrcchecks:
-				import md5
-				control_md5 = md5.new()
+				control_md5 = hash.md5_new()
 				control_md5.update(d[0x20:])
 				stats.bytesread += len(d)
 				d = file.read(pkt_len - pkt_header_size)
@@ -956,7 +954,6 @@ cftypes.register_cftype(PAR2)
 
 #---------- .torrent ----------
 from cfv.BitTorrent import bencode, btformats
-import sha
 
 class Torrent(ChksumType):
 	name = 'torrent'
@@ -1111,7 +1108,7 @@ class Torrent(ChksumType):
 				if not f.done:
 					wanttest = 1
 			if wanttest:
-				sh = sha.sha()
+				sh = hash.sha_new()
 				for f,fcurpos,fpiecelen in piecefiles:
 					if view.progress and f.l_filename and f.l_filename!=view.progress.filename:
 						view.progress.cleanup()
@@ -1165,7 +1162,7 @@ class Torrent(ChksumType):
 		if config.announceurl==None:
 			raise EnvironmentError, 'announce url required'
 		file = fileutil.open_write_raw(filename, config)
-		self.sh = sha.sha()
+		self.sh = hash.sha_new()
 		self.files = []
 		self.pieces = []
 		self.piece_done = 0
@@ -1190,7 +1187,7 @@ class Torrent(ChksumType):
 			self.piece_done += s
 			if self.piece_done == self.piece_length:
 				self.pieces.append(self.sh.digest())
-				self.sh = sha.sha()
+				self.sh = hash.sha_new()
 				self.piece_done = 0
 		f.close()
 		if view.progress: view.progress.cleanup()
@@ -1889,7 +1886,7 @@ def printusage(err=0):
 	phelp(' --private_torrent    set private flag in torrent')
 	sys.exit(err)
 def printhelp():
-	view.pinfo('cfv v%s - Copyright (C) 2000-2005 Matthew Mueller - GPL license'%__version__)
+	view.pinfo('cfv v%s - Copyright (C) 2000-2009 Matthew Mueller - GPL license'%__version__)
 	printusage()
 def printcftypehelp(err):
 	phelp = err and view.perror or view.pinfo
