@@ -57,6 +57,14 @@ try:
 except ImportError:
 	from md5 import new as md5_new
 
+def getfilechecksumgeneric(algo):
+	import hashlib
+	if hasattr(hashlib, algo):
+		hasher = getattr(hashlib, algo)
+	else:
+		hasher = lambda: hashlib.new(algo)
+	return lambda filename, callback: _getfilechecksum(filename, hasher, callback), hasher().digest_size
+
 def getfilesha1(filename, callback):
 	return _getfilechecksum(filename, sha_new, callback)
 			

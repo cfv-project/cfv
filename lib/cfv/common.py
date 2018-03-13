@@ -665,14 +665,6 @@ class TextChksumType(ChksumType):
 		return len((fn+'a').splitlines())==1
 
 	
-#---------- sha1sum ----------
-
-class SHA1_MixIn:
-	def do_test_file(self, filename, filecrc):
-		c=getfilesha1(filename)[0]
-		if c!=filecrc:
-			return c
-
 # Base class for md5sum/sha1sum style checksum file formats.
 class FooSum_Base(TextChksumType):
 	def do_test_chksumfile_print_testingline(self, file):
@@ -688,6 +680,70 @@ class FooSum_Base(TextChksumType):
 			stats.textmode += 1
 		self.test_file(x.group(3),unhexlify(x.group(1)))
 
+def gnu_sum(algo):
+	hasher, digestlen = hash.getfilechecksumgeneric(algo)
+	hexlen = digestlen * 2
+	
+	class GnuSum_Base(FooSum_Base):
+		name = algo
+		description = 'GNU %ssum' % algo
+		descinfo = '%s,name' % algo
+	
+		def do_test_file(self, filename, filecrc):
+			c = getfilehash(filename, algo, hasher)[0]
+			if c != filecrc:
+				return c
+	
+		@staticmethod
+		def auto_chksumfile_match(file, _autorem=re.compile(r'[0-9a-fA-F]{%d} [ *].' % hexlen)):
+			l = file.peekline(4096)
+			while l:
+				if l[0] not in ';#':
+					return _autorem.match(l) is not None
+				l = file.peeknextline(4096)
+
+		auto_filename_match = algo
+	
+		_foosum_rem = re.compile(r'([0-9a-fA-F]{%s}) ([ *])([^\r\n]+)[\r\n]*$' % hexlen)
+	
+		@staticmethod
+		def make_std_filename(filename):
+			return '%s.%s' % (filename, algo)
+	
+		def make_addfile(self, filename):
+			crc = hexlify(getfilehash(filename, algo, hasher)[0])
+			return (crc, -1), '%s *%s' % (crc, filename) + os.linesep
+
+	return GnuSum_Base
+
+try:
+	cftypes.register_cftype(gnu_sum('sha512'))
+except:
+	pass
+
+try:
+	cftypes.register_cftype(gnu_sum('sha384'))
+except:
+	pass
+
+try:
+	cftypes.register_cftype(gnu_sum('sha256'))
+except:
+	pass
+
+try:
+	cftypes.register_cftype(gnu_sum('sha224'))
+except:
+	pass
+
+
+#---------- sha1sum ----------
+
+class SHA1_MixIn:
+	def do_test_file(self, filename, filecrc):
+		c=getfilesha1(filename)[0]
+		if c!=filecrc:
+			return c
 
 class SHA1(FooSum_Base, SHA1_MixIn):
 	name = 'sha1'
