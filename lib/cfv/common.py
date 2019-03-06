@@ -1482,7 +1482,7 @@ def getimagedimensions(filename):
 	if filename == '':
 		return '0','0'
 	try:
-		import Image
+		from PIL import Image
 		im1=Image.open(filename)
 		return map(str, im1.size)
 	except (ImportError, IOError):
@@ -1554,7 +1554,7 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 		file.write('Generated at: %s'%(time.strftime('%a, %d %b %Y %H:%M:%S',time.gmtime(time.time())))+os.linesep)
 		file.write('Find  it  at: '+__homepage__+os.linesep+os.linesep)
 		try:
-			import Image
+			from PIL import Image
 			self.use_dimensions=1 ####should this be made optional somehow?
 		except ImportError:
 			self.use_dimensions=0
