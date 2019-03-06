@@ -1,3 +1,185 @@
+cfv (1.18.3-2) unstable; urgency=low
+
+  * Package cleanup below by Jari Aalto <jari.aalto@cante.net> - thanks!
+  * Remove deprecated dpatch and upgrade to packaging format "3.0 quilt".
+  * Update to Standards-Version to 3.9.3 and debhelper to 9.
+  * Move to full dh(1) and simplify rules file. Move from deprecated
+    python-support to dh_python2, see:
+    http://wiki.debian.org/Python/TransitionToDHPython2
+  * Fix build-depends-on-python-dev-with-no-arch-any (Lintian) by changing
+    depends python-dev to python-all.
+
+ -- Stefan Alfredsson <alfs@debian.org>  Thu, 10 May 2012 20:39:46 +0200
+
+cfv (1.18.3-1) unstable; urgency=low
+
+  * New upstream release and python 2.6 compatibility (Closes: #532056)
+  * Included note in README.Debian about iso-8859-x
+    and utf problems (Closes: #466591)
+  * Improvements below by Krzysztof Klimonda (thanks!)
+  * debian/rules:
+    - Simplify rules, make it compatible with Python 2.6.
+  * debian/control:
+    - Add versioned Build-Depends on debhelper and python packages.
+    - Add Homepage.
+    - Make package depends on ${misc:Depends}.
+  * debian/copyright:
+    - Use GPL-2 instead of GPL symlink.
+  * debian/compat:
+    - Make package compatible with debhelper 7.
+
+
+ -- Stefan Alfredsson <alfs@debian.org>  Sat, 08 Aug 2009 16:27:25 +0200  
+
+cfv (1.18.2-1) unstable; urgency=low
+
+  * New upstream release
+  * Fix for py 2.5 "struct integer overflow warning" (Closes: #479037, #479037)
+  * torrent clients are now suggested rather than recommended (Closes: #337796)
+  * Color patch temporarily removed due to incompatiblitiy
+    with new upsteam version
+
+ -- Stefan Alfredsson <alfs@debian.org>  Tue, 24 Jun 2008 22:41:40 +0000
+
+cfv (1.18.1-2) unstable; urgency=low
+
+  * Color patch from "xi iota" <xiota@hotmail.com> applied.
+
+ -- Stefan Alfredsson <alfs@debian.org>  Mon,  4 Feb 2008 19:50:15 +0100
+
+cfv (1.18.1-1) unstable; urgency=low
+
+  * New upstream release
+  * Acknowledge FTBFS unrepresentable changes NMU (Closes: #357216).
+    Thanks Matej!
+  * Acknowledge python transition NMU (Closes: #380793).
+    Thanks Pierre!
+  * Bump Standards-Version to 3.7.3
+
+ -- Stefan Alfredsson <alfs@debian.org>  Wed, 30 Jan 2008 06:57:24 +0100
+
+cfv (1.18-2.2) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Update package to the last python policy (Closes: 380793)..
+  * Bump Standards-Version to 3.7.2.
+  * Bump DH_COMPAT to 4.
+
+ -- Pierre Habouzit <madcoder@debian.org>  Sun,  3 Sep 2006 22:54:37 +0200
+
+cfv (1.18-2.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * debian/rules: Invoke `make distclean' to avoid spurious diffs.
+    Closes: #357216.
+
+ -- Matej Vela <vela@debian.org>  Mon, 27 Mar 2006 18:44:40 +0200
+
+cfv (1.18-2) unstable; urgency=low
+
+  * Fixed grammatical and spelling errors (closes: #298519)
+  * Updated standards-version
+
+ -- Stefan Alfredsson <alfs@debian.org>  Thu, 10 Mar 2005 07:13:18 +0100
+
+cfv (1.18-1) unstable; urgency=low
+
+  * New upstream release - adds sha1 and torrent related fixes
+
+ -- Stefan Alfredsson <alfs@debian.org>  Fri, 14 Jan 2005 11:34:19 +0100
+
+cfv (1.17-1) unstable; urgency=low
+
+  * New upstream release
+  * To use bittorrent checking, bittorrent or bittornado must (at the moment)
+    be installed, therefore a Recommends: was added on these packages
+    (Closes: #259391)
+
+ -- Stefan Alfredsson <alfs@debian.org>  Fri, 16 Jul 2004 15:23:17 +0200
+
+cfv (1.16-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Stefan Alfredsson <alfs@debian.org>  Fri, 21 Nov 2003 13:52:55 +0100
+
+cfv (1.15-2) unstable; urgency=low
+
+  * An automatically generated wrapper script tried to use python 2.2,
+    due to a hardcoded version in debian/rules - updated
+    the rules-file to use python2.3 (Closes: #207062).
+
+ -- Stefan Alfredsson <alfs@debian.org>  Mon, 25 Aug 2003 07:16:29 +0200
+
+cfv (1.15-1) unstable; urgency=low
+
+  * New upstream release
+  * Python dependency moved to 2.3, as per Matthias Klose request
+
+ -- Stefan Alfredsson <alfs@debian.org>  Sun, 24 Aug 2003 18:54:03 +0200
+
+cfv (1.13-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Stefan Alfredsson <alfs@debian.org>  Thu, 19 Dec 2002 07:39:44 +0100   
+
+cfv (1.12-3) unstable; urgency=low
+
+  * Somehow the last upload got lost in the upload queue of
+    ftp.uk.debian.org
+  * Updated to latest policy
+  * Python dependency moved to 2.2
+
+ -- Stefan Alfredsson <alfs@debian.org>  Mon, 25 Nov 2002 18:59:05 +0100
+
+cfv (1.12-2) unstable; urgency=low
+
+  * Added python-imaging suggestion, to get image dimensions for pictures.
+
+ -- Stefan Alfredsson <alfs@debian.org>  Tue, 24 Sep 2002 14:54:06 +0200
+
+cfv (1.12-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Stefan Alfredsson <alfs@debian.org>  Tue, 24 Sep 2002 12:04:36 +0200
+
+cfv (1.11-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Stefan Alfredsson <alfs@debian.org>  Sun, 14 Apr 2002 21:40:43 +0200
+
+cfv (1.10-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Stefan Alfredsson <alfs@debian.org>  Sat,  8 Dec 2001 00:04:22 +0100
+
+cfv (1.9-4) unstable; urgency=low
+
+  * Removed dependency on package not in debian archive (closes: #116867)
+  * Upstream changes to support 2.1 (new python policy)
+
+ -- Stefan Alfredsson <alfs@debian.org>  Mon,  5 Nov 2001 23:02:12 +0100
+
+cfv (1.9-3) unstable; urgency=low
+
+  * Update to the new python policy.
+
+ -- Matthew Mueller <donut@azstarnet.com>  Sun,  4 Nov 2001 12:52:42 -0700
+
+cfv (1.9-2) unstable; urgency=low
+
+  * First upload to the debian archive; Previous versions have been
+    packaged by the upstream author and offered locally, but to
+    get the package into the official debian archive it must be
+    maintained by a debian developer. Hence, this upload by me
+    (after checking that the packaging was OK).
+
+ -- Stefan Alfredsson <alfs@debian.org>  Wed, 19 Sep 2001 18:32:39 +0200
+
 cfv (1.9-1) unstable; urgency=low
 
   * New release.
@@ -86,6 +268,3 @@ cfv (1.0-1) unstable; urgency=low
 
  -- Matthew Mueller <donut@azstarnet.com>  Fri, 30 Jun 2000 15:35:14 -0700
 
-Local variables:
-mode: debian-changelog
-End:

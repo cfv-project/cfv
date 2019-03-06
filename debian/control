@@ -1,14 +1,18 @@
 Source: cfv
 Section: utils
 Priority: optional
-Maintainer: Matthew Mueller <donut@azstarnet.com>
-Standards-Version: 3.0.1
+Maintainer: Stefan Alfredsson <alfs@debian.org>
+Build-Depends: python-all (>=2.6.7), debhelper (>= 9)
+Standards-Version: 3.9.3
+Homepage: http://cfv.sourceforge.net/
 
 Package: cfv
 Architecture: all
-Depends: python-base, python-zlib | python-fchksum (>= 1.2-1)
-Recommends: python-fchksum (>= 1.2-1)
-Description: tests and creates .sfv, .csv and md5 files
- cfv is a utility to both test and create .sfv (Simple File Verify) .csv,
- and md5sum files. These files are commonly used to ensure the correct
- retrieval or storage of data.
+Depends: ${python:Depends}, ${misc:Depends}
+Suggests: python-imaging, bittorrent | bittornado
+Description: versatile file checksum creator and verifier
+ cfv is a utility to test and create a wide range of checksum
+ verification files. It currently supports testing and creating
+ sfv, sfvmd5, csv, csv2, csv4, md5, bsdmd5, torrent and crc files.
+ Test-only support is available for par, par2.
+

@@ -3,9 +3,17 @@ Fri, 30 Jun 2000 15:35:14 -0700.
 
 Upstream Author: Matthew Mueller.
 
-This software is copyright (c) 2000-2001 by Matthew Mueller.
+This software is Copyright (c) 2000-2009 by Matthew Mueller.
 
-You are free to distribute this software under the terms of
-the GNU General Public License.
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
 On Debian systems, the complete text of the GNU General Public
-License can be found in /usr/share/common-licenses/GPL file.
+License can be found in /usr/share/common-licenses/GPL-2 file.

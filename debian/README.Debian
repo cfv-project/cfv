@@ -1,0 +1,24 @@
+
+
+Problems with "missing files" and international characters?
+-------------------------------------------------------------
+
+From http://bugs.debian.org/466591
+
+
+"When verifying .md5 or .cfv files which contain filenames containing 
+ chars with values > 127 (in ISO-8859), cfv reports the corresponding 
+files as missing.
+
+...
+
+cfv (1.x) has no understanding of encodings for text checksum files, and
+since the files are encoded in iso-8859-? but your system is probably
+using utf-8 for filenames, the bytes just aren't going to match up.  For
+the text-based formats you can work around this pretty easily by
+manually converting the files:
+
+"iconv -f iso-8859-1 -t utf-8 foo.md5 > foo.utf8.md5"
+
+
+
