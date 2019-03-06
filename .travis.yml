@@ -5,4 +5,4 @@ python:
 
 script:
   - python -m compileall -f .
-  - test/test.py
+  - test/test.py --exit-early
