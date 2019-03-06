@@ -159,6 +159,8 @@ def test_log_finish(cmd,s,r):
 	log("%s (%s)"%(result,s));
 	if r:
 		log("\n".join(traceback.format_stack()))
+		if run_exit_early:
+			sys.exit(1)
 	log("");
 def test_log_results(cmd,s,o,r,kw):
 	"""
@@ -1324,7 +1326,7 @@ def private_torrent_test():
 
 def all_unittest_tests():
 	if not run_internal:
-		return
+		return 0
 	test_log_start('all_unittests_suite', None)
 	from unittest import TextTestRunner
 	suite = cfvtest.all_unittests_suite()
@@ -1336,10 +1338,14 @@ def all_unittest_tests():
 		r = 0
 	test_log_finish('all_unittests_suite', not result.wasSuccessful(), r)
 
+	return len(result.failures) + len(result.errors)
+
 
 run_internal = 1
 run_long_tests = 0
 run_unittests_only = 0
+run_exit_early = 0
+run_log_to_file = 0
 
 def show_help_and_exit(err=None):
 	if err:
@@ -1350,6 +1356,8 @@ def show_help_and_exit(err=None):
 	print ' -e      launch seperate cfv process for each test'
 	print ' --long  include tests that may use large amounts of CPU or disk'
 	print ' --unit  run only unittests, no integration tests'
+	print ' --exit-early exit after first error'
+	print ' --log-to-file output logs to file instead of stdout'
 	print ' --help  show this help'
 	print
 	print 'default [cfv] is:', cfvtest.cfvfn
@@ -1357,7 +1365,7 @@ def show_help_and_exit(err=None):
 	sys.exit(1)
 
 try:
-	optlist, args = getopt.getopt(sys.argv[1:], 'ie',['long','help', 'unit'])
+	optlist, args = getopt.getopt(sys.argv[1:], 'ie',['long','help', 'unit', 'exit-early', 'log-to-file'])
 except getopt.error, e:
 	show_help_and_exit(e)
 
@@ -1371,6 +1379,10 @@ for o,a in optlist:
 		run_long_tests = 1
 	elif o=='--unit':
 		run_unittests_only = 1
+	elif o=='--exit-early':
+		run_exit_early = 1
+	elif o=='--log-to-file':
+		run_log_to_file = 1
 	elif o=='-i':
 		run_internal = 1
 	elif o=='-e':
@@ -1388,7 +1400,10 @@ from cfvtest import runcfv
 #set everything to default in case user has different in config file
 cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url --noprivate_torrent'
 
-logfile=open(os.path.join(tempfile.gettempdir(), "cfv_%s_test-%s.log"%(cfvtest.ver_cfv, time.strftime('%Y%m%dT%H%M%S'))), "w")
+if run_log_to_file:
+	logfile = open(os.path.join(tempfile.gettempdir(), "cfv_%s_test-%s.log"%(cfvtest.ver_cfv, time.strftime('%Y%m%dT%H%M%S'))), "w")
+else:
+	logfile = sys.stdout
 
 def all_tests():
 	stats.ok = stats.failed = 0
@@ -1612,7 +1627,10 @@ def all_tests():
 
 	donestr="tests finished:  ok: %i  failed: %i"%(stats.ok,stats.failed)
 	log("\n"+donestr)
-	print donestr
+	if run_log_to_file:
+		print donestr
+
+	return stats.failed
 
 
 
@@ -1638,18 +1656,20 @@ try:
 	copytree(cfvtest.datapath, tmpdatapath, ignore=['.svn'])
 	os.chdir(tmpdatapath) # do this after the setcfv, since the user may have specified a relative path
 
+	failed = 0
 	print 'testing...'
-	all_unittest_tests()
-	all_tests()
+	failed += all_unittest_tests()
+	failed += all_tests()
 	if cfvtest.ver_fchksum:
 		print 'testing without fchksum...'
 		cfvtest.setenv('CFV_NOFCHKSUM','x')
 		assert not cfvtest.ver_fchksum
-		all_tests()
+		failed += all_tests()
 	if cfvtest.ver_mmap:
 		print 'testing without mmap...'
 		cfvtest.setenv('CFV_NOMMAP','x')
 		assert not cfvtest.ver_mmap
-		all_tests()
+		failed += all_tests()
+	sys.exit(failed)
 finally:
 	shutil.rmtree(tmpdatapath)
