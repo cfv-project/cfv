@@ -146,19 +146,25 @@ def log(text):
 
 def test_log_start(cmd,kw):
 	log("*** testing "+cmd + (kw and ' '+str(kw) or ''));
-def test_log_finish(cmd,s,r):
+def test_log_finish(cmd,s,r,output,kw):
 	if r:
 		stats.failed += 1
-		print "failed test:",cmd
+		print "failed test:",cmd,(kw and ' '+str(kw) or '')
+		if output is not None:
+			print(output)
 		result="FAILED";
 		if type(r)!=type(1) or r!=1:
 			result += " (%s)"%r
 	else:
 		stats.ok += 1
 		result="OK";
-	log("%s (%s)"%(result,s));
+	result_str = "%s (%s)"%(result,s)
+	log(result_str)
 	if r:
-		log("\n".join(traceback.format_stack()))
+		print(result_str)
+		traceback_str = "\n".join(traceback.format_stack())
+		log(traceback_str)
+		print(traceback_str)
 		if run_exit_early:
 			sys.exit(1)
 	log("");
@@ -171,7 +177,7 @@ def test_log_results(cmd,s,o,r,kw):
 	"""
 	test_log_start(cmd,kw)
 	log(o);
-	test_log_finish(cmd,s,r)
+	test_log_finish(cmd,s,r,o,kw)
 	
 
 def test_external(cmd,test):
@@ -1336,7 +1342,7 @@ def all_unittest_tests():
 		r = '%i failures, %i errors'%tuple(map(len, (result.failures, result.errors)))
 	else:
 		r = 0
-	test_log_finish('all_unittests_suite', not result.wasSuccessful(), r)
+	test_log_finish('all_unittests_suite', not result.wasSuccessful(), r, None, None)
 
 	return len(result.failures) + len(result.errors)
 
