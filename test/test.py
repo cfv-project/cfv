@@ -1345,7 +1345,6 @@ run_internal = 1
 run_long_tests = 0
 run_unittests_only = 0
 run_exit_early = 0
-run_log_to_file = 0
 
 def show_help_and_exit(err=None):
 	if err:
@@ -1357,7 +1356,6 @@ def show_help_and_exit(err=None):
 	print ' --long  include tests that may use large amounts of CPU or disk'
 	print ' --unit  run only unittests, no integration tests'
 	print ' --exit-early exit after first error'
-	print ' --log-to-file output logs to file instead of stdout'
 	print ' --help  show this help'
 	print
 	print 'default [cfv] is:', cfvtest.cfvfn
@@ -1365,7 +1363,7 @@ def show_help_and_exit(err=None):
 	sys.exit(1)
 
 try:
-	optlist, args = getopt.getopt(sys.argv[1:], 'ie',['long','help', 'unit', 'exit-early', 'log-to-file'])
+	optlist, args = getopt.getopt(sys.argv[1:], 'ie',['long','help', 'unit', 'exit-early'])
 except getopt.error, e:
 	show_help_and_exit(e)
 
@@ -1381,8 +1379,6 @@ for o,a in optlist:
 		run_unittests_only = 1
 	elif o=='--exit-early':
 		run_exit_early = 1
-	elif o=='--log-to-file':
-		run_log_to_file = 1
 	elif o=='-i':
 		run_internal = 1
 	elif o=='-e':
@@ -1400,10 +1396,7 @@ from cfvtest import runcfv
 #set everything to default in case user has different in config file
 cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url --noprivate_torrent'
 
-if run_log_to_file:
-	logfile = open(os.path.join(tempfile.gettempdir(), "cfv_%s_test-%s.log"%(cfvtest.ver_cfv, time.strftime('%Y%m%dT%H%M%S'))), "w")
-else:
-	logfile = sys.stdout
+logfile = open(os.path.join(tempfile.gettempdir(), "cfv_%s_test-%s.log"%(cfvtest.ver_cfv, time.strftime('%Y%m%dT%H%M%S'))), "w")
 
 def all_tests():
 	stats.ok = stats.failed = 0
@@ -1627,8 +1620,7 @@ def all_tests():
 
 	donestr="tests finished:  ok: %i  failed: %i"%(stats.ok,stats.failed)
 	log("\n"+donestr)
-	if run_log_to_file:
-		print donestr
+	print donestr
 
 	return stats.failed
 
