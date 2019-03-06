@@ -149,7 +149,7 @@ def test_log_start(cmd,kw):
 def test_log_finish(cmd,s,r,output,kw):
 	if r:
 		stats.failed += 1
-		print "failed test:",cmd,(kw and ' '+str(kw) or '')
+		print ">>> failed test:",cmd,(kw and ' '+str(kw) or '')
 		if output is not None:
 			print(output)
 		result="FAILED";
@@ -1624,7 +1624,7 @@ def all_tests():
 	test_generic(cfvcmd+" -h",cfv_nooutput_test,stdout='/dev/null')
 	test_generic(cfvcmd+" -h",cfv_version_test,stderr='/dev/null')
 
-	donestr="tests finished:  ok: %i  failed: %i"%(stats.ok,stats.failed)
+	donestr=">>> tests finished:  ok: %i  failed: %i"%(stats.ok,stats.failed)
 	log("\n"+donestr)
 	print donestr
 
@@ -1655,16 +1655,16 @@ try:
 	os.chdir(tmpdatapath) # do this after the setcfv, since the user may have specified a relative path
 
 	failed = 0
-	print 'testing...'
+	print '>>> testing...'
 	failed += all_unittest_tests()
 	failed += all_tests()
 	if cfvtest.ver_fchksum:
-		print 'testing without fchksum...'
+		print '>>> testing without fchksum...'
 		cfvtest.setenv('CFV_NOFCHKSUM','x')
 		assert not cfvtest.ver_fchksum
 		failed += all_tests()
 	if cfvtest.ver_mmap:
-		print 'testing without mmap...'
+		print '>>> testing without mmap...'
 		cfvtest.setenv('CFV_NOMMAP','x')
 		assert not cfvtest.ver_mmap
 		failed += all_tests()
