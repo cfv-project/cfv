@@ -1874,7 +1874,7 @@ def show_unverified_files(filelist):
 			show_unverified_dir(u'')
 
 
-atrem=re.compile(r'md5|sha1|\.(csv|sfv|par|p[0-9][0-9]|par2|torrent|crc)(\.gz)?$',re.IGNORECASE)#md5sum/sha1sum files have no standard extension, so just search for files with md5/sha1 in the name anywhere, and let the test func see if it really is one.
+atrem=re.compile(r'md5|sha1|sha224|sha256|sha384|sha512|\.(csv|sfv|par|p[0-9][0-9]|par2|torrent|crc)(\.gz)?$',re.IGNORECASE)#md5sum/sha1sum files have no standard extension, so just search for files with md5/sha1 in the name anywhere, and let the test func see if it really is one.
 def autotest(typename):
 	files = osutil.listdir(osutil.curdiru)
 	if config.dirsort:
