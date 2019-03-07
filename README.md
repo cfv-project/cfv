@@ -3,6 +3,8 @@
 cfv was originally written by Matthew Mueller ([original project home](http://cfv.sourceforge.net/)).
 This is a [friendly fork of cfv](https://github.com/cfv-project/cfv) maintained by David Gnedt.
 
+[![Build Status](https://travis-ci.org/cfv-project/cfv.svg?branch=master)](https://travis-ci.org/cfv-project/cfv)
+
 ## Requirements
 
 Python ≥ 2.4 <https://www.python.org/>
