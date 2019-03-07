@@ -1916,6 +1916,7 @@ def printusage(err=0):
 	phelp('  -i       ignore case')
 	phelp('  -I       don\'t ignore case (default)')
 	phelp('  -u       show unverified files')
+	phelp('  -uu      show each unverified file individually, no special directory handling')
 	phelp('  -U       don\'t show unverified files (default)')
 	phelp('  -v       verbose')
 	phelp('  -V       not verbose (default)')
