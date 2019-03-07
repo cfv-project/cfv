@@ -36,7 +36,7 @@ You can get the latest release from the [Github releases page](https://github.co
 
 ## Contributions
 
-Contributions are welcome, just open a pull request :)
+Contributions are welcome, just open a pull request ☺️
 
 ## Copying
 
