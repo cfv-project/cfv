@@ -425,7 +425,7 @@ class ChksumType:
 			view.ev_cf_enverror(filename, a)
 
 	def do_test_chksumfile_print_testingline(self, file, comment=None):
-		view.ev_test_cf_begin(self.__class__.__name__, file.name, comment)
+		view.ev_test_cf_begin(self.name, file.name, comment)
 
 	def search_file(self, filename, filecrc, filesize, errfunc, errargs):
 		if (not config.search or
