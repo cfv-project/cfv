@@ -149,7 +149,7 @@ def test_log_start(cmd,kw):
 def test_log_finish(cmd,s,r,output,kw):
 	if r:
 		stats.failed += 1
-		print ">>> failed test:",cmd,(kw and ' '+str(kw) or '')
+		print "\n>>> failed test:",cmd,(kw and ' '+str(kw) or '')
 		if output is not None:
 			print(output)
 		result="FAILED";
@@ -157,6 +157,8 @@ def test_log_finish(cmd,s,r,output,kw):
 			result += " (%s)"%r
 	else:
 		stats.ok += 1
+		sys.stdout.write('.')
+		sys.stdout.flush()
 		result="OK";
 	result_str = "%s (%s)"%(result,s)
 	log(result_str)
@@ -1624,9 +1626,9 @@ def all_tests():
 	test_generic(cfvcmd+" -h",cfv_nooutput_test,stdout='/dev/null')
 	test_generic(cfvcmd+" -h",cfv_version_test,stderr='/dev/null')
 
-	donestr=">>> tests finished:  ok: %i  failed: %i"%(stats.ok,stats.failed)
-	log("\n"+donestr)
-	print donestr
+	donestr="\n>>> tests finished:  ok: %i  failed: %i"%(stats.ok,stats.failed)
+	log(donestr)
+	print(donestr)
 
 	return stats.failed
 
