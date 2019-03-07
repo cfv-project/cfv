@@ -1,9 +1,10 @@
 This package was debianized by Matthew Mueller <donut@azstarnet.com> on
 Fri, 30 Jun 2000 15:35:14 -0700.
 
-Upstream Author: Matthew Mueller.
+Upstream Authors: Matthew Mueller, David Gnedt.
 
-This software is Copyright (c) 2000-2009 by Matthew Mueller.
+This software is Copyright (C) 2000-2013 by Matthew Mueller and
+                 Copyright (C) 2018-2019 by David Gnedt.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

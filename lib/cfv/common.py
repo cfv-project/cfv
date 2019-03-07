@@ -1,7 +1,8 @@
 #! /usr/bin/env python
 
 #    cfv - Command-line File Verify
-#    Copyright (C) 2000-2009  Matthew Mueller <donut AT dakotacom DOT net>
+#    Copyright (C) 2000-2013  Matthew Mueller <donut AT dakotacom DOT net>
+#    Copyright (C) 2018-2019  David Gnedt <david.gnedt AT davizone DOT at>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -1942,7 +1943,7 @@ def printusage(err=0):
 	phelp(' --private_torrent    set private flag in torrent')
 	sys.exit(err)
 def printhelp():
-	view.pinfo('cfv v%s - Copyright (C) 2000-2009 Matthew Mueller - GPL license'%__version__)
+	view.pinfo('cfv v%s - Copyright (C) 2000-2013 Matthew Mueller - Copyright (C) 2018-2019 David Gnedt - GPL license'%__version__)
 	printusage()
 def printcftypehelp(err):
 	phelp = err and view.perror or view.pinfo
