@@ -55,19 +55,23 @@ def is_encodable(s, enc=preferredencoding):
 
 
 fmt_info = {
-	#name:    (hascrc, hassize, cancreate, available, istext, preferredencoding)
-	'sha1':   (1, 0, 1, 1,                  1, preferredencoding),
-	'md5':    (1, 0, 1, 1,                  1, preferredencoding),
-	'bsdmd5': (1, 0, 1, 1,                  1, preferredencoding),
-	'sfv':    (1, 0, 1, 1,                  1, preferredencoding),
-	'sfvmd5': (1, 0, 1, 1,                  1, preferredencoding),
-	'csv':    (1, 1, 1, 1,                  1, preferredencoding),
-	'csv2':   (0, 1, 1, 1,                  1, preferredencoding),
-	'csv4':   (1, 1, 1, 1,                  1, preferredencoding),
-	'crc':    (1, 1, 1, 1,                  1, preferredencoding),
-	'par':    (1, 1, 0, 1,                  0, 'utf-16-le'),
-	'par2':   (1, 1, 0, 1,                  0, preferredencoding),
-	'torrent':(1, 1, 1, 1,                  0, 'utf-8'),
+	#name:    (hascrc, hassize, cancreate, available, istext, preferredencoding, iscoreutils)
+	'sha512': (1, 0, 1, 1,                  1, preferredencoding, 1),
+	'sha384': (1, 0, 1, 1,                  1, preferredencoding, 1),
+	'sha256': (1, 0, 1, 1,                  1, preferredencoding, 1),
+	'sha224': (1, 0, 1, 1,                  1, preferredencoding, 1),
+	'sha1':   (1, 0, 1, 1,                  1, preferredencoding, 1),
+	'md5':    (1, 0, 1, 1,                  1, preferredencoding, 1),
+	'bsdmd5': (1, 0, 1, 1,                  1, preferredencoding, 0),
+	'sfv':    (1, 0, 1, 1,                  1, preferredencoding, 0),
+	'sfvmd5': (1, 0, 1, 1,                  1, preferredencoding, 0),
+	'csv':    (1, 1, 1, 1,                  1, preferredencoding, 0),
+	'csv2':   (0, 1, 1, 1,                  1, preferredencoding, 0),
+	'csv4':   (1, 1, 1, 1,                  1, preferredencoding, 0),
+	'crc':    (1, 1, 1, 1,                  1, preferredencoding, 0),
+	'par':    (1, 1, 0, 1,                  0, 'utf-16-le',       0),
+	'par2':   (1, 1, 0, 1,                  0, preferredencoding, 0),
+	'torrent':(1, 1, 1, 1,                  0, 'utf-8',           0),
 }
 def fmt_hascrc(f):
 	return fmt_info[f][0]
@@ -81,12 +85,16 @@ def fmt_istext(f):
 	return fmt_info[f][4]
 def fmt_preferredencoding(f):
 	return fmt_info[f][5]
+def fmt_iscoreutils(f):
+	return fmt_info[f][6]
 def allfmts():
 	return fmt_info.keys()
 def allavailablefmts():
 	return filter(fmt_available, allfmts())
 def allcreatablefmts():
 	return filter(fmt_cancreate, allavailablefmts())
+def coreutilsfmts():
+	return filter(fmt_iscoreutils, allfmts())
 
 
 class rcurry:
@@ -1412,8 +1420,8 @@ def all_tests():
 	symlink_test()
 	deep_unverified_test()
 	
-	ren_test('sha1')
-	ren_test('md5')
+	for fmt in coreutilsfmts():
+		ren_test(fmt)
 	ren_test('md5',extra='-rr')
 	ren_test('bsdmd5')
 	ren_test('sfv')
@@ -1424,15 +1432,15 @@ def all_tests():
 	ren_test('crc')
 	ren_test('torrent')
 
-	for t in 'sha1', 'md5', 'bsdmd5', 'sfv', 'sfvmd5', 'csv', 'csv2', 'csv4', 'crc', 'par', 'par2':
-		search_test(t)
+	for t in allavailablefmts():
+		if t != 'torrent':
+			search_test(t)
 		search_test(t,test_nocrc=1)
-	search_test('torrent',test_nocrc=1)
 	#search_test('torrent',test_nocrc=1,extra="--strip=1")
 	quoted_search_test()
 
-	T_test(".sha1")
-	T_test(".md5")
+	for fmt in coreutilsfmts():
+		T_test("." + fmt)
 	T_test(".md5.gz")
 	T_test("comments.md5")
 	T_test(".bsdmd5")
@@ -1454,8 +1462,8 @@ def all_tests():
 	T_test("nosize.crc")
 	T_test("nodims.crc")
 	T_test("nosizenodimsnodesc.crc")
-	T_test("crlf.sha1")
-	T_test("crlf.md5")
+	for fmt in coreutilsfmts():
+		T_test("crlf." + fmt)
 	T_test("crlf.bsdmd5")
 	T_test("crlf.csv")
 	T_test("crlf.csv2")
@@ -1463,8 +1471,8 @@ def all_tests():
 	T_test("crlf.sfv")
 	T_test("noheadercrlf.sfv")
 	T_test("crlf.crc")
-	T_test("crcrlf.sha1")
-	T_test("crcrlf.md5")
+	for fmt in coreutilsfmts():
+		T_test("crcrlf." + fmt)
 	T_test("crcrlf.bsdmd5")
 	T_test("crcrlf.csv")
 	T_test("crcrlf.csv2")
@@ -1521,16 +1529,12 @@ def all_tests():
 	test_generic(cfvcmd+r" -i --fixpaths \\/ -T -f testfix.csv4",cfv_test)
 
 	C_test("bsdmd5","-t bsdmd5")#,verify=lambda f: test_generic("md5 -c "+f,status_test)) #bsd md5 seems to have no way to check, only create
-	if pathfind('sha1sum'): #don't report pointless errors on systems that don't have sha1sum
-		sha1verify=lambda f: test_external("sha1sum -c "+f,status_test)
-	else:
-		sha1verify=None
-	C_test("sha1",verify=sha1verify)
-	if pathfind('md5sum'): #don't report pointless errors on systems that don't have md5sum
-		md5verify=lambda f: test_external("md5sum -c "+f,status_test)
-	else:
-		md5verify=None
-	C_test("md5",verify=md5verify)
+	for fmt in coreutilsfmts():
+		if pathfind(fmt + 'sum'): #don't report pointless errors on systems that don't have e.g. sha1sum
+			coreutils_verify=lambda f: test_external(fmt + "sum -c "+f,status_test)
+		else:
+			coreutils_verify=None
+		C_test(fmt,verify=coreutils_verify)
 	C_test("csv")
 	if pathfind('cksfv'): #don't report pointless errors on systems that don't have cksfv
 		sfvverify=lambda f: test_external("cksfv -f "+f,status_test)
@@ -1577,8 +1581,8 @@ def all_tests():
 	test_generic(cfvcmd+" -m -v -T -t sfv", lambda s,o: cfv_typerestrict_test(s,o,'sfv'))
 	test_generic(cfvcmd+" -m -v -T -t sfvmd5", lambda s,o: cfv_typerestrict_test(s,o,'sfvmd5'))
 	test_generic(cfvcmd+" -m -v -T -t bsdmd5", lambda s,o: cfv_typerestrict_test(s,o,'bsdmd5'))
-	test_generic(cfvcmd+" -m -v -T -t sha1", lambda s,o: cfv_typerestrict_test(s,o,'sha1'))
-	test_generic(cfvcmd+" -m -v -T -t md5", lambda s,o: cfv_typerestrict_test(s,o,'md5'))
+	for fmt in coreutilsfmts():
+		test_generic(cfvcmd+" -m -v -T -t "+fmt, lambda s,o: cfv_typerestrict_test(s,o,fmt))
 	test_generic(cfvcmd+" -m -v -T -t csv", lambda s,o: cfv_typerestrict_test(s,o,'csv'))
 	test_generic(cfvcmd+" -m -v -T -t par", lambda s,o: cfv_typerestrict_test(s,o,'par'))
 	test_generic(cfvcmd+" -m -v -T -t par2", lambda s,o: cfv_typerestrict_test(s,o,'par2'))
