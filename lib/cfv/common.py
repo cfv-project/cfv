@@ -396,7 +396,7 @@ def make_rename_formatmap(l_filename):
 	sp=os.path.splitext(l_filename)
 	return {'name':sp[0], 'ext':sp[1], 'fullname':l_filename}
 
-__version__='2.0-pre'+'$Revision$'[11:-2]
+__version__='2.0~dev'
 __homepage__='http://cfv.sourceforge.net/'
 
 _hassymlinks=hasattr(os,'symlink')
@@ -425,7 +425,7 @@ class ChksumType:
 			view.ev_cf_enverror(filename, a)
 
 	def do_test_chksumfile_print_testingline(self, file, comment=None):
-		view.ev_test_cf_begin(self.__class__.__name__, file.name, comment)
+		view.ev_test_cf_begin(self.name, file.name, comment)
 
 	def search_file(self, filename, filecrc, filesize, errfunc, errargs):
 		if (not config.search or
@@ -1874,7 +1874,7 @@ def show_unverified_files(filelist):
 			show_unverified_dir(u'')
 
 
-atrem=re.compile(r'md5|sha1|\.(csv|sfv|par|p[0-9][0-9]|par2|torrent|crc)(\.gz)?$',re.IGNORECASE)#md5sum/sha1sum files have no standard extension, so just search for files with md5/sha1 in the name anywhere, and let the test func see if it really is one.
+atrem=re.compile(r'md5|sha1|sha224|sha256|sha384|sha512|\.(csv|sfv|par|p[0-9][0-9]|par2|torrent|crc)(\.gz)?$',re.IGNORECASE)#md5sum/sha1sum files have no standard extension, so just search for files with md5/sha1 in the name anywhere, and let the test func see if it really is one.
 def autotest(typename):
 	files = osutil.listdir(osutil.curdiru)
 	if config.dirsort:

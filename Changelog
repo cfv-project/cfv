@@ -1,4 +1,4 @@
-2005-xx-xx - v2.x:	
+2019-xx-xx - v2.0~dev:
 	* Now fully unicode aware.  Work is done internally in unicode, only translating to encoded form on input/output.
 	* Added --encoding option.
 	* Specifying --encoding=raw will allow working with broken filenames. (But really, you should just fix them, if possible.)
@@ -8,6 +8,7 @@
 	* Decode the torrent comment field too.
 	* Changed handling of -f: Now all options are checked before testing/creating the file. (Benjamin Hohl)
 	* Torrent file handling no longer requires BitTorrent client to be installed.
+	* Support for GNU coreutils sha224sum, sha256sum, sha384sum and sha512sum formats.
 
 2009-06-07 - v1.18.3:
 	* Fix python2.6 md5 and sha module deprecation warnings.

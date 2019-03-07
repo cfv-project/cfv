@@ -55,19 +55,23 @@ def is_encodable(s, enc=preferredencoding):
 
 
 fmt_info = {
-	#name:    (hascrc, hassize, cancreate, available, istext, preferredencoding)
-	'sha1':   (1, 0, 1, 1,                  1, preferredencoding),
-	'md5':    (1, 0, 1, 1,                  1, preferredencoding),
-	'bsdmd5': (1, 0, 1, 1,                  1, preferredencoding),
-	'sfv':    (1, 0, 1, 1,                  1, preferredencoding),
-	'sfvmd5': (1, 0, 1, 1,                  1, preferredencoding),
-	'csv':    (1, 1, 1, 1,                  1, preferredencoding),
-	'csv2':   (0, 1, 1, 1,                  1, preferredencoding),
-	'csv4':   (1, 1, 1, 1,                  1, preferredencoding),
-	'crc':    (1, 1, 1, 1,                  1, preferredencoding),
-	'par':    (1, 1, 0, 1,                  0, 'utf-16-le'),
-	'par2':   (1, 1, 0, 1,                  0, preferredencoding),
-	'torrent':(1, 1, 1, 1,                  0, 'utf-8'),
+	#name:    (hascrc, hassize, cancreate, available, istext, preferredencoding, iscoreutils)
+	'sha512': (1, 0, 1, 1,                  1, preferredencoding, 1),
+	'sha384': (1, 0, 1, 1,                  1, preferredencoding, 1),
+	'sha256': (1, 0, 1, 1,                  1, preferredencoding, 1),
+	'sha224': (1, 0, 1, 1,                  1, preferredencoding, 1),
+	'sha1':   (1, 0, 1, 1,                  1, preferredencoding, 1),
+	'md5':    (1, 0, 1, 1,                  1, preferredencoding, 1),
+	'bsdmd5': (1, 0, 1, 1,                  1, preferredencoding, 0),
+	'sfv':    (1, 0, 1, 1,                  1, preferredencoding, 0),
+	'sfvmd5': (1, 0, 1, 1,                  1, preferredencoding, 0),
+	'csv':    (1, 1, 1, 1,                  1, preferredencoding, 0),
+	'csv2':   (0, 1, 1, 1,                  1, preferredencoding, 0),
+	'csv4':   (1, 1, 1, 1,                  1, preferredencoding, 0),
+	'crc':    (1, 1, 1, 1,                  1, preferredencoding, 0),
+	'par':    (1, 1, 0, 1,                  0, 'utf-16-le',       0),
+	'par2':   (1, 1, 0, 1,                  0, preferredencoding, 0),
+	'torrent':(1, 1, 1, 1,                  0, 'utf-8',           0),
 }
 def fmt_hascrc(f):
 	return fmt_info[f][0]
@@ -81,12 +85,16 @@ def fmt_istext(f):
 	return fmt_info[f][4]
 def fmt_preferredencoding(f):
 	return fmt_info[f][5]
+def fmt_iscoreutils(f):
+	return fmt_info[f][6]
 def allfmts():
 	return fmt_info.keys()
 def allavailablefmts():
 	return filter(fmt_available, allfmts())
 def allcreatablefmts():
 	return filter(fmt_cancreate, allavailablefmts())
+def coreutilsfmts():
+	return filter(fmt_iscoreutils, allfmts())
 
 
 class rcurry:
@@ -146,19 +154,29 @@ def log(text):
 
 def test_log_start(cmd,kw):
 	log("*** testing "+cmd + (kw and ' '+str(kw) or ''));
-def test_log_finish(cmd,s,r):
+def test_log_finish(cmd,s,r,output,kw):
 	if r:
 		stats.failed += 1
-		print "failed test:",cmd
+		print "\n>>> failed test:",cmd,(kw and ' '+str(kw) or '')
+		if output is not None:
+			print(output)
 		result="FAILED";
 		if type(r)!=type(1) or r!=1:
 			result += " (%s)"%r
 	else:
 		stats.ok += 1
+		sys.stdout.write('.')
+		sys.stdout.flush()
 		result="OK";
-	log("%s (%s)"%(result,s));
+	result_str = "%s (%s)"%(result,s)
+	log(result_str)
 	if r:
-		log("\n".join(traceback.format_stack()))
+		print(result_str)
+		traceback_str = "\n".join(traceback.format_stack())
+		log(traceback_str)
+		print(traceback_str)
+		if run_exit_early:
+			sys.exit(1)
 	log("");
 def test_log_results(cmd,s,o,r,kw):
 	"""
@@ -169,7 +187,7 @@ def test_log_results(cmd,s,o,r,kw):
 	"""
 	test_log_start(cmd,kw)
 	log(o);
-	test_log_finish(cmd,s,r)
+	test_log_finish(cmd,s,r,o,kw)
 	
 
 def test_external(cmd,test):
@@ -384,18 +402,16 @@ def cfv_listdata_bad_test(s,o):
 	return 1
 
 def cfv_version_test(s,o):
-	x=re.search(r'cfv v([\d.]+) -',o)
-	x2=re.search(r'cfv ([\d.]+) ',open(os.path.join(cfvtest.testpath,os.pardir,"README")).readline())
-	x3=re.search(r' v([\d.]+):',open(os.path.join(cfvtest.testpath,os.pardir,"Changelog")).readline())
+	x=re.search(r'cfv v([\d.]+(?:~dev)?) -',o)
+	x3=re.search(r' v([\d.]+(?:~dev)?):',open(os.path.join(cfvtest.testpath,os.pardir,"Changelog")).readline())
 	if x: log('cfv: '+x.group(1))
-	if x2: log('README: '+x2.group(1))
 	if x3: log('Changelog: '+x3.group(1))
 	#if os.path.isdir(os.path.join(os.pardir,'debian')):
 	#	x4=re.search(r'cfv \(([\d.]+)-\d+\) ',open(os.path.join(os.pardir,"debian","changelog")).readline())
 	#	if x4: log('deb changelog: '+x4.group(1))
 	#	if not x or not x4 or x4.group(1)!=x.group(1):
 	#		return 1
-	if x and x2 and x3 and x.group(1)==x2.group(1) and x.group(1)==x3.group(1):
+	if x and x3 and x.group(1)==x3.group(1):
 		return 0
 	return 1
 
@@ -1324,7 +1340,7 @@ def private_torrent_test():
 
 def all_unittest_tests():
 	if not run_internal:
-		return
+		return 0
 	test_log_start('all_unittests_suite', None)
 	from unittest import TextTestRunner
 	suite = cfvtest.all_unittests_suite()
@@ -1334,12 +1350,15 @@ def all_unittest_tests():
 		r = '%i failures, %i errors'%tuple(map(len, (result.failures, result.errors)))
 	else:
 		r = 0
-	test_log_finish('all_unittests_suite', not result.wasSuccessful(), r)
+	test_log_finish('all_unittests_suite', not result.wasSuccessful(), r, None, None)
+
+	return len(result.failures) + len(result.errors)
 
 
 run_internal = 1
 run_long_tests = 0
 run_unittests_only = 0
+run_exit_early = 0
 
 def show_help_and_exit(err=None):
 	if err:
@@ -1350,6 +1369,7 @@ def show_help_and_exit(err=None):
 	print ' -e      launch seperate cfv process for each test'
 	print ' --long  include tests that may use large amounts of CPU or disk'
 	print ' --unit  run only unittests, no integration tests'
+	print ' --exit-early exit after first error'
 	print ' --help  show this help'
 	print
 	print 'default [cfv] is:', cfvtest.cfvfn
@@ -1357,7 +1377,7 @@ def show_help_and_exit(err=None):
 	sys.exit(1)
 
 try:
-	optlist, args = getopt.getopt(sys.argv[1:], 'ie',['long','help', 'unit'])
+	optlist, args = getopt.getopt(sys.argv[1:], 'ie',['long','help', 'unit', 'exit-early'])
 except getopt.error, e:
 	show_help_and_exit(e)
 
@@ -1371,6 +1391,8 @@ for o,a in optlist:
 		run_long_tests = 1
 	elif o=='--unit':
 		run_unittests_only = 1
+	elif o=='--exit-early':
+		run_exit_early = 1
 	elif o=='-i':
 		run_internal = 1
 	elif o=='-e':
@@ -1388,7 +1410,7 @@ from cfvtest import runcfv
 #set everything to default in case user has different in config file
 cfvcmd='-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url --noprivate_torrent'
 
-logfile=open(os.path.join(tempfile.gettempdir(), "cfv_%s_test-%s.log"%(cfvtest.ver_cfv, time.strftime('%Y%m%dT%H%M%S'))), "w")
+logfile = open(os.path.join(tempfile.gettempdir(), "cfv_%s_test-%s.log"%(cfvtest.ver_cfv, time.strftime('%Y%m%dT%H%M%S'))), "w")
 
 def all_tests():
 	stats.ok = stats.failed = 0
@@ -1396,8 +1418,8 @@ def all_tests():
 	symlink_test()
 	deep_unverified_test()
 	
-	ren_test('sha1')
-	ren_test('md5')
+	for fmt in coreutilsfmts():
+		ren_test(fmt)
 	ren_test('md5',extra='-rr')
 	ren_test('bsdmd5')
 	ren_test('sfv')
@@ -1408,15 +1430,15 @@ def all_tests():
 	ren_test('crc')
 	ren_test('torrent')
 
-	for t in 'sha1', 'md5', 'bsdmd5', 'sfv', 'sfvmd5', 'csv', 'csv2', 'csv4', 'crc', 'par', 'par2':
-		search_test(t)
+	for t in allavailablefmts():
+		if t != 'torrent':
+			search_test(t)
 		search_test(t,test_nocrc=1)
-	search_test('torrent',test_nocrc=1)
 	#search_test('torrent',test_nocrc=1,extra="--strip=1")
 	quoted_search_test()
 
-	T_test(".sha1")
-	T_test(".md5")
+	for fmt in coreutilsfmts():
+		T_test("." + fmt)
 	T_test(".md5.gz")
 	T_test("comments.md5")
 	T_test(".bsdmd5")
@@ -1438,8 +1460,8 @@ def all_tests():
 	T_test("nosize.crc")
 	T_test("nodims.crc")
 	T_test("nosizenodimsnodesc.crc")
-	T_test("crlf.sha1")
-	T_test("crlf.md5")
+	for fmt in coreutilsfmts():
+		T_test("crlf." + fmt)
 	T_test("crlf.bsdmd5")
 	T_test("crlf.csv")
 	T_test("crlf.csv2")
@@ -1447,8 +1469,8 @@ def all_tests():
 	T_test("crlf.sfv")
 	T_test("noheadercrlf.sfv")
 	T_test("crlf.crc")
-	T_test("crcrlf.sha1")
-	T_test("crcrlf.md5")
+	for fmt in coreutilsfmts():
+		T_test("crcrlf." + fmt)
 	T_test("crcrlf.bsdmd5")
 	T_test("crcrlf.csv")
 	T_test("crcrlf.csv2")
@@ -1505,16 +1527,12 @@ def all_tests():
 	test_generic(cfvcmd+r" -i --fixpaths \\/ -T -f testfix.csv4",cfv_test)
 
 	C_test("bsdmd5","-t bsdmd5")#,verify=lambda f: test_generic("md5 -c "+f,status_test)) #bsd md5 seems to have no way to check, only create
-	if pathfind('sha1sum'): #don't report pointless errors on systems that don't have sha1sum
-		sha1verify=lambda f: test_external("sha1sum -c "+f,status_test)
-	else:
-		sha1verify=None
-	C_test("sha1",verify=sha1verify)
-	if pathfind('md5sum'): #don't report pointless errors on systems that don't have md5sum
-		md5verify=lambda f: test_external("md5sum -c "+f,status_test)
-	else:
-		md5verify=None
-	C_test("md5",verify=md5verify)
+	for fmt in coreutilsfmts():
+		if pathfind(fmt + 'sum'): #don't report pointless errors on systems that don't have e.g. sha1sum
+			coreutils_verify=lambda f: test_external(fmt + "sum -c "+f,status_test)
+		else:
+			coreutils_verify=None
+		C_test(fmt,verify=coreutils_verify)
 	C_test("csv")
 	if pathfind('cksfv'): #don't report pointless errors on systems that don't have cksfv
 		sfvverify=lambda f: test_external("cksfv -f "+f,status_test)
@@ -1561,8 +1579,8 @@ def all_tests():
 	test_generic(cfvcmd+" -m -v -T -t sfv", lambda s,o: cfv_typerestrict_test(s,o,'sfv'))
 	test_generic(cfvcmd+" -m -v -T -t sfvmd5", lambda s,o: cfv_typerestrict_test(s,o,'sfvmd5'))
 	test_generic(cfvcmd+" -m -v -T -t bsdmd5", lambda s,o: cfv_typerestrict_test(s,o,'bsdmd5'))
-	test_generic(cfvcmd+" -m -v -T -t sha1", lambda s,o: cfv_typerestrict_test(s,o,'sha1'))
-	test_generic(cfvcmd+" -m -v -T -t md5", lambda s,o: cfv_typerestrict_test(s,o,'md5'))
+	for fmt in coreutilsfmts():
+		test_generic(cfvcmd+" -m -v -T -t "+fmt, lambda s,o: cfv_typerestrict_test(s,o,fmt))
 	test_generic(cfvcmd+" -m -v -T -t csv", lambda s,o: cfv_typerestrict_test(s,o,'csv'))
 	test_generic(cfvcmd+" -m -v -T -t par", lambda s,o: cfv_typerestrict_test(s,o,'par'))
 	test_generic(cfvcmd+" -m -v -T -t par2", lambda s,o: cfv_typerestrict_test(s,o,'par2'))
@@ -1610,9 +1628,11 @@ def all_tests():
 	test_generic(cfvcmd+" -h",cfv_nooutput_test,stdout='/dev/null')
 	test_generic(cfvcmd+" -h",cfv_version_test,stderr='/dev/null')
 
-	donestr="tests finished:  ok: %i  failed: %i"%(stats.ok,stats.failed)
-	log("\n"+donestr)
-	print donestr
+	donestr="\n>>> tests finished:  ok: %i  failed: %i"%(stats.ok,stats.failed)
+	log(donestr)
+	print(donestr)
+
+	return stats.failed
 
 
 
@@ -1638,18 +1658,20 @@ try:
 	copytree(cfvtest.datapath, tmpdatapath, ignore=['.svn'])
 	os.chdir(tmpdatapath) # do this after the setcfv, since the user may have specified a relative path
 
-	print 'testing...'
-	all_unittest_tests()
-	all_tests()
+	failed = 0
+	print '>>> testing...'
+	failed += all_unittest_tests()
+	failed += all_tests()
 	if cfvtest.ver_fchksum:
-		print 'testing without fchksum...'
+		print '>>> testing without fchksum...'
 		cfvtest.setenv('CFV_NOFCHKSUM','x')
 		assert not cfvtest.ver_fchksum
-		all_tests()
+		failed += all_tests()
 	if cfvtest.ver_mmap:
-		print 'testing without mmap...'
+		print '>>> testing without mmap...'
 		cfvtest.setenv('CFV_NOMMAP','x')
 		assert not cfvtest.ver_mmap
-		all_tests()
+		failed += all_tests()
+	sys.exit(failed)
 finally:
 	shutil.rmtree(tmpdatapath)

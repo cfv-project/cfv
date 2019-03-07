@@ -1,0 +1,9 @@
+language: python
+
+python:
+  - '2.7'
+
+script:
+  - python -m compileall -f .
+  - test/test.py --unit --exit-early
+  - test/test.py --exit-early
