@@ -396,7 +396,7 @@ def make_rename_formatmap(l_filename):
 	sp=os.path.splitext(l_filename)
 	return {'name':sp[0], 'ext':sp[1], 'fullname':l_filename}
 
-__version__='2.0-pre'+'$Revision$'[11:-2]
+__version__='2.0~dev'
 __homepage__='http://cfv.sourceforge.net/'
 
 _hassymlinks=hasattr(os,'symlink')
