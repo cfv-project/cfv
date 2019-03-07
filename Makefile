@@ -28,7 +28,7 @@ cfv.txt: %.txt: %.1
 
 distclean-winsrc: distclean cfv.txt
 	-rm Makefile cfv.1
-	todos *.txt COPYING README Changelog bin/cfv.bat lib/cfv/*.py test/*.py
+	todos *.txt COPYING README.md Changelog bin/cfv.bat lib/cfv/*.py test/*.py
 
 PY2EXEDIR=~/mnt/temp/cfv
 nsis-prepare: cfv.txt
