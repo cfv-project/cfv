@@ -5,4 +5,5 @@ python:
 
 script:
   - python -m compileall -f .
+  - test/test.py --unit --exit-early
   - test/test.py --exit-early
