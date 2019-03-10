@@ -1,0 +1,6 @@
+include COPYING
+include Changelog
+include lib/cfv/BitTorrent/LICENSE.txt
+exclude cfv.nsi
+prune debian
+prune test
