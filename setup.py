@@ -52,6 +52,7 @@ setup(
 	python_requires='>=2.7, <3',
 	packages=find_packages('lib'),
 	package_dir={'': 'lib'},
+	include_package_data=True,
 	data_files=[('man/man1', ['cfv.1'])],
 	entry_points={
 		'console_scripts': [
