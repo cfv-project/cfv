@@ -32,7 +32,7 @@ setup(
 	long_description_content_type='text/markdown',
 	url='https://github.com/cfv-project/cfv',
 	author='David Gnedt (Current Maintainer)',
-	author_email='cfv-project AT davizone DOT at',
+	author_email='%s@%s' % ('cfv-project', 'davizone.at'),
 	license='GPL',
 	classifiers=[
 		'Development Status :: 5 - Production/Stable',
