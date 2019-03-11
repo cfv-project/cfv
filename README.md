@@ -12,32 +12,37 @@ This is a [friendly fork of cfv](https://github.com/cfv-project/cfv) maintained 
 
 ## Requirements
 
-Python ≥ 2.4 <https://www.python.org/>
+Python ≥ 2.7 – older versions might work, but are unsupported.
+Python 3 is not supported yet, see issue #8.
 
 ### Optional
 
-* Python Imaging Library (PIL) <https://www.pythonware.com/products/pil/> or
-  Pillow <https://python-pillow.org/>
-  (only needed if you want to create the dimensions column of .crc files)
-* python-fchksum <http://code.fluffytapeworm.com/projects>
-  (may speed up checksumming speed a bit, especially if your python was not built with the mmap module.)
+* [Python Imaging Library (PIL)](https://www.pythonware.com/products/pil/) or
+  [Pillow](https://python-pillow.org/) – only needed if you want to create the
+  dimensions column of .crc files.
+* [python-fchksum](http://code.fluffytapeworm.com/projects) – may speed up checksumming
+  speed a bit, especially if your python was not built with the mmap module.
 
 ## Install
 
-You can get the latest release from the [Github releases page](https://github.com/cfv-project/cfv/releases).
+You can get the latest releases via the [Python Package Index (PyPI)](https://pypi.org/project/cfv/)
+or from the [Github releases page](https://github.com/cfv-project/cfv/releases).
+Other distribution ways are work-in-progress, see issue #4.
 
-### Unix
+### From PyPI
 
-1. `make install` (which just runs `python setup.py install --prefix=/usr/local`)
-2. read man page, `cfv -h`, etc. have fun
+If you have a working Python installation with pip, you can follow these installation steps:
+
+1. `pip install cfv`
+2. read man page `man cfv` or read usage `cfv -h` and have fun ☺️
+
+### From Source
+
+Download a snapshot from the [Github releases page](https://github.com/cfv-project/cfv/releases) or checkout the development version via Git.
+
+1. `python setup.py install`
+2. read man page `man cfv` or read usage `cfv -h` and have fun ☺️
 3. optional: run tests to verify correct operation: `cd test; ./test.py`
-
-### Windows
-
-1. maybe `python setup.py install` will do something useful? At least it should stick the
-   libraries in the right place
-2. move `cfv.bat` to somewhere in the path
-3. edit the `cfv.bat` file if your Python is installed somewhere other than `C:\python24`
 
 ## Contributions
 
