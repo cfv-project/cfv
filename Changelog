@@ -1,4 +1,4 @@
-2019-xx-xx - v2.0.0.dev0:
+2019-xx-xx - v2.0.0.dev1:
 	* Now fully unicode aware.  Work is done internally in unicode, only translating to encoded form on input/output.
 	* Added --encoding option.
 	* Specifying --encoding=raw will allow working with broken filenames. (But really, you should just fix them, if possible.)
