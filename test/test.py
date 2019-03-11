@@ -403,8 +403,8 @@ def cfv_listdata_bad_test(s,o):
 	return 1
 
 def cfv_version_test(s,o):
-	x=re.search(r'cfv v([\d.]+(?:~dev)?) -',o)
-	x3=re.search(r' v([\d.]+(?:~dev)?):',open(os.path.join(cfvtest.testpath,os.pardir,"Changelog")).readline())
+	x=re.search(r'cfv v([\d.]+(?:\.dev\d+)?) -',o)
+	x3=re.search(r' v([\d.]+(?:\.dev\d+)?):',open(os.path.join(cfvtest.testpath,os.pardir,"Changelog")).readline())
 	if x: log('cfv: '+x.group(1))
 	if x3: log('Changelog: '+x3.group(1))
 	#if os.path.isdir(os.path.join(os.pardir,'debian')):
