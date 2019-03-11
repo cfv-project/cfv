@@ -13,7 +13,7 @@ This is a [friendly fork of cfv](https://github.com/cfv-project/cfv) maintained 
 ## Requirements
 
 Python ≥ 2.7 – older versions might work, but are unsupported.
-Python 3 is not supported yet, see issue #8.
+Python 3 is not supported yet, see [issue #8](https://github.com/cfv-project/cfv/issues/8).
 
 ### Optional
 
@@ -27,7 +27,7 @@ Python 3 is not supported yet, see issue #8.
 
 You can get the latest releases via the [Python Package Index (PyPI)](https://pypi.org/project/cfv/)
 or from the [Github releases page](https://github.com/cfv-project/cfv/releases).
-Other distribution ways are work-in-progress, see issue #4.
+Other distribution ways are work-in-progress, see [issue #4](https://github.com/cfv-project/cfv/issues/4).
 
 ### From PyPI
 
@@ -38,7 +38,8 @@ If you have a working Python installation with pip, you can follow these install
 
 ### From Source
 
-Download a snapshot from the [Github releases page](https://github.com/cfv-project/cfv/releases) or checkout the development version via Git.
+Download a snapshot from the [Github releases page](https://github.com/cfv-project/cfv/releases)
+or checkout the development version via Git.
 
 1. `python setup.py install`
 2. read man page `man cfv` or read usage `cfv -h` and have fun ☺️
