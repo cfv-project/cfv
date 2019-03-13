@@ -4,7 +4,7 @@ import re
 from setuptools import setup, find_packages
 
 
-RE_VERSION = "^__version__\s*=\s*'([^']*)'$"
+RE_VERSION = r"^__version__\s*=\s*'([^']*)'$"
 
 
 def _read(path):
