@@ -789,22 +789,22 @@ def gnu_sum(algo):
 
 try:
     cftypes.register_cftype(gnu_sum('sha512'))
-except:
+except (ImportError, ValueError):
     pass
 
 try:
     cftypes.register_cftype(gnu_sum('sha384'))
-except:
+except (ImportError, ValueError):
     pass
 
 try:
     cftypes.register_cftype(gnu_sum('sha256'))
-except:
+except (ImportError, ValueError):
     pass
 
 try:
     cftypes.register_cftype(gnu_sum('sha224'))
-except:
+except (ImportError, ValueError):
     pass
 
 

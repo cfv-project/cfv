@@ -723,7 +723,7 @@ def create_funkynames(t, d, chr, deep):
                 os.mkdir(os.path.join(d, n))
                 try:
                     f = open(os.path.join(d, n, n), 'wb')
-                except:
+                except Exception:
                     # if making the dir succeeded but making the file fails, remove the dir so it won't confuse the tests which count the number of items in the top dir.
                     os.rmdir(os.path.join(d, n))
                     raise
@@ -1382,7 +1382,7 @@ def test_encoding2():
         if raw_fnok == len(datafns):
             test_generic(cfvcmd + ' --encoding=raw -v -T -p ' + d, rcurry(cfv_all_test, ok=raw_fnok, notfound=raw_fnerrs))
             test_generic(cfvcmd + ' --encoding=raw -v -u -T -p ' + d, rcurry(cfv_all_test, ok=raw_fnok, unv=fnok - raw_fnok, notfound=raw_fnerrs))
-    except:
+    except Exception:
         test_log_results('test_encoding2', 'foobar', ''.join(traceback.format_exception(*sys.exc_info())), 'foobar', {})  # yuck.  I really should switch this crap all to unittest ...
     # finally:
     shutil.rmtree(unicode(d2))
@@ -1764,7 +1764,7 @@ def all_tests():
                 except UnicodeError:
                     nf = 0
                     err = 4
-                except:
+                except Exception:
                     nf = 4
                     err = 0
                 test_generic(cfvcmd + ' --encoding=utf-16be -T -f test.' + t, rcurry(cfv_all_test, notfound=nf, ferror=err))
@@ -1776,7 +1776,7 @@ def all_tests():
                 except UnicodeError:
                     nf = 0
                     err = 4
-                except:
+                except Exception:
                     nf = 4
                     err = 0
                 test_generic(cfvcmd + ' --encoding=cp500 -T -f test.' + t, rcurry(cfv_all_test, notfound=nf, ferror=err))

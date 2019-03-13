@@ -164,7 +164,7 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
                 sys.stderr.close()
         except KeyboardInterrupt:
             raise
-        except:
+        except Exception:
             traceback.print_exc(file=obuf)
             s = 1
     finally:

@@ -96,7 +96,7 @@ try:
     try:
         if fchksum.version() < 5:
             raise ImportError
-    except:
+    except Exception:
         # can't use perror yet since config hasn't been done..
         stderr.write('old fchksum version installed, using std python modules. please update.\n')
         raise ImportError
