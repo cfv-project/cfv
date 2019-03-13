@@ -1108,14 +1108,14 @@ def quoted_search_test():
     try:
         join = os.path.join
         with open(join(d, 'foo.sfv'), 'w') as f:
-            f.write(r'''"data1" B2A9E441
+            f.write(r""""data1" B2A9E441
 "/data4" FA323C6D
 "aa1/data1" B2A9E441
 "c:/aa1/data4" FA323C6D
 "aa3/data3" 841ADFA2
 "\aa3\data4" FA323C6D
 "c:\aa4\bb4\data1" B2A9E441
-"aa4/bb4/data4" FA323C6D''')
+"aa4/bb4/data4" FA323C6D""")
         shutil.copyfile('data1', pathjoin_and_mkdir(d, 'foo1'))
         shutil.copyfile('data4', pathjoin_and_mkdir(d, 'foo4'))
         shutil.copyfile('data1', pathjoin_and_mkdir(d, 'aa1', 'foo1'))
