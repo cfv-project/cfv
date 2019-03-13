@@ -17,10 +17,6 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-default_ns = globals().copy()
-default_ns['__name__'] = '__main__'
-
-
 import fnmatch
 import imp
 import os
@@ -150,7 +146,12 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
         if need_reload:
             import cfv.hash
             reload(cfv.hash)  # XXX: hack for environment variable changing
-        cfv_ns = default_ns.copy()
+        cfv_ns = {
+            '__name__': '__main__',
+            '__file__': cfvfn,
+            '__doc__': None,
+            '__package__': None,
+        }
         try:
             exec cfv_compiled in cfv_ns
             s = 'no exit?'
