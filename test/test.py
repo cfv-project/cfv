@@ -227,7 +227,7 @@ def test_log_finish(cmd, s, r, output, kw):
         if output is not None:
             print(output)
         result = 'FAILED'
-        if type(r) != type(1) or r != 1:
+        if not isinstance(r, int) or r != 1:
             result += ' (%s)' % r
     else:
         stats.ok += 1
