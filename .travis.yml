@@ -3,7 +3,17 @@ language: python
 python:
   - '2.7'
 
+before_install:
+  - pip install pyroma
+  - pip install check-manifest
+  - pip install flake8
+
 script:
   - python -m compileall -f .
   - test/test.py --unit --exit-early
   - test/test.py --exit-early
+  - pyroma -n 9 .
+  - check-manifest .
+  - flake8 --exclude=build,venv --max-line-length=200 --show-source --statistics .
+  - python setup.py sdist bdist_wheel
+  - twine check dist/*
