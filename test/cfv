@@ -1,7 +1,9 @@
 #! /usr/bin/env python
+
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'lib')))
 if __name__ == '__main__':
-	import cfv.common
-	cfv.common.main()
+    import cfv.common
+    cfv.common.main()

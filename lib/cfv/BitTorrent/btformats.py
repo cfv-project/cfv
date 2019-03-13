@@ -1,55 +1,58 @@
 # Written by Bram Cohen
 # see LICENSE.txt for license information
 
-from types import StringType, LongType, IntType, ListType, DictType
 from re import compile
+from types import StringType, LongType, IntType, ListType, DictType
+
 
 reg = compile(r'^[^/\\.~][^/\\]*$')
 
 ints = (LongType, IntType)
 
+
 def check_info(info):
     if type(info) != DictType:
-        raise ValueError, 'bad metainfo - not a dictionary'
+        raise ValueError('bad metainfo - not a dictionary')
     pieces = info.get('pieces')
     if type(pieces) != StringType or len(pieces) % 20 != 0:
-        raise ValueError, 'bad metainfo - bad pieces key'
+        raise ValueError('bad metainfo - bad pieces key')
     piecelength = info.get('piece length')
     if type(piecelength) not in ints or piecelength <= 0:
-        raise ValueError, 'bad metainfo - illegal piece length'
+        raise ValueError('bad metainfo - illegal piece length')
     name = info.get('name')
     if type(name) != StringType:
-        raise ValueError, 'bad metainfo - bad name'
+        raise ValueError('bad metainfo - bad name')
     if not reg.match(name):
-        raise ValueError, 'name %s disallowed for security reasons' % name
-    if info.has_key('files') == info.has_key('length'):
-        raise ValueError, 'single/multiple file mix'
-    if info.has_key('length'):
+        raise ValueError('name %s disallowed for security reasons' % name)
+    if 'files' in info == 'length' in info:
+        raise ValueError('single/multiple file mix')
+    if 'length' in info:
         length = info.get('length')
         if type(length) not in ints or length < 0:
-            raise ValueError, 'bad metainfo - bad length'
+            raise ValueError('bad metainfo - bad length')
     else:
         files = info.get('files')
         if type(files) != ListType:
             raise ValueError
         for f in files:
             if type(f) != DictType:
-                raise ValueError, 'bad metainfo - bad file value'
+                raise ValueError('bad metainfo - bad file value')
             length = f.get('length')
             if type(length) not in ints or length < 0:
-                raise ValueError, 'bad metainfo - bad length'
+                raise ValueError('bad metainfo - bad length')
             path = f.get('path')
             if type(path) != ListType or path == []:
-                raise ValueError, 'bad metainfo - bad path'
+                raise ValueError('bad metainfo - bad path')
             for p in path:
                 if type(p) != StringType:
-                    raise ValueError, 'bad metainfo - bad path dir'
+                    raise ValueError('bad metainfo - bad path dir')
                 if not reg.match(p):
-                    raise ValueError, 'path %s disallowed for security reasons' % p
+                    raise ValueError('path %s disallowed for security reasons' % p)
         for i in xrange(len(files)):
             for j in xrange(i):
                 if files[i]['path'] == files[j]['path']:
-                    raise ValueError, 'bad metainfo - duplicate path'
+                    raise ValueError('bad metainfo - duplicate path')
+
 
 def check_message(message):
     if type(message) != DictType:
@@ -57,12 +60,13 @@ def check_message(message):
     check_info(message.get('info'))
     announce = message.get('announce')
     if type(announce) != StringType or len(announce) == 0:
-        raise ValueError, 'bad torrent file - announce is invalid'
+        raise ValueError('bad torrent file - announce is invalid')
+
 
 def check_peers(message):
     if type(message) != DictType:
         raise ValueError
-    if message.has_key('failure reason'):
+    if 'failure reason' in message:
         if type(message['failure reason']) != StringType:
             raise ValueError
         return
@@ -76,7 +80,7 @@ def check_peers(message):
             port = p.get('port')
             if type(port) not in ints or p <= 0:
                 raise ValueError
-            if p.has_key('peer id'):
+            if 'peer id' in p:
                 id = p.get('peer id')
                 if type(id) != StringType or len(id) != 20:
                     raise ValueError
