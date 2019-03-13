@@ -3,8 +3,6 @@ import os
 import re
 import sys
 
-from cfv import strutil
-
 
 if hasattr(locale, 'getpreferredencoding'):
     preferredencoding = locale.getpreferredencoding() or 'ascii'

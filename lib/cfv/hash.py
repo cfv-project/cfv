@@ -2,7 +2,6 @@ import os
 import sys
 
 from cfv import osutil
-from cfv import strutil
 
 
 try:

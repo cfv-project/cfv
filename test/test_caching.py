@@ -22,7 +22,6 @@ import os
 import shutil
 import tempfile
 
-import cfvtest
 from cfv.caching import FileInfoCache
 from cfvtest import TestCase
 
