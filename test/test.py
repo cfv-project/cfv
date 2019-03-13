@@ -884,7 +884,7 @@ def ren_test(f, extra=None, verify=None, t=None):
                 with open(fl, 'wb') as f2:
                     f2.write(t)
 
-        def flscmp(t, n, fls=flsf):
+        def flscmp(t, n, fls):
             for fl in fls:
                 fn = n is not None and fl % n or fl
                 try:
@@ -910,12 +910,12 @@ def ren_test(f, extra=None, verify=None, t=None):
         test_generic(cmd + ' --renameformat="%(fullname)s" -Tn', cfv_bad_test)  # test for formats without count too
         flsw('hello')
         test_generic('%s -Tn' % cmd, cfv_test)
-        flscmp('1', 0)
-        flscmp('11', 1)
-        flscmp('123', 2)
-        flscmp('63', 1, fls=flsf_1)
-        flscmp('63', 3, fls=flsf_2)
-        flscmp('hello', None, fls=fls)
+        flscmp('1', 0, flsf)
+        flscmp('11', 1, flsf)
+        flscmp('123', 2, flsf)
+        flscmp('63', 1, flsf_1)
+        flscmp('63', 3, flsf_2)
+        flscmp('hello', None, fls)
     finally:
         shutil.rmtree(dir)
 
@@ -1845,8 +1845,10 @@ def all_tests():
     return stats.failed
 
 
-def copytree(src, dst, ignore=[]):
+def copytree(src, dst, ignore=None):
     for name in os.listdir(src):
+        if ignore is None:
+            ignore = []
         if name in ignore:
             continue
         srcname = os.path.join(src, name)
