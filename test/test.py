@@ -267,8 +267,8 @@ def test_external(cmd, test):
 
 
 def test_generic(cmd, test, **kw):
-    # s,o=runcfv(cmd)
-    s, o = apply(runcfv, (cmd,), kw)
+    # s, o = cfvtest.runcfv(cmd)
+    s, o = apply(cfvtest.runcfv, (cmd,), kw)
     r = test(s, o)
     test_log_results(cfvtest.cfvenv + cfvtest.cfvfn + ' ' + cmd, s, o, r, kw)
 
@@ -282,10 +282,10 @@ def cfv_stdin_test(cmd, file):
     o1 = o2 = ''
     r = 0
     try:
-        s1, o1 = runcfv(cmd + ' ' + file)
+        s1, o1 = cfvtest.runcfv(cmd + ' ' + file)
         if s1:
             raise cst_err(2)
-        s2, o2 = runcfv(cmd + ' -', stdin=file)
+        s2, o2 = cfvtest.runcfv(cmd + ' -', stdin=file)
         if s2:
             raise cst_err(3)
         x = re.search(r'^([^\r\n]*)' + re.escape(file) + r'(.*)$[\r\n]{0,2}^-: (\d+) files, (\d+) OK.  [\d.]+ seconds, [\d.]+K(/s)?$', o1, re.M | re.DOTALL)
@@ -308,10 +308,10 @@ def cfv_stdin_progress_test(t, file):
         try:
             cf1 = os.path.join(dir, 'cf1.' + t)
             cf2 = os.path.join(dir, 'cf2.' + t)
-            s1, o1 = runcfv('%s --progress=yes -C -t %s -f %s %s' % (cfvcmd, t, cf1, file))
+            s1, o1 = cfvtest.runcfv('%s --progress=yes -C -t %s -f %s %s' % (cfvcmd, t, cf1, file))
             if s1:
                 raise cst_err(2)
-            s2, o2 = runcfv('%s --progress=yes -C -t %s -f %s -' % (cfvcmd, t, cf2), stdin=file)
+            s2, o2 = cfvtest.runcfv('%s --progress=yes -C -t %s -f %s -' % (cfvcmd, t, cf2), stdin=file)
             if s2:
                 raise cst_err(3)
             if t != 'csv2':  # csv2 has only filesize, hence checksum never happens, so no progress
@@ -1475,7 +1475,7 @@ def specialfile_test(cfpath):
 
         t = threading.Thread(target=pusher, args=(fpath,))
         t.start()
-        s, o = runcfv('%s --progress=yes -T -p %s -f %s' % (cfvcmd, d, cfn))
+        s, o = cfvtest.runcfv('%s --progress=yes -T -p %s -f %s' % (cfvcmd, d, cfn))
         t.join()
         r = 0
         if s:
@@ -1605,8 +1605,6 @@ if run_unittests_only:
     logfile = sys.stdout
     all_unittest_tests()
     sys.exit()
-
-from cfvtest import runcfv
 
 # set everything to default in case user has different in config file
 cfvcmd = '-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url --noprivate_torrent'
