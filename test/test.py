@@ -1846,9 +1846,9 @@ def all_tests():
 
 
 def copytree(src, dst, ignore=None):
+    if ignore is None:
+        ignore = []
     for name in os.listdir(src):
-        if ignore is None:
-            ignore = []
         if name in ignore:
             continue
         srcname = os.path.join(src, name)
