@@ -98,7 +98,7 @@ try:
             raise ImportError
     except Exception:
         # can't use perror yet since config hasn't been done..
-        stderr.write('old fchksum version installed, using std python modules. please update.\n')
+        sys.stderr.write('old fchksum version installed, using std python modules. please update.\n')
         raise ImportError
 
     def getfilemd5(filename, callback):
