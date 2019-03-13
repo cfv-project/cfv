@@ -70,10 +70,10 @@ decode_func = {
 
 def bdecode(x):
     try:
-        r, l = decode_func[x[0]](x, 0)
+        r, pos = decode_func[x[0]](x, 0)
     except (IndexError, KeyError):
         raise ValueError
-    if l != len(x):
+    if pos != len(x):
         raise ValueError
     return r
 
