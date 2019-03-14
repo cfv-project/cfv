@@ -15,6 +15,6 @@ script:
   - test/test.py --exit-early
   - pyroma -n 9 .
   - check-manifest .
-  - flake8 --exclude=build,venv --max-line-length=200 --max-complexity=20 --show-source --statistics .
+  - flake8 --exclude=build,venv --max-line-length=200 --max-complexity=75 --show-source --statistics .
   - python setup.py sdist bdist_wheel
   - twine check dist/*
