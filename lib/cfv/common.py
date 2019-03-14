@@ -1672,7 +1672,7 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
         file.write('Generated at: %s' % (time.strftime('%a, %d %b %Y %H:%M:%S', time.gmtime(time.time()))) + os.linesep)
         file.write('Find  it  at: ' + __homepage__ + os.linesep + os.linesep)
         try:
-            from PIL import Image
+            from PIL import Image  # noqa: F401
             self.use_dimensions = 1  # TODO: should this be made optional somehow?
         except ImportError:
             self.use_dimensions = 0

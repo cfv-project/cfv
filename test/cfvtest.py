@@ -26,7 +26,8 @@ import traceback
 import unittest
 from doctest import DocTestSuite
 from glob import glob
-from unittest import TestCase, main
+from unittest import TestCase  # noqa: F401
+from unittest import main
 
 
 cfvenv = ''
