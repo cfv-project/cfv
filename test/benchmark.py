@@ -138,7 +138,7 @@ def run(args):
     input_root = os.getcwd()
     if args.verbose:
         print 'outputting temp files in', output_root
-    formatlen = int(math.ceil(math.log(args.iterations, 16)))
+    # formatlen = int(math.ceil(math.log(args.iterations, 16)))
 
     times = timeit.repeat(partial(run_create_test, args.type, output_root, input_root, args.verbose), repeat=args.repeats, number=args.iterations)
     print_times('create', times, args.iterations, args.verbose)

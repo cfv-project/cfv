@@ -133,8 +133,9 @@ class RelPathKeyTest(RelTestCase):
     def test_nocase_findfile(self):
         cache = FileInfoCache()
         a1 = self.mkfile('aAaA/AaA1', '1')
-        a2 = self.mkfile('aAaA/Aaa2', '2')
-        a3 = self.mkfile('aAaA/AAa2', '3')
+        self.mkfile('aAaA/Aaa2', '2')
+        self.mkfile('aAaA/AAa2', '3')
+
         self.assertEquals(a1, cache.nocase_findfile(self.mkpath('aaAA/aaa1')))
         with self.assertRaises(IOError) as cm:
             cache.nocase_findfile(self.mkpath('aaAb/aaa1'))
@@ -150,8 +151,8 @@ class RelPathKeyTest(RelTestCase):
 
     def test_nocase_findfile_parent(self):
         cache = FileInfoCache()
-        a1 = self.mkfile('aaaA/aaA1', '1')
-        a2 = self.mkfile('aAaA/aaa2', '2')
+        self.mkfile('aaaA/aaA1', '1')
+        self.mkfile('aAaA/aaa2', '2')
 
         # right now we don't handle this case, though it would be possible
         # to generate all possible matches and see if the number is exactly

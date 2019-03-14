@@ -396,9 +396,9 @@ class Config:
             testmap = make_rename_formatmap('1.2')
             testmapwc = make_rename_formatmap('1.2')
             testmapwc['count'] = 1
-            format_test = v % testmapwc
+            v % testmapwc  # format_test
             try:
-                format_test = v % testmap
+                v % testmap  # format_test
                 self.renameformatnocount = 1  # if we can get here, it doesn't use the count param
             except KeyError:
                 self.renameformatnocount = 0
@@ -605,7 +605,6 @@ class ChksumType:
         self.do_f_verifyerror(l_filename, msg, foundok=foundok)
 
     def do_f_verifyerror(self, l_filename, a, foundok=0):
-        reninfo = ''
         if config.rename:
             formatmap = make_rename_formatmap(l_filename)
             for count in xrange(0, sys.maxint):
@@ -1978,7 +1977,7 @@ def show_unverified_dir_verbose(path):
             elif not (pathcache.get(fn, {}).get('_verified') or pathcache.get(sfn, {}).get('_verified')):
                 if S_ISREG(st.st_mode):
                     show_unverified_file(filename)
-        except OSError, e:
+        except OSError:
             pass
 
 

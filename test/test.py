@@ -1353,7 +1353,7 @@ def test_encoding2():
                         flag_ok_raw = 1
                 try:
                     open(os.path.join(d, fn), 'rb')
-                except (EnvironmentError, UnicodeError), e:
+                except (EnvironmentError, UnicodeError):
                     files_fnerrs += 1
                 else:
                     files_fnok += 1
