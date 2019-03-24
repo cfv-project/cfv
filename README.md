@@ -9,6 +9,10 @@ cfv was originally written by Matthew Mueller ([original project home](http://cf
 This is a [friendly fork of cfv](https://github.com/cfv-project/cfv) maintained by David Gnedt.
 
 [![Build Status](https://travis-ci.org/cfv-project/cfv.svg?branch=master)](https://travis-ci.org/cfv-project/cfv)
+[![Supported Python versions](https://img.shields.io/pypi/pyversions/cfv.svg)](https://pypi.org/project/cfv/)
+[![License](https://img.shields.io/pypi/l/cfv.svg)](https://pypi.org/project/cfv/)
+[![Latest PyPI version](https://img.shields.io/pypi/v/cfv.svg)](https://pypi.org/project/cfv/)
+[![Number of PyPI downloads](https://img.shields.io/pypi/dm/cfv.svg)](https://pypi.org/project/cfv/)
 
 ## Requirements
 
