@@ -40,9 +40,9 @@ class View:
         # if one of stdinfo (usually stdout) or stderr is a tty, use it.  Otherwise use stdinfo.
         progressfd = self.stdinfo.isatty() and self.stdinfo or self.stderr.isatty() and self.stderr or self.stdinfo
         doprogress = not self.config.verbose == -2 and (
-                self.config.progress == 'y' or (
-                    self.config.progress == 'a' and progressfd.isatty()
-                )
+            self.config.progress == 'y' or (
+                self.config.progress == 'a' and progressfd.isatty()
+            )
         )
         if doprogress:
             self.progress = TimedProgressMeter(fd=progressfd, scrwidth=term.scrwidth, frobfn=self.perhaps_showpath)

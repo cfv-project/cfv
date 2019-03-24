@@ -490,8 +490,7 @@ class ChksumType:
         view.ev_test_cf_begin(self.name, file.name, comment)
 
     def search_file(self, filename, filecrc, filesize, errfunc, errargs):
-        if (not config.search or
-                (filesize < 0 and (not filecrc or not config.docrcchecks))):  # don't bother searching if we don't have anything to compare against
+        if not config.search or (filesize < 0 and (not filecrc or not config.docrcchecks)):  # don't bother searching if we don't have anything to compare against
             errfunc(*errargs)
             return -2
         alreadyok = None
