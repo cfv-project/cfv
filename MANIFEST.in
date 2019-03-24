@@ -1,5 +1,6 @@
 include COPYING
 include Changelog
 include lib/cfv/BitTorrent/LICENSE.txt
+prune Release.md
 prune debian
 prune test
