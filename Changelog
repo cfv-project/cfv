@@ -1,3 +1,6 @@
+2019-xx-xx - v2.0.1.dev0:
+	* Nothing yet.
+
 2019-03-27 - v2.0.0:
 	* Now fully unicode aware.  Work is done internally in unicode, only translating to encoded form on input/output.
 	* Added --encoding option.
