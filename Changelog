@@ -1,4 +1,4 @@
-2019-xx-xx - v2.0.0.dev3:
+2019-03-27 - v2.0.0:
 	* Now fully unicode aware.  Work is done internally in unicode, only translating to encoded form on input/output.
 	* Added --encoding option.
 	* Specifying --encoding=raw will allow working with broken filenames. (But really, you should just fix them, if possible.)
@@ -9,6 +9,7 @@
 	* Changed handling of -f: Now all options are checked before testing/creating the file. (Benjamin Hohl)
 	* Torrent file handling no longer requires BitTorrent client to be installed.
 	* Support for GNU coreutils sha224sum, sha256sum, sha384sum and sha512sum formats.
+	* New project home: https://github.com/cfv-project/cfv
 
 2009-06-07 - v1.18.3:
 	* Fix python2.6 md5 and sha module deprecation warnings.
