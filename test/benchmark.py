@@ -17,6 +17,8 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from __future__ import print_function
+
 import argparse
 import math
 import os
@@ -62,7 +64,7 @@ def human_int(value):
 def create_test_file(path, max_size, verbose=False):
     size = random.randint(1, max_size)
     if verbose:
-        print 'creating', path, 'size', size
+        print('creating', path, 'size', size)
     with open(path, 'wb') as f:
         # TODO: make this more efficient.
         while size:
@@ -79,12 +81,12 @@ def create_test_dir(root, num_files, branch_factor, max_size, verbose=False):
         path = root
         path_parts = ['%0*x' % (formatlen, n) for n in path_counter]
         if verbose >= 2:
-            print path_parts
+            print(path_parts)
         for part in path_parts[:-1]:
             path = os.path.join(path, part)
             if not os.path.exists(path):
                 if verbose:
-                    print 'mkdir', path
+                    print('mkdir', path)
                 os.mkdir(path)
         path = os.path.join(path, path_parts[-1])
         create_test_file(path, max_size, verbose=verbose)
@@ -96,7 +98,7 @@ def create_test_dir(root, num_files, branch_factor, max_size, verbose=False):
         path_counter[inc_level] += 1
         remaining -= 1
         if verbose >= 2:
-            print remaining, path_counter
+            print(remaining, path_counter)
 
 
 def create(args):
@@ -106,24 +108,24 @@ def create(args):
 
 def print_times(name, results, iterations, verbose=False):
     best = min(results)
-    print '%s: best=%.4g msec' % (name, best * 1000 / iterations)
+    print('%s: best=%.4g msec' % (name, best * 1000 / iterations))
     if verbose:
-        print '  raw results:', results
+        print('  raw results:', results)
 
 
 def run_cfv(args, verbose):
     if verbose >= 2:
-        print 'running cfv', args
+        print('running cfv', args)
     s, o = cfvtest.runcfv(args)
     if s or verbose >= 3:
-        print 'cfv returned', s, ', output:'
-        print o
+        print('cfv returned', s, ', output:')
+        print(o)
     if s:
         raise RuntimeError('cfv returned %s' % s)
 
 
 def run_create_test(cftype, output_root, input_root, verbose):
-    output_fn = os.path.join(output_root, 'create_test.%s.%s' % (random.randint(0, sys.maxint), cftype))
+    output_fn = os.path.join(output_root, 'create_test.%s.%s' % (random.randint(0, sys.maxsize), cftype))
     run_cfv('-C -rr -t %s -p %s -f %s' % (cftype, input_root, output_fn), verbose)
 
 
@@ -137,7 +139,7 @@ def run(args):
     output_root = tempfile.mkdtemp()
     input_root = os.getcwd()
     if args.verbose:
-        print 'outputting temp files in', output_root
+        print('outputting temp files in', output_root)
     # formatlen = int(math.ceil(math.log(args.iterations, 16)))
 
     times = timeit.repeat(partial(run_create_test, args.type, output_root, input_root, args.verbose), repeat=args.repeats, number=args.iterations)

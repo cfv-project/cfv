@@ -18,9 +18,10 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from __future__ import print_function
+
 __version__ = '2.0.1.dev0'
 __homepage__ = 'https://github.com/cfv-project/cfv'
-
 
 import copy
 import errno
@@ -281,7 +282,7 @@ class Config:
         else:
             try:
                 u'a'.encode(v)
-            except (UnicodeError, LookupError), e:
+            except (UnicodeError, LookupError) as e:
                 raise CFVValueError('invalid encoding option: %s' % e)
         self.encoding = v
 
@@ -439,7 +440,7 @@ class Config:
                         o, v = x
                         try:
                             self.setx(o, v)
-                        except CFVException, err:
+                        except CFVException as err:
                             # reuse the traceback of the original exception, but add file and line numbers to the error
                             raise sys.exc_info()[0], '%s:%i: %s' % (filename, line_number, err), sys.exc_info()[2]
 
@@ -482,7 +483,7 @@ class ChksumType:
             self.do_test_chksumfile(file)
             cf_stats.sub_stats_end(stats)
             view.ev_test_cf_done(filename, cf_stats)
-        except EnvironmentError, a:
+        except EnvironmentError as a:
             stats.cferror += 1
             view.ev_cf_enverror(filename, a)
 
@@ -563,7 +564,7 @@ class ChksumType:
                 if not os.path.isfile(l_filename):
                     raise EnvironmentError(errno.ENOENT, 'not a file')
                 filecrct = 'exists'  # since we didn't actually test the crc, make verbose mode merely say it exists
-        except (EnvironmentError, UnicodeError), a:  # UnicodeError can occur if python can't map the filename to the filesystem's encoding
+        except (EnvironmentError, UnicodeError) as a:  # UnicodeError can occur if python can't map the filename to the filesystem's encoding
             self.search_file(filename, filecrc, filesize,
                              self.do_f_enverror, (l_filename, a))
             return -1
@@ -606,7 +607,7 @@ class ChksumType:
     def do_f_verifyerror(self, l_filename, a, foundok=0):
         if config.rename:
             formatmap = make_rename_formatmap(l_filename)
-            for count in xrange(0, sys.maxint):
+            for count in xrange(0, sys.maxsize):
                 formatmap['count'] = count
                 newfilename = config.renameformat % formatmap
                 if config.renameformatnocount and count > 0:
@@ -637,7 +638,7 @@ class ChksumType:
                     prep = 'to'
                     try:
                         os.link(found_fn, filename)
-                    except (EnvironmentError, AttributeError), e:
+                    except (EnvironmentError, AttributeError) as e:
                         if isinstance(e, EnvironmentError) and e[0] not in (errno.EXDEV, errno.EPERM):
                             raise
                         verb = 'copied', 'copying'
@@ -648,7 +649,7 @@ class ChksumType:
                     verb = 'renamed', 'renaming'
                     prep = 'from'
                     rename(found_fn, filename)
-            except EnvironmentError, e:
+            except EnvironmentError as e:
                 action = '%s %s' % (verb[1], prep)
                 stats.ferror += 1
                 view.ev_f_found_renameetcerror(filename, filesize, filecrct, found_fn, action, e)
@@ -715,7 +716,7 @@ class TextChksumType(ChksumType):
             line_number += 1
             try:
                 line = file.readline()
-            except UnicodeError, e:
+            except UnicodeError as e:
                 stats.cferror += 1
                 view.ev_test_cf_lineencodingerror(file.name, line_number, e)
                 continue
@@ -964,7 +965,7 @@ class PAR(ChksumType, MD5_MixIn):
                 stats.bytesread += size
             try:
                 filename = cffndecode(d, 'utf-16-le')
-            except (UnicodeError, FilenameError), e:
+            except (UnicodeError, FilenameError) as e:
                 stats.cferror += 1
                 view.ev_test_cf_filenameencodingerror(file.name, i, e)
                 continue
@@ -1053,7 +1054,7 @@ class PAR2(ChksumType, MD5_MixIn):
                     filename = strutil.chompnulls(d[file_pkt_size:])
                     try:
                         filename = cffndecode(filename)
-                    except (UnicodeError, FilenameError), e:
+                    except (UnicodeError, FilenameError) as e:
                         stats.cferror += 1
                         view.ev_test_cf_filenameencodingerror(file.name, hexlify(file_id), e)
                         continue
@@ -1103,7 +1104,7 @@ class Torrent(ChksumType):
         try:
             metainfo = bencode.bdecode(file.read())
             btformats.check_message(metainfo)
-        except ValueError, e:
+        except ValueError as e:
             raise EnvironmentError(str(e) or 'invalid or corrupt torrent')
 
         encoding = metainfo.get('encoding')
@@ -1125,9 +1126,9 @@ class Torrent(ChksumType):
             done = 0
             try:
                 filenameparts = map(lambda p: cffndecode(p, encoding), filenameparts)
-            except LookupError, e:  # lookup error is raised when specified encoding isn't found.
+            except LookupError as e:  # lookup error is raised when specified encoding isn't found.
                 raise EnvironmentError(str(e))
-            except (UnicodeError, FilenameError), e:
+            except (UnicodeError, FilenameError) as e:
                 stats.cferror += 1
                 view.ev_test_cf_filenameencodingerror(file.name, repr(filenameparts), e)
                 done = 1
@@ -1152,7 +1153,7 @@ class Torrent(ChksumType):
                         if not done:
                             self.do_f_badsize(l_filename, filesize, fs)
                             done = 1
-                except (EnvironmentError, UnicodeError), e:  # UnicodeError can occur if python can't map the filename to the filesystem's encoding
+                except (EnvironmentError, UnicodeError) as e:  # UnicodeError can occur if python can't map the filename to the filesystem's encoding
                     if not done:
                         self.do_f_enverror(filename, e)
                         done = 1
@@ -1171,7 +1172,7 @@ class Torrent(ChksumType):
                 dirname = info['name']
                 try:
                     dirname = cffndecode(dirname, encoding)
-                except (LookupError, UnicodeError, FilenameError), e:  # lookup error is raised when specified encoding isn't found.
+                except (LookupError, UnicodeError, FilenameError) as e:  # lookup error is raised when specified encoding isn't found.
                     stats.cferror += 1
                     raise EnvironmentError(e)
 
@@ -1212,7 +1213,7 @@ class Torrent(ChksumType):
                     curfh.f = f
                 curfh.fh.seek(pos)
                 d = curfh.fh.read(size)
-            except EnvironmentError, e:
+            except EnvironmentError as e:
                 if not f.done:
                     if view.progress:
                         view.progress.cleanup()
@@ -1703,7 +1704,7 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
         for fdata in self._flist:
             try:
                 writedata(fdata)
-            except UnicodeError, e:
+            except UnicodeError as e:
                 stats.ferror += 1
                 stats.ok -= 1  # ugly hack, since this is incremented after make_addfile returns, since we don't know then that it will cause an error
                 view.ev_make_filenameencodingerror(fdata[0], e)
@@ -1773,7 +1774,7 @@ def test(filename, typename, restrict_typename='auto'):
             cf = cftype()
             cf.test_chksumfile(file, filename)
             return
-    except EnvironmentError, a:
+    except EnvironmentError as a:
         stats.cferror += 1
         view.ev_cf_enverror(filename, a)
         return -1
@@ -1825,7 +1826,7 @@ def make(cftype, ifilename, testfiles):
                             strutil.safesort(rfiles)
                         testfiles[:i] = map(lambda x, p=f: osutil.path_join(p, x), rfiles)
                         i = 0
-                    except EnvironmentError, a:
+                    except EnvironmentError as a:
                         view.ev_d_enverror(f, a)
                         stats.ferror += 1
                 continue
@@ -1843,7 +1844,7 @@ def make(cftype, ifilename, testfiles):
             if isinstance(f, unicode):
                 try:
                     f = f.encode(osutil.fsencoding)
-                except UnicodeError, e:
+                except UnicodeError as e:
                     stats.ferror += 1
                     view.ev_make_filenameencodingerror(f, e)
                     continue
@@ -1855,14 +1856,14 @@ def make(cftype, ifilename, testfiles):
             try:
                 cf = cftype()
                 file = cf.make_chksumfile_create(filename)
-            except EnvironmentError, a:
+            except EnvironmentError as a:
                 stats.cferror += 1
                 view.ev_cf_enverror(filename, a)
                 file = IOError
                 continue
         try:
             (filecrc, filesize), dat = cf.make_addfile(f)
-        except EnvironmentError, a:
+        except EnvironmentError as a:
             if a[0] == errno.ENOENT:
                 stats.notfound += 1
             else:
@@ -1871,12 +1872,12 @@ def make(cftype, ifilename, testfiles):
             continue
         try:
             cf.make_writefile(dat, file)
-        except EnvironmentError, a:
+        except EnvironmentError as a:
             stats.cferror += 1
             view.ev_cf_enverror(filename, a)
             file = IOError
             continue
-        except UnicodeError, e:
+        except UnicodeError as e:
             stats.ferror += 1
             view.ev_make_filenameencodingerror(f, e)
             continue
@@ -1885,7 +1886,7 @@ def make(cftype, ifilename, testfiles):
     if file and file is not IOError:
         try:
             cf.make_chksumfile_finish(file)
-        except EnvironmentError, a:
+        except EnvironmentError as a:
             stats.cferror += 1
             view.ev_cf_enverror(filename, a)
         else:
@@ -1895,7 +1896,7 @@ def make(cftype, ifilename, testfiles):
     for f in testdirs:
         try:
             chdir(f)
-        except EnvironmentError, a:
+        except EnvironmentError as a:
             view.ev_d_enverror(f, a)
             stats.ferror += 1
         else:
@@ -2017,7 +2018,7 @@ def autotest(typename):
         if config.recursive and visit_dir(a):
             try:
                 chdir(a)
-            except EnvironmentError, e:
+            except EnvironmentError as e:
                 view.ev_d_enverror(a, e)
                 stats.ferror += 1
             else:
@@ -2127,7 +2128,7 @@ def main(argv=None):
                                        'encoding=',
                                        'announceurl=', 'piece_size_pow2=', 'private_torrent', 'noprivate_torrent',  # torrent options
                                        ])
-    except getopt.error, a:
+    except getopt.error as a:
         view.perror('cfv: %s' % a)
         printusage(1)
     args = map(decode_arg, args)
@@ -2255,20 +2256,20 @@ def main(argv=None):
             elif o == '-h' or o == '-?' or o == '--help':
                 printhelp()
             elif o == '--version':
-                print 'cfv %s' % __version__
+                print('cfv %s' % __version__)
                 try:
                     if not hash._nommap:
-                        print '+mmap'
+                        print('+mmap')
                 except NameError:
                     pass
                 try:
-                    print 'fchksum %s' % fchksum.version()
+                    print('fchksum %s' % fchksum.version())
                 except NameError:
                     pass
-                print 'python %08x-%s' % (sys.hexversion, sys.platform)
+                print('python %08x-%s' % (sys.hexversion, sys.platform))
                 sys.exit(0)
             prevopt = o
-    except CFVValueError, e:
+    except CFVValueError as e:
         view.perror('cfv: %s' % e)
         sys.exit(1)
 

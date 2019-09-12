@@ -17,6 +17,8 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from __future__ import print_function
+
 import fnmatch
 import imp
 import os
@@ -154,9 +156,9 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
             '__package__': None,
         }
         try:
-            exec cfv_compiled in cfv_ns
+            exec(cfv_compiled, cfv_ns)
             s = 'no exit?'
-        except SystemExit, e:
+        except SystemExit as e:
             s = e.code
             if stdin:
                 sys.stdin.close()
@@ -257,9 +259,9 @@ def all_unittests_suite():
         assert module.__name__ == name, (module, name)
         try:
             suite = DocTestSuite(module)
-        except ValueError, e:
+        except ValueError as e:
             if len(e.args) != 2 or e[1] != 'has no docstrings':
-                print e
+                print(e)
         else:
             alltests.addTest(suite)
 

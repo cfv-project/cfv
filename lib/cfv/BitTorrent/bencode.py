@@ -94,10 +94,10 @@ def test_bdecode():
         assert 0
     except ValueError:
         pass
-    assert bdecode('i4e') == 4L
-    assert bdecode('i0e') == 0L
-    assert bdecode('i123456789e') == 123456789L
-    assert bdecode('i-10e') == -10L
+    assert bdecode('i4e') == 4
+    assert bdecode('i0e') == 0
+    assert bdecode('i123456789e') == 123456789
+    assert bdecode('i-10e') == -10
     try:
         bdecode('i-0e')
         assert 0
@@ -300,7 +300,7 @@ def test_bencode():
     assert bencode(4) == 'i4e'
     assert bencode(0) == 'i0e'
     assert bencode(-10) == 'i-10e'
-    assert bencode(12345678901234567890L) == 'i12345678901234567890e'
+    assert bencode(12345678901234567890) == 'i12345678901234567890e'
     assert bencode('') == '0:'
     assert bencode('abc') == '3:abc'
     assert bencode('1234567890') == '10:1234567890'
