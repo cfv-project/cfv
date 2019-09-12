@@ -1,6 +1,8 @@
 import os
 import sys
 
+from builtins import object
+
 from cfv import osutil
 
 
@@ -106,7 +108,7 @@ try:
             f = sys.stdin
         else:
             f = open(filename, 'rb')
-        if isinstance(filename, unicode):
+        if isinstance(filename, str):
             sname = filename.encode(osutil.fsencoding, 'replace')
         else:
             sname = filename
@@ -118,7 +120,7 @@ try:
             f = sys.stdin
         else:
             f = open(filename, 'rb')
-        if isinstance(filename, unicode):
+        if isinstance(filename, str):
             sname = filename.encode(osutil.fsencoding, 'replace')
         else:
             sname = filename
@@ -132,7 +134,7 @@ except ImportError:
     except ImportError:
         from binascii import crc32 as _crc32
 
-    class CRC32:
+    class CRC32(object):
         digest_size = 4
 
         def __init__(self, s=''):

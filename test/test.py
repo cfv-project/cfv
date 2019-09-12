@@ -20,6 +20,17 @@
 
 from __future__ import print_function
 
+from future import standard_library
+standard_library.install_aliases()
+from past.builtins import cmp
+from builtins import chr
+from builtins import zip
+from builtins import map
+from builtins import str
+from builtins import filter
+from builtins import range
+from builtins import object
+
 import getopt
 import gzip
 import locale
@@ -50,7 +61,7 @@ def is_undecodable(s):
     if isinstance(s, str):
         try:
             # this is for python < 2.3, where os.listdir never returns unicode.
-            unicode(s, preferredencoding)
+            str(s, preferredencoding)
             return 0
         except UnicodeError:
             return 1
@@ -59,10 +70,10 @@ def is_undecodable(s):
 
 
 def is_encodable(s, enc=preferredencoding):
-    if not isinstance(s, unicode):
+    if not isinstance(s, str):
         try:
             # this is for python < 2.3, where os.listdir never returns unicode.
-            unicode(s, preferredencoding)  # note: using preferredencoding not enc, since this assumes the string is coming from os.listdir, and thus we should decode with the system's encoding.
+            str(s, preferredencoding)  # note: using preferredencoding not enc, since this assumes the string is coming from os.listdir, and thus we should decode with the system's encoding.
             return 1
         except UnicodeError:
             return 0
@@ -140,22 +151,22 @@ def fmt_iscoreutils(f):
 
 
 def allfmts():
-    return fmt_info.keys()
+    return list(fmt_info.keys())
 
 
 def allavailablefmts():
-    return filter(fmt_available, allfmts())
+    return list(filter(fmt_available, allfmts()))
 
 
 def allcreatablefmts():
-    return filter(fmt_cancreate, allavailablefmts())
+    return list(filter(fmt_cancreate, allavailablefmts()))
 
 
 def coreutilsfmts():
-    return filter(fmt_iscoreutils, allfmts())
+    return list(filter(fmt_iscoreutils, allfmts()))
 
 
-class rcurry:
+class rcurry(object):
     def __init__(self, func, *args, **kw):
         self.curry_func = func
         self.curry_args = args
@@ -206,7 +217,7 @@ def writefile_and_reopen(fn, data):
     return f
 
 
-class stats:
+class stats(object):
     ok = 0
     failed = 0
 
@@ -263,7 +274,7 @@ def test_log_results(cmd, s, o, r, kw):
 
 def test_external(cmd, test):
     # TODO: replace this with subprocess
-    from commands import getstatusoutput
+    from subprocess import getstatusoutput
     s, o = getstatusoutput(cmd)
     r = test(s, o)
     test_log_results(cmd, s, o, r, None)
@@ -370,7 +381,7 @@ def optionalize(s):
 rx_StatusLine = rx_Begin + ''.join(map(optionalize, [rx_badcrc, rx_badsize, rx_notfound, rx_ferror, rx_unv, rx_cferror, rx_misnamed])) + rx_End
 
 
-class OneOf:
+class OneOf(object):
     def __init__(self, *possibilities):
         self.possible = possibilities
 
@@ -432,8 +443,8 @@ def cfv_all_test(s, o, files=-2, ok=0, unv=0, notfound=0, badcrc=0, badsize=0, c
         if files == -2:
             files = reduce(operator.add, [ok, badcrc, badsize, notfound, ferror])
         expected = [files, ok, badcrc, badsize, notfound, ferror, unv, cferror, misnamed]
-        actual = map(intize, x.groups()[:9])
-        if not filter(icomp, map(None, expected, actual)):
+        actual = list(map(intize, x.groups()[:9]))
+        if not list(filter(icomp, map(None, expected, actual))):
             sresult = cfv_status_test(s, o, unv=unv, notfound=notfound, badcrc=badcrc, badsize=badsize, cferror=cferror, ferror=ferror)
             if sresult:
                 return sresult
@@ -756,7 +767,7 @@ def C_funkynames_test(t):
             if isinstance(s, str):
                 try:
                     # this is for python < 2.3, where os.listdir never returns unicode.
-                    s = unicode(s, enc)
+                    s = str(s, enc)
                 except UnicodeError:
                     pass
             return len(('a' + s + 'a').splitlines()) == 1
@@ -765,9 +776,9 @@ def C_funkynames_test(t):
     for deep in (0, 1):
         d = tempfile.mkdtemp()
         try:
-            num = create_funkynames(t, d, unichr, deep=deep)
+            num = create_funkynames(t, d, chr, deep=deep)
             # numencodable = len(filter(lambda fn: os.path.exists(os.path.join(d,fn)), os.listdir(d)))
-            numencodable = len(filter(is_fmtencodable, os.listdir(unicode(d))))
+            numencodable = len(list(filter(is_fmtencodable, os.listdir(str(d)))))
             # cfv -C, unencodable filenames on disk, ferror on unencodable filename and ignore it
             numunencodable = num - numencodable
             cfn = os.path.join(d, 'funky%s.%s' % (deep and 'deep' or '', t))
@@ -782,13 +793,13 @@ def C_funkynames_test(t):
             test_generic(cfvcmd + ' -v --encoding=utf-8 -T -p %s -f %s' % (d, cfn), rcurry(cfv_all_test, files=num, ok=num))
             test_generic(cfvcmd + ' -v --encoding=utf-8 -u -T -p %s -f %s' % (d, cfn), rcurry(cfv_all_test, files=num, ok=num, unv=0))
         finally:
-            shutil.rmtree(unicode(d))
+            shutil.rmtree(str(d))
 
         d3 = tempfile.mkdtemp()
         try:
             cnum = create_funkynames(t, d3, chr, deep=deep)
-            ulist = os.listdir(unicode(d3))
-            numundecodable = len(filter(is_undecodable, ulist))
+            ulist = os.listdir(str(d3))
+            numundecodable = len(list(filter(is_undecodable, ulist)))
             okcnum = len(ulist) - numundecodable
             dcfn = os.path.join(d3, 'funky3%s.%s' % (deep and 'deep' or '', t))
             # cfv -C, undecodable filenames on disk, with --encoding=raw just put everything in like before
@@ -806,7 +817,7 @@ def C_funkynames_test(t):
             if not deep:
                 renamelist = []
                 numrenamed = 0
-                for fn in os.listdir(unicode(d3)):
+                for fn in os.listdir(str(d3)):
                     if os.path.join(d3, fn) == dcfn:
                         continue
                     newfn = 'ren%3s' % numrenamed
@@ -823,8 +834,8 @@ def C_funkynames_test(t):
 
                 cnum += 1
                 # okcnum += 1
-                ulist = os.listdir(unicode(d3))
-                okcnum = len(filter(is_fmtencodable, ulist))
+                ulist = os.listdir(str(d3))
+                okcnum = len(list(filter(is_fmtencodable, ulist)))
                 numerr = len(ulist) - okcnum
                 dcfn = os.path.join(d3, 'funky3%s2.%s' % (deep and 'deep' or '', t))
                 test_generic(cfvcmd + '%s -v -C -p %s -t %s -f %s' % (deep and ' -rr' or '', d3, t, dcfn), rcurry(cfv_all_test, ok=okcnum, ferror=numerr))
@@ -846,8 +857,8 @@ def C_funkynames_test(t):
         d3 = tempfile.mkdtemp()
         try:
             cnum = create_funkynames(t, d3, chr, deep=deep)
-            ulist = os.listdir(unicode(d3))
-            okcnum = len(filter(is_fmtokfn, filter(is_fmtencodable, ulist)))
+            ulist = os.listdir(str(d3))
+            okcnum = len(list(filter(is_fmtokfn, list(filter(is_fmtencodable, ulist)))))
             numerr = len(ulist) - okcnum
             dcfn = os.path.join(d3, 'funky3%s3.%s' % (deep and 'deep' or '', t))
             # cfv -C, undecodable(and/or unencodable) filenames on disk: without raw, ferror on undecodable filename and ignore it
@@ -939,7 +950,7 @@ def search_test(t, test_nocrc=0, extra=None):
         # if using -m and type doesn't have size, make sure -s doesn't do anything silly
         d = tempfile.mkdtemp()
         try:
-            for n, n2 in zip(range(1, 5), range(4, 0, -1)):
+            for n, n2 in zip(list(range(1, 5)), list(range(4, 0, -1))):
                 shutil.copyfile('data%s' % n, os.path.join(d, 'fOoO%s' % n2))
             test_generic(cmd + ' -v -T -p %s -f %s' % (d, cfn), rcurry(cfv_all_test, notfound=4))
             test_generic(cmd + ' -v -s -T -p %s -f %s' % (d, cfn), rcurry(cfv_all_test, notfound=4))
@@ -958,7 +969,7 @@ def search_test(t, test_nocrc=0, extra=None):
             return cfv_all_test(s, o, ok=4, misnamed=4)
 
         test_generic(cmd + ' -v -s -T -p %s -f %s' % (d, cfn), rcurry(cfv_all_test, notfound=4))
-        for n, n2 in zip(range(1, 5), range(4, 0, -1)):
+        for n, n2 in zip(list(range(1, 5)), list(range(4, 0, -1))):
             shutil.copyfile('data%s' % n, os.path.join(d, 'fOoO%s' % n2))
         test_generic(cmd + ' -v -T -p %s -f %s' % (d, cfn), rcurry(cfv_all_test, notfound=4))
         test_generic(cmd + ' -v -s -T -p %s -f %s' % (d, cfn), dont_find_same_file_twice_test)
@@ -1202,7 +1213,7 @@ def deep_unverified_test():
                    join(B_ushallow, 'uNvs'), join(B_ushallow_d, 'unvP'), join(B_ushallow_d, 'datA5'),
                    join(u, 'uNVu'), join(u, 'UnvY'), join(u_u2, 'UNVX'),
                    join(e2_e2s, 'DaTaE'), join(e2_e2u, 'unVe2'),)
-        lower_datafns = map(string.lower, datafns)
+        lower_datafns = list(map(string.lower, datafns))
         for fn in datafns:
             open(join(dir, fn), 'w').close()
         with open(join(dir, 'deep.md5'), 'w') as f:
@@ -1281,7 +1292,7 @@ def test_encoding_detection():
             if fmt_istext(t):
                 utf8cfn = os.path.join(d, 'utf8nobom.' + t)
                 test_generic(cfvcmd + ' -C --encoding=utf-8 -p %s -t %s -f %s' % (datad, t, utf8cfn), rcurry(cfv_all_test, ok=fnok))
-                chksumdata = unicode(readfile(utf8cfn), 'utf-8')
+                chksumdata = str(readfile(utf8cfn), 'utf-8')
                 for enc in utfencodings:
                     bommedcfn = os.path.join(d, enc + '.' + t)
                     try:
@@ -1293,7 +1304,7 @@ def test_encoding_detection():
                         test_generic(cfvcmd + ' -T -p %s -f %s' % (datad, bommedcfn), rcurry(cfv_all_test, ok=fnok))
     finally:
         shutil.rmtree(d)
-        shutil.rmtree(unicode(datad))
+        shutil.rmtree(str(datad))
 
 
 def test_encoding2():
@@ -1344,7 +1355,7 @@ def test_encoding2():
         raw_files_fnok = raw_files_fnerrs = 0
         dirn = filter(lambda s: not s.endswith('torrent'), os.listdir(d))[0]
         try:
-            files = map(lambda s: os.path.join(dirn, s), os.listdir(os.path.join(d, dirn)))
+            files = [os.path.join(dirn, s) for s in os.listdir(os.path.join(d, dirn))]
         except EnvironmentError:
             files = []
         else:
@@ -1388,8 +1399,8 @@ def test_encoding2():
     except Exception:
         test_log_results('test_encoding2', 'foobar', ''.join(traceback.format_exception(*sys.exc_info())), 'foobar', {})  # yuck.  I really should switch this crap all to unittest ...
     # finally:
-    shutil.rmtree(unicode(d2))
-    shutil.rmtree(unicode(d))
+    shutil.rmtree(str(d2))
+    shutil.rmtree(str(d))
 
 
 def largefile2GB_test():
@@ -1761,7 +1772,7 @@ def all_tests():
         else:
             if t == 'par':
                 try:
-                    open(unicode(u'data1'.encode('utf-16le'), 'utf-16be'), 'rb')
+                    open(str(u'data1'.encode('utf-16le'), 'utf-16be'), 'rb')
                 except UnicodeError:
                     nf = 0
                     err = 4
@@ -1773,7 +1784,7 @@ def all_tests():
                 test_generic(cfvcmd + ' --encoding=cp500 -i -T -f test.' + t, rcurry(cfv_all_test, cferror=4))
             else:
                 try:
-                    open(unicode('data1', 'cp500'), 'rb')
+                    open(str('data1', 'cp500'), 'rb')
                 except UnicodeError:
                     nf = 0
                     err = 4

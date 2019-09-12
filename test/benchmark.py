@@ -17,6 +17,7 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from __future__ import division
 from __future__ import print_function
 
 import argparse
@@ -27,6 +28,9 @@ import sys
 import tempfile
 import timeit
 from functools import partial
+
+from builtins import chr
+from past.utils import old_div
 
 import cfvtest
 
@@ -108,7 +112,7 @@ def create(args):
 
 def print_times(name, results, iterations, verbose=False):
     best = min(results)
-    print('%s: best=%.4g msec' % (name, best * 1000 / iterations))
+    print('%s: best=%.4g msec' % (name, old_div(best * 1000, iterations)))
     if verbose:
         print('  raw results:', results)
 

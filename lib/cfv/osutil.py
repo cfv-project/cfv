@@ -3,6 +3,8 @@ import os
 import re
 import sys
 
+from builtins import str
+
 
 if hasattr(locale, 'getpreferredencoding'):
     preferredencoding = locale.getpreferredencoding() or 'ascii'
@@ -36,18 +38,18 @@ except TypeError:
 if hasattr(os, 'getcwdu'):
     def getcwdu():
         try:
-            return os.getcwdu()
+            return os.getcwd()
         except UnicodeError:
             return os.getcwd()
 else:
     def getcwdu():
         d = os.getcwd()
         try:
-            return unicode(d, fsencoding)
+            return str(d, fsencoding)
         except UnicodeError:
             return d
 
-curdiru = unicode(os.curdir)
+curdiru = str(os.curdir)
 
 if sys.hexversion >= 0x020300f0:
     listdir = os.listdir
@@ -56,7 +58,7 @@ else:
         r = []
         for fn in os.listdir(path):
             try:
-                r.append(unicode(fn, fsencoding))
+                r.append(str(fn, fsencoding))
             except UnicodeError:
                 r.append(fn)
         return r
@@ -78,7 +80,7 @@ def path_join(*paths):
 
         npaths = []
         for p in paths:
-            if isinstance(p, unicode):
+            if isinstance(p, str):
                 npaths.append(p.encode(fsencoding))
             else:
                 npaths.append(p)

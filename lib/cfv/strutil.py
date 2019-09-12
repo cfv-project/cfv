@@ -1,6 +1,10 @@
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import object
 import codecs
 import unicodedata
-from StringIO import StringIO
+from io import StringIO
 
 
 def safesort(l):
@@ -18,7 +22,7 @@ def safesort(l):
 
 def showfn(s):
     if isinstance(s, str):
-        return unicode(s, 'ascii', 'replace')
+        return str(s, 'ascii', 'replace')
     return s
 
 
@@ -136,7 +140,7 @@ def rchoplen(line, max):
     return ''.join(chars)
 
 
-class CodecWriter:
+class CodecWriter(object):
     """Similar to codecs.StreamWriter, but str objects are decoded (as ascii) before then being passed to the the output encoder.
     This is necessary as some codecs barf on trying to encode ascii strings.
     """
@@ -146,7 +150,7 @@ class CodecWriter:
 
     def write(self, obj):
         if isinstance(obj, str):
-            obj = unicode(obj, 'ascii')
+            obj = str(obj, 'ascii')
         self.__stream.write(obj)
 
     def writelines(self, list):

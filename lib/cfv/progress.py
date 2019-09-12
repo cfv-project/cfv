@@ -1,10 +1,15 @@
+from __future__ import division
+
 import os
 import time
+
+from builtins import object
+from past.utils import old_div
 
 from cfv import strutil
 
 
-class INF:
+class INF(object):
     """object that is always larger than what it is compared to
     """
 
@@ -35,7 +40,7 @@ INF = INF()
 _CLR_TO_EOL = '\x1b[K'
 
 
-class ProgressMeter:
+class ProgressMeter(object):
     spinnerchars = r'\|/-'
 
     def __init__(self, fd, steps=20, scrwidth=80, frobfn=lambda x: x):
@@ -59,7 +64,7 @@ class ProgressMeter:
         elif size <= self.steps:
             self.stepsize = 1
         else:
-            self.stepsize = size / self.steps
+            self.stepsize = old_div(size, self.steps)
         self.nextstep = self.stepsize
         self.spinneridx = 0
         self.needrefresh = 1
@@ -67,14 +72,14 @@ class ProgressMeter:
 
     def update(self, cursize):
         if self.needrefresh:
-            donesteps = cursize / self.stepsize
+            donesteps = old_div(cursize, self.stepsize)
             stepsleft = self.steps - donesteps
             self.nextstep = self.stepsize * (donesteps + 1)
             self.fd.write('%s : %s' % (self.name, '#' * donesteps + '.' * stepsleft) + '\b' * stepsleft)
             self.fd.flush()
             self.needrefresh = 0
         elif self.nextstep < cursize:
-            updsteps = (cursize - self.nextstep) / self.stepsize + 1
+            updsteps = old_div((cursize - self.nextstep), self.stepsize) + 1
             self.nextstep += self.stepsize * updsteps
             self.fd.write('#' * updsteps)
             self.fd.flush()

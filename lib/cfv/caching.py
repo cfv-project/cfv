@@ -1,6 +1,9 @@
 import errno
 import os
 
+from builtins import object
+from builtins import range
+
 from cfv import osutil
 
 
@@ -9,7 +12,7 @@ from cfv import osutil
 # TODO: Only set _verified, _ok attributes when we actually will need them.
 # TODO: stop common.py mucking with _path_key_cache member.  (Move chdir/cdup functions here, or even better don't chang directories at all.)
 # TODO: make nocase_* functions not depend on current dir
-class FileInfoCache:
+class FileInfoCache(object):
     def __init__(self):
         # data is a mapping of <path key> -> <path cache>
         # <path key> is either a (dev, inode) pair or a full pathname (from os.path.realpath)
@@ -72,7 +75,7 @@ class FileInfoCache:
         ofinfo = self.getfinfo(oldfn)
         nfinfo = self.getfinfo(newfn)
         nfinfo.clear()
-        for k, v in ofinfo.items():
+        for k, v in list(ofinfo.items()):
             if k[0] != '_':  # don't preserve flags
                 nfinfo[k] = v
         # nfinfo.update(ofinfo)
@@ -110,9 +113,9 @@ class FileInfoCache:
             matches = self.nocase_dirfiles(cur, p)  # nice and speedy :)
             # print 'i:', i, ' cur:', cur, ' p:', p, ' matches:', matches
             if i == len(parts) - find:  # if we are on the last part of the path and using FINDFILE, we want to match a file
-                matches = filter(lambda f: os.path.isfile(osutil.path_join(cur, f)), matches)
+                matches = [f for f in matches if os.path.isfile(osutil.path_join(cur, f))]
             else:  # otherwise, we want to match a dir
-                matches = filter(lambda f: os.path.isdir(osutil.path_join(cur, f)), matches)
+                matches = [f for f in matches if os.path.isdir(osutil.path_join(cur, f))]
             if not matches:
                 raise IOError(errno.ENOENT, os.strerror(errno.ENOENT))
             if len(matches) > 1:

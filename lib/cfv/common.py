@@ -18,7 +18,14 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from __future__ import division
 from __future__ import print_function
+
+from builtins import map
+from builtins import object
+from builtins import range
+from builtins import str
+from past.utils import old_div
 
 __version__ = '2.0.1.dev0'
 __homepage__ = 'https://github.com/cfv-project/cfv'
@@ -46,7 +53,7 @@ from cfv.BitTorrent import bencode, btformats
 
 def cfencode(s, preferred=None):
     if config.encoding == 'raw':
-        if isinstance(s, unicode):
+        if isinstance(s, str):
             return s.encode(osutil.fsencoding)
         return s
     else:
@@ -59,7 +66,7 @@ class FilenameError(ValueError):
 
 def cfdecode(s, preferred=None):
     if config.encoding != 'raw':
-        s = unicode(s, config.getencoding(preferred))
+        s = str(s, config.getencoding(preferred))
     return s
 
 
@@ -70,7 +77,7 @@ def cffndecode(s, preferred=None):
     return s
 
 
-class Data:
+class Data(object):
     def __init__(self, **kw):
         self.__dict__.update(kw)
 
@@ -120,7 +127,7 @@ class CFError(ValueError):
     pass
 
 
-class FileNameFilter:
+class FileNameFilter(object):
     def __init__(self, testfiles=None):
         self.testfiles = set()
         if testfiles:
@@ -131,7 +138,7 @@ class FileNameFilter:
             fn = osutil.path_join(reldir[-1], fn)
             if config.ignorecase:
                 fn = fn.lower()
-            if config.encoding == 'raw' and isinstance(fn, unicode):
+            if config.encoding == 'raw' and isinstance(fn, str):
                 try:
                     fn = fn.encode(osutil.fsencoding)
                 except UnicodeError:
@@ -179,7 +186,7 @@ def rename(oldfn, newfn):
     cache.rename(oldfn, newfn)
 
 
-class Stats:
+class Stats(object):
     def __init__(self):
         self.num = 0
         self.ok = 0
@@ -239,12 +246,12 @@ class Stats:
         if elapsed == 0.0:
             s += '%.1fK' % (self.bytesread / 1024.0)
         else:
-            s += '%.1fK/s' % (self.bytesread / elapsed / 1024.0)
+            s += '%.1fK/s' % (old_div(self.bytesread, elapsed / 1024.0))
 
         return s
 
 
-class Config:
+class Config(object):
     verbose = 0  # -1=quiet  0=norm  1=noisy
     docrcchecks = 1
     dirsort = 1
@@ -472,7 +479,7 @@ def parse_commentline(comment, commentchars):
     return None
 
 
-class ChksumType:
+class ChksumType(object):
     def test_chksumfile(self, file, filename):
         if config.showunverified:  # we can't expect the checksum file itself to be checksummed
             cache.set_verified(filename)
@@ -607,7 +614,7 @@ class ChksumType:
     def do_f_verifyerror(self, l_filename, a, foundok=0):
         if config.rename:
             formatmap = make_rename_formatmap(l_filename)
-            for count in xrange(0, sys.maxsize):
+            for count in range(0, sys.maxsize):
                 formatmap['count'] = count
                 newfilename = config.renameformat % formatmap
                 if config.renameformatnocount and count > 0:
@@ -809,7 +816,7 @@ except (ImportError, ValueError):
 
 # ---------- sha1sum ----------
 
-class SHA1_MixIn:
+class SHA1_MixIn(object):
     def do_test_file(self, filename, filecrc):
         c = getfilesha1(filename)[0]
         if c != filecrc:
@@ -847,7 +854,7 @@ cftypes.register_cftype(SHA1)
 
 # ---------- md5 ----------
 
-class MD5_MixIn:
+class MD5_MixIn(object):
     def do_test_file(self, filename, filecrc):
         c = getfilemd5(filename)[0]
         if c != filecrc:
@@ -1065,7 +1072,7 @@ class PAR2(ChksumType, MD5_MixIn):
                 if expected_file_ids is None:
                     expected_file_ids = []
                     slice_size, num_files = struct.unpack(main_pkt_fmt, d[:main_pkt_size])
-                    num_nonrecovery = (len(d) - main_pkt_size) / 16 - num_files
+                    num_nonrecovery = old_div((len(d) - main_pkt_size), 16) - num_files
                     for i in range(main_pkt_size, main_pkt_size + (num_files + num_nonrecovery) * 16, 16):
                         expected_file_ids.append(d[i:i + 16])
             else:
@@ -1125,7 +1132,7 @@ class Torrent(ChksumType):
         def init_file(filenameparts, ftotpos, filesize):
             done = 0
             try:
-                filenameparts = map(lambda p: cffndecode(p, encoding), filenameparts)
+                filenameparts = [cffndecode(p, encoding) for p in filenameparts]
             except LookupError as e:  # lookup error is raised when specified encoding isn't found.
                 raise EnvironmentError(str(e))
             except (UnicodeError, FilenameError) as e:
@@ -1342,7 +1349,7 @@ class Torrent(ChksumType):
         def cfencode_utf8pref(s):
             return cfencode(s, 'UTF-8')
 
-        self.files.append({'length': fs, 'path': map(cfencode_utf8pref, osutil.path_split(filename))})
+        self.files.append({'length': fs, 'path': list(map(cfencode_utf8pref, osutil.path_split(filename)))})
         return ('pieces %i..%i' % (firstpiece, len(self.pieces)), fs), ''
 
     def make_chksumfile_finish(self, file):
@@ -1370,7 +1377,7 @@ class Torrent(ChksumType):
             info['name'] = commonroot
 
         btformats.check_info(info)
-        data = {'info': info, 'announce': cfencode(config.announceurl.strip(), 'UTF-8'), 'creation date': long(time.time())}
+        data = {'info': info, 'announce': cfencode(config.announceurl.strip(), 'UTF-8'), 'creation date': int(time.time())}
         if config.encoding != 'raw':
             data['encoding'] = str(config.getencoding('UTF-8'))
         # if comment:
@@ -1384,7 +1391,7 @@ cftypes.register_cftype(Torrent)
 
 # ---------- sfv ----------
 
-class CRC_MixIn:
+class CRC_MixIn(object):
     def do_test_file(self, filename, filecrc):
         c = getfilecrc(filename)[0]
         if c != filecrc:
@@ -1599,7 +1606,7 @@ def getimagedimensions(filename):
     try:
         from PIL import Image
         im1 = Image.open(filename)
-        return map(str, im1.size)
+        return list(map(str, im1.size))
     except (ImportError, IOError):
         return '0', '0'
 
@@ -1824,7 +1831,7 @@ def make(cftype, ifilename, testfiles):
                         rfiles = osutil.listdir(f)
                         if config.dirsort:
                             strutil.safesort(rfiles)
-                        testfiles[:i] = map(lambda x, p=f: osutil.path_join(p, x), rfiles)
+                        testfiles[:i] = list(map(lambda x, p=f: osutil.path_join(p, x), rfiles))
                         i = 0
                     except EnvironmentError as a:
                         view.ev_d_enverror(f, a)
@@ -1841,7 +1848,7 @@ def make(cftype, ifilename, testfiles):
                 view.ev_make_filenamedecodingerror(f)
                 continue
         else:
-            if isinstance(f, unicode):
+            if isinstance(f, str):
                 try:
                     f = f.encode(osutil.fsencoding)
                 except UnicodeError as e:
@@ -1923,7 +1930,7 @@ def show_unverified_dir(path, unvchild=0):
     unv_sub_dirs = []
     for fn in pathfiles:
         sfn = fn
-        if config.encoding == 'raw' and isinstance(fn, unicode):
+        if config.encoding == 'raw' and isinstance(fn, str):
             try:
                 sfn = fn.encode(osutil.fsencoding)
             except UnicodeError:
@@ -1964,7 +1971,7 @@ def show_unverified_dir_verbose(path):
     pathfiles = osutil.listdir(path or osutil.curdiru)
     for fn in pathfiles:
         sfn = fn
-        if config.encoding == 'raw' and isinstance(fn, unicode):
+        if config.encoding == 'raw' and isinstance(fn, str):
             try:
                 sfn = fn.encode(osutil.fsencoding)
             except UnicodeError:
@@ -2107,10 +2114,10 @@ filenamefilter = FileNameFilter()
 
 
 def decode_arg(a):
-    if isinstance(a, unicode):
+    if isinstance(a, str):
         return a
     try:
-        return unicode(a, osutil.preferredencoding)
+        return str(a, osutil.preferredencoding)
     except UnicodeError:
         return a
 
@@ -2131,7 +2138,7 @@ def main(argv=None):
     except getopt.error as a:
         view.perror('cfv: %s' % a)
         printusage(1)
-    args = map(decode_arg, args)
+    args = list(map(decode_arg, args))
 
     try:
         if config.cmdlineglob == 'y' or (config.cmdlineglob == 'a' and os.name in ('os2', 'nt', 'dos')):

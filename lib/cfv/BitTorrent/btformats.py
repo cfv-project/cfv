@@ -4,6 +4,8 @@
 from re import compile
 from types import StringType, LongType, IntType, ListType, DictType
 
+from builtins import range
+
 
 reg = compile(r'^[^/\\.~][^/\\]*$')
 
@@ -48,8 +50,8 @@ def check_info(info):
                     raise ValueError('bad metainfo - bad path dir')
                 if not reg.match(p):
                     raise ValueError('path %s disallowed for security reasons' % p)
-        for i in xrange(len(files)):
-            for j in xrange(i):
+        for i in range(len(files)):
+            for j in range(i):
                 if files[i]['path'] == files[j]['path']:
                     raise ValueError('bad metainfo - duplicate path')
 

@@ -3,6 +3,9 @@
 
 from types import StringType, IntType, LongType, DictType, ListType, TupleType
 
+from builtins import object
+from builtins import str
+
 
 def decode_int(x, f):
     f += 1
@@ -10,7 +13,7 @@ def decode_int(x, f):
     try:
         n = int(x[f:newf])
     except (OverflowError, ValueError):
-        n = long(x[f:newf])
+        n = int(x[f:newf])
     if x[f] == '-':
         if x[f + 1] == '0':
             raise ValueError
@@ -24,7 +27,7 @@ def decode_string(x, f):
     try:
         n = int(x[f:colon])
     except (OverflowError, ValueError):
-        n = long(x[f:colon])
+        n = int(x[f:colon])
     if x[f] == '0' and colon != f + 1:
         raise ValueError
     colon += 1
@@ -265,7 +268,7 @@ def encode_list(x, r):
 
 def encode_dict(x, r):
     r.append('d')
-    ilist = x.items()
+    ilist = list(x.items())
     ilist.sort()
     for k, v in ilist:
         r.extend((str(len(k)), ':', k))

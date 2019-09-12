@@ -1,6 +1,9 @@
+from future import standard_library
+standard_library.install_aliases()
+from builtins import object
 import codecs
 import sys
-from StringIO import StringIO
+from io import StringIO
 
 from cfv import osutil
 from cfv import strutil
@@ -16,7 +19,7 @@ def _markbadbytes(exc):
 codecs.register_error('markbadbytes', _markbadbytes)
 
 
-class PeekFile:
+class PeekFile(object):
     def __init__(self, fileobj, filename=None, encoding='auto'):
         self.fileobj = fileobj
         self._init_decodeobj(encoding)
@@ -144,7 +147,7 @@ def PeekFileGzip(filename, encoding):
         return PeekFile(f, filename, encoding)
 
 
-class NoCloseFile:
+class NoCloseFile(object):
     def __init__(self, fileobj):
         self.write = fileobj.write
         self.close = fileobj.flush

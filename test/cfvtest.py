@@ -19,6 +19,10 @@
 
 from __future__ import print_function
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
+from builtins import object
 import fnmatch
 import imp
 import os
@@ -41,7 +45,7 @@ testpath = os.path.split(__file__)[0] or os.curdir
 datapath = os.path.join(testpath, 'testdata')
 
 
-class NullFile:
+class NullFile(object):
     def isatty(self):
         return 0
 
@@ -117,10 +121,10 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
         os.dup2(fileno, sys.stdin.fileno())
         os.close(fileno)
     try:
-        from cStringIO import StringIO
+        from io import StringIO
         StringIO().write(u'foo')  # cStringIO with unicode doesn't work in python 1.6
     except (ImportError, SystemError):
-        from StringIO import StringIO
+        from io import StringIO
     obuf = StringIO()
     saved = sys.stdin, sys.stdout, sys.stderr, sys.argv
     cwd = os.getcwd()

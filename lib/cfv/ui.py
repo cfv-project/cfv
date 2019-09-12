@@ -2,6 +2,9 @@ import errno
 import os
 import sys
 
+from builtins import object
+from builtins import str
+
 from cfv import osutil
 from cfv import strutil
 from cfv import term
@@ -17,7 +20,7 @@ LISTARGS = {'ok': LISTOK, 'bad': LISTBAD, 'notfound': LISTNOTFOUND, 'unverified'
 _codec_error_handler = 'backslashreplace'
 
 
-class View:
+class View(object):
     def __init__(self, config):
         self.stdout = sys.stdout
         self.stderr = sys.stderr
