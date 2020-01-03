@@ -50,13 +50,6 @@ class PeekFile(object):
         self.fileobj.seek(self._decode_start)
         if self._encoding:
             self.decodeobj = codecs.getreader(self._encoding)(self.fileobj, errors='markbadbytes')
-            if not strutil.codec_supports_readline(self._encoding):
-                # print 'codec %s doesn't support readline, hacking it.' % self._encoding
-                try:
-                    self.decodeobj = StringIO(self.decodeobj.read())
-                except UnicodeError:
-                    self.decodeobj = StringIO(u'')
-                    self._decode_errs = 1
         self._prevlineend = None
 
     def _readline(self, *args):

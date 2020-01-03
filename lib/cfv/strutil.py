@@ -26,24 +26,6 @@ def showfn(s):
     return s
 
 
-def codec_supports_readline(e):
-    """Figure out whether the given codec's StreamReader supports readline.
-
-    Some (utf-16) raise NotImplementedError(py2.3) or UnicodeError(py<2.3),
-    others (cp500) are just broken.
-    With recent versions of python (cvs as of 20050203), readline seems to
-    work on all codecs.  Yay.
-    """
-    testa = u'a' * 80 + u'\n'
-    testb = u'b' * 80 + u'\n'
-    test = testa + testb
-    r = codecs.getreader(e)(StringIO(test.encode(e)))
-    try:
-        return r.readline(100) == testa and r.readline(100) == testb
-    except (NotImplementedError, UnicodeError):
-        return 0
-
-
 def chomp(line):
     if line[-2:] == '\r\n':
         return line[:-2]
