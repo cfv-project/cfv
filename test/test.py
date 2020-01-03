@@ -178,7 +178,7 @@ class rcurry(object):
         return self.curry_func(*(_args + self.curry_args), **kw)
 
 
-def pathfind(p, path=string.split(os.environ.get('PATH', os.defpath), os.pathsep)):
+def pathfind(p, path=os.environ.get('PATH', os.defpath).split(os.pathsep)):
     for d in path:
         if os.path.exists(os.path.join(d, p)):
             return 1
@@ -1011,7 +1011,7 @@ def search_test(t, test_nocrc=0, extra=None):
         try:
             for n, n2 in zip([4], [2]):
                 shutil.copyfile('data%s' % n, os.path.join(d, 'foo%s' % n2))
-            for n in string.lowercase:
+            for n in string.ascii_lowercase:
                 os.symlink('noexist', os.path.join(d, n))
             test_generic(cmd + ' -v -s -T -p %s -f %s' % (d, cfn), rcurry(cfv_all_test, ok=1, misnamed=1, notfound=3))
             test_generic(cmd + ' -v -T -p %s -f %s' % (d, cfn), rcurry(cfv_all_test, notfound=4))
@@ -1164,7 +1164,7 @@ def symlink_test():
         def r_unv_test(s, o):
             if cfv_unvonly_test(s, o, 2):
                 return 1
-            if string.count(o, 'not verified') != 1:
+            if o.count('not verified') != 1:
                 return 1
             return 0
 
@@ -1176,7 +1176,7 @@ def symlink_test():
         def r_unv_verbose_test(s, o):
             if cfv_unvonly_test(s, o, 2):
                 return 1
-            if string.count(o, 'not verified') != 2:
+            if o.count('not verified') != 2:
                 return 1
             return 0
 
@@ -1213,7 +1213,7 @@ def deep_unverified_test():
                    join(B_ushallow, 'uNvs'), join(B_ushallow_d, 'unvP'), join(B_ushallow_d, 'datA5'),
                    join(u, 'uNVu'), join(u, 'UnvY'), join(u_u2, 'UNVX'),
                    join(e2_e2s, 'DaTaE'), join(e2_e2u, 'unVe2'),)
-        lower_datafns = list(map(string.lower, datafns))
+        lower_datafns = list(map(lambda s: s.lower(), datafns))
         for fn in datafns:
             open(join(dir, fn), 'w').close()
         with open(join(dir, 'deep.md5'), 'w') as f:
@@ -1229,27 +1229,27 @@ def deep_unverified_test():
         def r_test(s, o):
             if cfv_test(s, o, operator.eq, 6):
                 return 1
-            if string.count(o, 'not verified') != 0:
+            if o.count('not verified') != 0:
                 return 1
             return 0
 
         def r_unv_test(s, o):
             if cfv_unvonly_test(s, o, 10):
                 return 1
-            if string.count(o, 'not verified') != 8:
+            if o.count('not verified') != 8:
                 return 1
-            if string.find(o, os.path.join('e', '*')) >= 0:
+            if o.find(os.path.join('e', '*')) >= 0:
                 return 1
-            if string.find(o, os.path.join('e2', '*')) >= 0:
+            if o.find(os.path.join('e2', '*')) >= 0:
                 return 1
             return 0
 
         def r_unv_verbose_test(s, o):
             if cfv_unvonly_test(s, o, 10):
                 return 1
-            if string.count(o, 'not verified') != 10:
+            if o.count('not verified') != 10:
                 return 1
-            if string.find(o, '*') >= 0:
+            if o.find('*') >= 0:
                 return 1
             return 0
 

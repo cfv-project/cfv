@@ -109,7 +109,7 @@ class FileInfoCache(object):
         # print 'nocase_findfile:',filename,parts,len(parts)
         for i in range(0, len(parts)):
             p = parts[i]
-            # matches = filter(lambda f, p=p: string.lower(f) == p, dircache.listdir(cur))  # too slooow, even with dircache (though not as slow as without it ;)
+            # matches = filter(lambda f, p=p: f.lower() == p, dircache.listdir(cur))  # too slooow, even with dircache (though not as slow as without it ;)
             matches = self.nocase_dirfiles(cur, p)  # nice and speedy :)
             # print 'i:', i, ' cur:', cur, ' p:', p, ' matches:', matches
             if i == len(parts) - find:  # if we are on the last part of the path and using FINDFILE, we want to match a file
