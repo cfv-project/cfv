@@ -120,25 +120,3 @@ def rchoplen(line, max):
         else:
             chars.append(c)
     return ''.join(chars)
-
-
-class CodecWriter(object):
-    """Similar to codecs.StreamWriter, but str objects are decoded (as ascii) before then being passed to the the output encoder.
-    This is necessary as some codecs barf on trying to encode ascii strings.
-    """
-
-    def __init__(self, encoding, stream, errors='strict'):
-        self.__stream = codecs.getwriter(encoding)(stream, errors)
-
-    def write(self, obj):
-        if isinstance(obj, str):
-            obj = str(obj, 'ascii')
-        self.__stream.write(obj)
-
-    def writelines(self, list):
-        self.write(''.join(list))
-
-    def __getattr__(self, name, getattr=getattr):
-        """ Inherit all other methods from the underlying stream.
-        """
-        return getattr(self.__stream, name)

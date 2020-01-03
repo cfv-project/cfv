@@ -37,8 +37,6 @@ class View(object):
         self.stdinfo = self.stderr
 
     def setup_output(self):
-        self.stdout = strutil.CodecWriter(getattr(sys.stdout, 'encoding', None) or osutil.preferredencoding, sys.stdout, errors=_codec_error_handler)
-        self.stderr = strutil.CodecWriter(getattr(sys.stderr, 'encoding', None) or getattr(sys.stdout, 'encoding', None) or osutil.preferredencoding, sys.stderr, errors=_codec_error_handler)
         self.stdinfo = self._stdout_special and self.stderr or self.stdout
         # if one of stdinfo (usually stdout) or stderr is a tty, use it.  Otherwise use stdinfo.
         progressfd = self.stdinfo.isatty() and self.stdinfo or self.stderr.isatty() and self.stderr or self.stdinfo

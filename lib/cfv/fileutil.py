@@ -160,21 +160,20 @@ def open_read(filename, config):
         return PeekFile(open(filename, mode), filename, config.encoding)
 
 
-def open_write_raw(filename, config):
-    mode = 'wb'  # write all files in binary mode. (Otherwise we can run into problems with some encodings, and also with binary files like torrent)
+def open_write(filename, config):
+    if config.encoding == 'raw':
+        encoding = None
+        mode = 'wb'  # write all files in binary mode. (Otherwise we can run into problems with some encodings, and also with binary files like torrent)
+    else:
+        encoding = config.getencoding()
+        mode = 'w'
+
     if config.gzip >= 2 or (config.gzip >= 0 and filename[-3:].lower() == '.gz'):
         import gzip
         if filename == '-':
             return gzip.GzipFile(filename=filename, mode=mode, fileobj=sys.stdout)
-        return gzip.open(filename, mode)
+        return gzip.open(filename, mode, encoding=encoding)
     else:
         if filename == '-':
             return NoCloseFile(sys.stdout)
-        return open(filename, mode)
-
-
-def open_write(filename, config):
-    if config.encoding == 'raw':
-        return open_write_raw(filename, config)
-    else:
-        return strutil.CodecWriter(config.getencoding(), open_write_raw(filename, config))
+        return open(filename, mode, encoding=encoding)
