@@ -1,8 +1,6 @@
 # Written by Petru Paler
 # see LICENSE.txt for license information
 
-from types import StringType, IntType, LongType, DictType, ListType, TupleType
-
 from builtins import object
 from builtins import str
 
@@ -278,12 +276,11 @@ def encode_dict(x, r):
 
 encode_func = {
     type(Bencached(0)): encode_bencached,
-    IntType: encode_int,
-    LongType: encode_int,
-    StringType: encode_string,
-    ListType: encode_list,
-    TupleType: encode_list,
-    DictType: encode_dict,
+    int: encode_int,
+    str: encode_string,
+    list: encode_list,
+    tuple: encode_list,
+    dict: encode_dict,
 }
 
 try:
