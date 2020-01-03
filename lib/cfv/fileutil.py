@@ -35,11 +35,11 @@ class PeekFile(object):
             if encoding == 'auto':
                 magic = self.fileobj.read(4)
                 # utf32 are tested first, since utf-32le BOM starts the same as utf-16le's.
-                if magic in ('\x00\x00\xfe\xff', '\xff\xfe\x00\x00'):
+                if magic in (b'\x00\x00\xfe\xff', b'\xff\xfe\x00\x00'):
                     self._encoding = 'UTF-32'
-                elif magic[:2] in ('\xfe\xff', '\xff\xfe'):
+                elif magic[:2] in (b'\xfe\xff', b'\xff\xfe'):
                     self._encoding = 'UTF-16'
-                elif magic.startswith('\xef\xbb\xbf'):
+                elif magic.startswith(b'\xef\xbb\xbf'):
                     self._encoding = 'UTF-8'
                     self._decode_start = 3
             if not self._encoding:

@@ -16,7 +16,7 @@ try:
 
     def dommap(fileno, len):  # generic mmap.  ACCESS_* args work on both nix and win.
         if len == 0:
-            return ''  # mmap doesn't like length=0
+            return b''  # mmap doesn't like length=0
         return mmap.mmap(fileno, len, access=mmap.ACCESS_READ)
 
     _nommap = 0
