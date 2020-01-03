@@ -65,7 +65,7 @@ def path_join(*paths):
     # represented in the fsencoding, then there's nothing that can be
     # done, and this will blow up.  Oh well.
     # TODO: try not using list compr here?
-    if [p for p in paths if isinstance(p, str)]:
+    if [p for p in paths if isinstance(p, bytes)]:
         # import traceback
         # traceback.print_stack()
         # perror('path_join: non-unicode args ' + repr(paths))

@@ -21,8 +21,8 @@ def safesort(l):
 
 
 def showfn(s):
-    if isinstance(s, str):
-        return str(s, 'ascii', 'replace')
+    if isinstance(s, bytes):
+        return s.decode('ascii', 'replace')
     return s
 
 
