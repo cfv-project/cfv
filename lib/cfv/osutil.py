@@ -35,19 +35,11 @@ except EnvironmentError:
 except TypeError:
     fs_nullsok = 0
 
-if hasattr(os, 'getcwdu'):
-    def getcwdu():
-        try:
-            return os.getcwd()
-        except UnicodeError:
-            return os.getcwd()
-else:
-    def getcwdu():
-        d = os.getcwd()
-        try:
-            return str(d, fsencoding)
-        except UnicodeError:
-            return d
+def getcwdu():
+    try:
+        return os.getcwd()
+    except UnicodeError:
+        return os.getcwdb()
 
 curdiru = str(os.curdir)
 
