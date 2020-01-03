@@ -23,8 +23,10 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import map
 from builtins import object
+
 import fnmatch
 import imp
+import importlib
 import os
 import shlex
 import sys
@@ -147,12 +149,12 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
         sys.argv = [cfvfn] + expand_cmdline(cmd)
         # TODO: make this work with cfv 1.x as well so that we can benchmark compare them in internal mode.
         import cfv.cftypes
-        reload(cfv.cftypes)  # XXX
+        importlib.reload(cfv.cftypes)  # XXX
         import cfv.common
-        reload(cfv.common)  # XXX: hack until I can get all the global state storage factored out.
+        importlib.reload(cfv.common)  # XXX: hack until I can get all the global state storage factored out.
         if need_reload:
             import cfv.hash
-            reload(cfv.hash)  # XXX: hack for environment variable changing
+            importlib.reload(cfv.hash)  # XXX: hack for environment variable changing
         cfv_ns = {
             '__name__': '__main__',
             '__file__': cfvfn,
@@ -160,7 +162,7 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
             '__package__': None,
         }
         try:
-            exec(cfv_compiled, cfv_ns)
+            exec (cfv_compiled, cfv_ns)
             s = 'no exit?'
         except SystemExit as e:
             s = e.code
