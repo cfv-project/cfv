@@ -32,7 +32,7 @@ try:
     fs_nullsok = 0  # if os.stat succeeded, it means the filename was cut off at the null (or the user has funny files ;)
 except EnvironmentError:
     fs_nullsok = 1
-except TypeError:
+except (TypeError, ValueError):
     fs_nullsok = 0
 
 def getcwdu():
