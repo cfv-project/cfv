@@ -449,7 +449,7 @@ class Config(object):
                             self.setx(o, v)
                         except CFVException as err:
                             # reuse the traceback of the original exception, but add file and line numbers to the error
-                            raise sys.exc_info()[0], '%s:%i: %s' % (filename, line_number, err), sys.exc_info()[2]
+                            raise RuntimeError('%s:%i: %s' % (filename, line_number, err)) from err
 
     def __init__(self):
         self.readconfig()

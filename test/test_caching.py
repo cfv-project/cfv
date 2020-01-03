@@ -139,15 +139,15 @@ class RelPathKeyTest(RelTestCase):
         self.assertEquals(a1, cache.nocase_findfile(self.mkpath('aaAA/aaa1')))
         with self.assertRaises(IOError) as cm:
             cache.nocase_findfile(self.mkpath('aaAb/aaa1'))
-        self.assertEquals(errno.ENOENT, cm.exception[0])
+        self.assertEquals(errno.ENOENT, cm.exception.errno)
 
         with self.assertRaises(IOError) as cm:
             cache.nocase_findfile(self.mkpath('aaAA/aab1'))
-        self.assertEquals(errno.ENOENT, cm.exception[0])
+        self.assertEquals(errno.ENOENT, cm.exception.errno)
 
         with self.assertRaises(IOError) as cm:
             cache.nocase_findfile(self.mkpath('aaAA/aaa2'))
-        self.assertEquals(errno.EEXIST, cm.exception[0])
+        self.assertEquals(errno.EEXIST, cm.exception.errno)
 
     def test_nocase_findfile_parent(self):
         cache = FileInfoCache()
@@ -159,4 +159,4 @@ class RelPathKeyTest(RelTestCase):
         # one.
         with self.assertRaises(IOError) as cm:
             cache.nocase_findfile(self.mkpath('aaAA/aaa2'))
-        self.assertEquals(errno.EEXIST, cm.exception[0])
+        self.assertEquals(errno.EEXIST, cm.exception.errno)
