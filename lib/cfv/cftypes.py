@@ -38,8 +38,6 @@ def register_cftype(cftype):
             _cf_fn_searches.append((re.compile(cftype.auto_filename_match, re.I).search, cftype))
 
     _cf_matchers.append((getattr(cftype, 'auto_chksumfile_order', 0), cftype.auto_chksumfile_match, cftype))
-    _cf_matchers.sort(key=lambda m: m[2].__name__)
-    _cf_matchers.reverse()
 
 
 def get_handler_names():
