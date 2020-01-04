@@ -446,7 +446,7 @@ def cfv_all_test(s, o, files=-2, ok=0, unv=0, notfound=0, badcrc=0, badsize=0, c
             files = reduce(operator.add, [ok, badcrc, badsize, notfound, ferror])
         expected = [files, ok, badcrc, badsize, notfound, ferror, unv, cferror, misnamed]
         actual = list(map(intize, x.groups()[:9]))
-        if not list(filter(icomp, map(None, expected, actual))):
+        if not list(filter(icomp, zip(expected, actual))):
             sresult = cfv_status_test(s, o, unv=unv, notfound=notfound, badcrc=badcrc, badsize=badsize, cferror=cferror, ferror=ferror)
             if sresult:
                 return sresult
