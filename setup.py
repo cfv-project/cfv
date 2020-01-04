@@ -2,8 +2,7 @@
 
 import re
 
-from setuptools import setup, find_packages
-
+from setuptools import find_packages, setup
 
 RE_VERSION = r"^__version__\s*=\s*'([^']*)'$"
 
@@ -50,7 +49,7 @@ setup(
         'Source Code': 'https://github.com/cfv-project/cfv',
         'Original Project': 'http://cfv.sourceforge.net/',
     },
-    python_requires='>=2.7, <3',
+    python_requires='>=2.7, >=3.6',
     packages=find_packages('lib'),
     package_dir={'': 'lib'},
     include_package_data=True,
