@@ -1103,7 +1103,7 @@ def search_test(t, test_nocrc=0, extra=None):
             os.mkdir(os.path.join(d, 'aoeu'))
             dirsize = os.path.getsize(os.path.join(d, 'aoeu'))
             with open(os.path.join(d, 'idth'), 'wb') as f:
-                f.write('a' * dirsize)
+                f.write(b'a' * dirsize)
             test_generic(cmd + ' -v -C -p %s -t %s -f %s' % (d, t, dcfn), rcurry(cfv_all_test, files=1, ok=1))
             os.remove(os.path.join(d, 'idth'))
             os.rename(os.path.join(d, 'aoeu'), os.path.join(d, 'idth'))
