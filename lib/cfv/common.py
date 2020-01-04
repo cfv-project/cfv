@@ -39,6 +39,7 @@ import struct
 import sys
 import time
 from binascii import hexlify, unhexlify
+from _collections import OrderedDict
 from stat import S_ISDIR, S_ISREG
 
 from cfv import caching
@@ -1133,7 +1134,7 @@ class Torrent(ChksumType):
         def init_file(filenameparts, ftotpos, filesize):
             done = 0
             try:
-                filenameparts = [cffndecode(p, encoding) for p in filenameparts]
+                filenameparts = [cffndecode(p.encode(), encoding) for p in filenameparts]
             except LookupError as e:  # lookup error is raised when specified encoding isn't found.
                 raise EnvironmentError(str(e))
             except (UnicodeError, FilenameError) as e:
@@ -1170,7 +1171,7 @@ class Torrent(ChksumType):
 
         info = metainfo['info']
         piecelen = info['piece length']
-        hashes = re.compile('.' * 20, re.DOTALL).findall(info['pieces'])
+        hashes = re.compile(b'.' * 20, re.DOTALL).findall(info['pieces'])
         if 'length' in info:
             total_len = info['length']
             files = [init_file([info['name']], 0, total_len)]
@@ -1179,7 +1180,7 @@ class Torrent(ChksumType):
             if config.strippaths == 0:
                 dirname = info['name']
                 try:
-                    dirname = cffndecode(dirname, encoding)
+                    dirname = cffndecode(dirname.encode(), encoding)
                 except (LookupError, UnicodeError, FilenameError) as e:  # lookup error is raised when specified encoding isn't found.
                     stats.cferror += 1
                     raise EnvironmentError(e)
@@ -1347,18 +1348,16 @@ class Torrent(ChksumType):
                     self.piece_done = 0
         if view.progress:
             view.progress.cleanup()
-
-        def cfencode_utf8pref(s):
-            return cfencode(s, 'UTF-8')
-
-        self.files.append({'length': fs, 'path': list(map(cfencode_utf8pref, osutil.path_split(filename)))})
+        self.files.append(OrderedDict({
+            'length': fs, 'path': osutil.path_split(filename)
+        }))
         return ('pieces %i..%i' % (firstpiece, len(self.pieces)), fs), ''
 
     def make_chksumfile_finish(self, file):
         if self.piece_done > 0:
             self.pieces.append(self.sh.digest())
 
-        info = {'pieces': ''.join(self.pieces), 'piece length': self.piece_length}
+        info = {'pieces': b''.join(self.pieces), 'piece length': self.piece_length}
         if config.private_torrent:
             info['private'] = 1
         if len(self.files) == 1 and len(self.files[0]['path']) == 1:
@@ -1374,11 +1373,11 @@ class Torrent(ChksumType):
                 for fileinfo in self.files:
                     del fileinfo['path'][0]
             else:
-                commonroot = cfencode(os.path.split(osutil.getcwdu())[1], 'UTF-8')
+                commonroot = os.path.split(osutil.getcwdu())[1]
             info['files'] = self.files
             info['name'] = commonroot
 
-        btformats.check_info(info)
+        btformats.check_info(OrderedDict(info))
         data = {'info': info, 'announce': cfencode(config.announceurl.strip(), 'UTF-8'), 'creation date': int(time.time())}
         if config.encoding != 'raw':
             data['encoding'] = str(config.getencoding('UTF-8'))

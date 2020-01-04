@@ -1,6 +1,7 @@
 # Written by Bram Cohen
 # see LICENSE.txt for license information
 
+from collections import OrderedDict
 from re import compile
 
 from builtins import range
@@ -10,13 +11,13 @@ reg = compile(r'^[^/\\.~][^/\\]*$')
 
 
 def check_info(info):
-    if type(info) != dict:
+    if type(info) != OrderedDict:
         raise ValueError('bad metainfo - not a dictionary')
     pieces = info.get('pieces')
-    if type(pieces) != str or len(pieces) % 20 != 0:
+    if type(pieces) != bytes or len(pieces) % 20 != 0:
         raise ValueError('bad metainfo - bad pieces key')
     piecelength = info.get('piece length')
-    if type(piecelength) == int or piecelength <= 0:
+    if type(piecelength) != int or piecelength <= 0:
         raise ValueError('bad metainfo - illegal piece length')
     name = info.get('name')
     if type(name) != str:
@@ -27,17 +28,17 @@ def check_info(info):
         raise ValueError('single/multiple file mix')
     if 'length' in info:
         length = info.get('length')
-        if type(length) == int or length < 0:
+        if type(length) != int or length < 0:
             raise ValueError('bad metainfo - bad length')
     else:
         files = info.get('files')
         if type(files) != list:
             raise ValueError
         for f in files:
-            if type(f) != dict:
+            if type(f) != OrderedDict:
                 raise ValueError('bad metainfo - bad file value')
             length = f.get('length')
-            if type(length) == int or length < 0:
+            if type(length) != int or length < 0:
                 raise ValueError('bad metainfo - bad length')
             path = f.get('path')
             if type(path) != list or path == []:
@@ -54,7 +55,7 @@ def check_info(info):
 
 
 def check_message(message):
-    if type(message) != dict:
+    if type(message) != OrderedDict:
         raise ValueError
     check_info(message.get('info'))
     announce = message.get('announce')
@@ -63,7 +64,7 @@ def check_message(message):
 
 
 def check_peers(message):
-    if type(message) != dict:
+    if type(message) != OrderedDict:
         raise ValueError
     if 'failure reason' in message:
         if type(message['failure reason']) != str:
@@ -72,7 +73,7 @@ def check_peers(message):
     peers = message.get('peers')
     if type(peers) == list:
         for p in peers:
-            if type(p) != dict:
+            if type(p) != OrderedDict:
                 raise ValueError
             if type(p.get('ip')) != str:
                 raise ValueError
