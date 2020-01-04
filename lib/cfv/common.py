@@ -563,7 +563,8 @@ class ChksumType(object):
                 filecrct = hexlify(filecrc)
                 if c:
                     self.search_file(filename, filecrc, filesize,
-                                     self.do_f_badcrc, (l_filename, 'crc does not match (%s!=%s)' % (filecrct, hexlify(c))))
+                                     self.do_f_badcrc, (l_filename, 'crc does not match (%s!=%s)'
+                                                        % (filecrct.decode(), hexlify(c).decode())))
                     return -2
             else:
                 if not os.path.exists(l_filename):
@@ -787,7 +788,7 @@ def gnu_sum(algo):
             return '%s.%s' % (filename, algo)
 
         def make_addfile(self, filename):
-            crc = hexlify(getfilehash(filename, algo, hasher)[0])
+            crc = hexlify(getfilehash(filename, algo, hasher)[0]).decode()
             return (crc, -1), '%s *%s' % (crc, filename) + os.linesep
 
     return GnuSum_Base
@@ -845,7 +846,7 @@ class SHA1(FooSum_Base, SHA1_MixIn):
         return filename + '.sha1'
 
     def make_addfile(self, filename):
-        crc = hexlify(getfilesha1(filename)[0])
+        crc = hexlify(getfilesha1(filename)[0]).decode()
         return (crc, -1), '%s *%s' % (crc, filename) + os.linesep
 
 
@@ -883,7 +884,7 @@ class MD5(FooSum_Base, MD5_MixIn):
         return filename + '.md5'
 
     def make_addfile(self, filename):
-        crc = hexlify(getfilemd5(filename)[0])
+        crc = hexlify(getfilemd5(filename)[0]).decode()
         return (crc, -1), '%s *%s' % (crc, filename) + os.linesep
 
 
@@ -916,7 +917,7 @@ class BSDMD5(TextChksumType, MD5_MixIn):
         return filename + '.md5'
 
     def make_addfile(self, filename):
-        crc = hexlify(getfilemd5(filename)[0])
+        crc = hexlify(getfilemd5(filename)[0]).decode()
         return (crc, -1), 'MD5 (%s) = %s' % (filename, crc) + os.linesep
 
 
@@ -1440,7 +1441,7 @@ class SFV(SFV_Base, CRC_MixIn):
         return filename + '.sfv'
 
     def make_addfile(self, filename):
-        crc = hexlify(getfilecrc(filename)[0])
+        crc = hexlify(getfilecrc(filename)[0]).decode()
         return (crc, -1), '%s %s' % (filename, crc) + os.linesep
 
 
@@ -1470,7 +1471,7 @@ class SFVMD5(SFV_Base, MD5_MixIn):
         return filename + '.md5'
 
     def make_addfile(self, filename):
-        crc = hexlify(getfilemd5(filename)[0])
+        crc = hexlify(getfilemd5(filename)[0]).decode()
         return (crc, -1), '%s %s' % (filename, crc) + os.linesep
 
 
@@ -1522,7 +1523,7 @@ class CSV(TextChksumType, CRC_MixIn):
 
     def make_addfile(self, filename):
         c, s = getfilecrc(filename)
-        c = hexlify(c)
+        c = hexlify(c).decode()
         return (c, s), '%s,%i,%s,' % (csvquote(filename), s, c) + os.linesep
 
 
@@ -1556,7 +1557,7 @@ class CSV4(TextChksumType, CRC_MixIn):
 
     def make_addfile(self, filename):
         c, s = getfilecrc(filename)
-        c = hexlify(c)
+        c = hexlify(c).decode()
         p = os.path.split(filename)
         return (c, s), '%s,%i,%s,%s,' % (csvquote(p[1]), s, c, csvquote(p[0])) + os.linesep
 
@@ -1722,7 +1723,7 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
 
     def make_addfile(self, filename):
         crc, size = getfilecrc(filename)
-        crc = hexlify(crc)
+        crc = hexlify(crc).decode()
         if self.use_dimensions:
             w, h = getimagedimensions(filename)
         else:
