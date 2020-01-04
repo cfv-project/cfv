@@ -1817,11 +1817,12 @@ def make(cftype, ifilename, testfiles):
     cf_stats = stats.make_sub_stats()
 
     i = 0
+    f_decoding_error = False
     while i < len(testfiles):
         f = testfiles[i]
         i += 1
         if not tfauto and f == '-':
-            f = u''
+            f_decoding_error = True
         elif not os.path.isfile(f):
             if config.recursive and visit_dir(f):
                 if config.recursive == 1:
@@ -1843,12 +1844,12 @@ def make(cftype, ifilename, testfiles):
         if file is IOError:
             continue
         if config.encoding != 'raw':
-            if isinstance(f, str):
+            if f_decoding_error:
                 stats.ferror += 1
                 view.ev_make_filenamedecodingerror(f)
                 continue
         else:
-            if isinstance(f, str):
+            if f_decoding_error:
                 try:
                     f = f.encode(osutil.fsencoding)
                 except UnicodeError as e:
