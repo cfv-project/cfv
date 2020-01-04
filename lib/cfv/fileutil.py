@@ -7,7 +7,6 @@ from io import BytesIO
 from io import StringIO
 
 from cfv import osutil
-from cfv import strutil
 
 
 _badbytesmarker = u'\ufffe'
