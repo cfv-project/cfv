@@ -137,7 +137,7 @@ except ImportError:
     class CRC32(object):
         digest_size = 4
 
-        def __init__(self, s=''):
+        def __init__(self, s=b''):
             self.value = _crc32(s)
 
         def update(self, s):
