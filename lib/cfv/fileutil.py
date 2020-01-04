@@ -172,7 +172,7 @@ def open_write(filename, config):
         import gzip
         if filename == '-':
             return gzip.GzipFile(filename=filename, mode=mode, fileobj=sys.stdout)
-        return gzip.open(filename, mode, encoding=encoding)
+        return gzip.open(filename, mode)
     else:
         if filename == '-':
             return NoCloseFile(sys.stdout)
