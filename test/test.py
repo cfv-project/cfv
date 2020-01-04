@@ -387,10 +387,10 @@ class OneOf(object):
     def __init__(self, *possibilities):
         self.possible = possibilities
 
-    def __cmp__(self, a):
+    def __eq__(self, a):
         if a in self.possible:
-            return 0
-        return cmp(a, self.possible[0])
+            return True
+        return a == self.possible[0]
 
     def __repr__(self):
         return 'OneOf' + repr(self.possible)
