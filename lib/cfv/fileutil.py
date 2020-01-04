@@ -6,7 +6,6 @@ import sys
 from io import StringIO, TextIOWrapper
 
 from cfv import osutil
-from cfv import strutil
 
 
 _badbytesmarker = u'\ufffe'
