@@ -3,7 +3,7 @@ standard_library.install_aliases()
 from builtins import object
 import codecs
 import sys
-from io import StringIO, TextIOWrapper
+from io import BytesIO, TextIOWrapper
 
 from cfv import osutil
 
@@ -122,7 +122,7 @@ class PeekFile(object):
 
 
 def PeekFileNonseekable(fileobj, filename, encoding):
-    return PeekFile(StringIO(fileobj.read()), filename, encoding)
+    return PeekFile(BytesIO(fileobj.read()), filename, encoding)
 
 
 def PeekFileGzip(filename, encoding):
