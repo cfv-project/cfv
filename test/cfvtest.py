@@ -215,7 +215,7 @@ def setcfv(fn=None, internal=None):
     cfv_compiled = compile(_cfv_code, cfvfn, 'exec')
 
     # This is so that the sys.path modification of the wrapper (if it has one) will be executed..
-    imp.load_source('cfvwrapper', cfvfn + '.py', open(cfvfn))
+    imp.load_source('cfvwrapper', cfvfn, open(cfvfn))
 
     get_version_flags()
 
