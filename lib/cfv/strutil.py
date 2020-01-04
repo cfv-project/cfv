@@ -1,11 +1,8 @@
 from future import standard_library
 standard_library.install_aliases()
 from builtins import str
-from builtins import object
 import binascii
-import codecs
 import unicodedata
-from io import StringIO
 
 
 def safesort(l):
