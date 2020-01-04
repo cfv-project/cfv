@@ -120,7 +120,7 @@ class View(object):
         self.perror('%s%s : %s' % (strutil.showfn(path), os.sep, enverrstr(ex)))
 
     def ev_f_enverror(self, l_filename, ex):
-        if ex[0] == errno.ENOENT:
+        if ex.args[0] == errno.ENOENT:
             if self.config.list & LISTNOTFOUND:
                 self.plistf(l_filename)
         self.perror('%s : %s' % (self.perhaps_showpath(l_filename), enverrstr(ex)))
