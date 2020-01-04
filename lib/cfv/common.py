@@ -940,7 +940,7 @@ class PAR(ChksumType, MD5_MixIn):
 
     @staticmethod
     def auto_chksumfile_match(file):
-        return file.peek(8) == 'PAR\0\0\0\0\0'
+        return file.peek(8) == b'PAR\0\0\0\0\0'
 
     def do_test_chksumfile(self, file):
         def prog2str(v):
@@ -1006,7 +1006,7 @@ class PAR2(ChksumType, MD5_MixIn):
 
     @staticmethod
     def auto_chksumfile_match(file):
-        return file.peek(8) == 'PAR2\0PKT'
+        return file.peek(8) == b'PAR2\0PKT'
 
     def do_test_chksumfile(self, file):
         pkt_header_fmt = '< 8s Q 16s 16s 16s'
@@ -1052,7 +1052,7 @@ class PAR2(ChksumType, MD5_MixIn):
                 if control_md5.digest() != pkt_md5:
                     raise EnvironmentError(errno.EINVAL, 'corrupt par2 file - bad packet hash')
 
-            if pkt_type == 'PAR 2.0\0FileDesc':
+            if pkt_type == b'PAR 2.0\0FileDesc':
                 if not config.docrcchecks:
                     d = file.read(pkt_len - pkt_header_size)
                 file_id, file_md5, file_md5_16k, file_size = struct.unpack(file_pkt_fmt, d[:file_pkt_size])
@@ -1066,7 +1066,7 @@ class PAR2(ChksumType, MD5_MixIn):
                         view.ev_test_cf_filenameencodingerror(file.name, hexlify(file_id), e)
                         continue
                     self.test_file(filename, file_md5, file_size)
-            elif pkt_type == 'PAR 2.0\0Main\0\0\0\0':
+            elif pkt_type == b'PAR 2.0\0Main\0\0\0\0':
                 if not config.docrcchecks:
                     d = file.read(pkt_len - pkt_header_size)
                 if expected_file_ids is None:
@@ -1105,7 +1105,7 @@ class Torrent(ChksumType):
 
     @staticmethod
     def auto_chksumfile_match(file):
-        return file.peek(1) == 'd' and file.peek(4096).find('8:announce') >= 0
+        return file.peek(1) == b'd' and file.peek(4096).find(b'8:announce') >= 0
 
     def do_test_chksumfile(self, file):
         try:
