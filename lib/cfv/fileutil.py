@@ -3,6 +3,7 @@ standard_library.install_aliases()
 from builtins import object
 import codecs
 import sys
+from io import BytesIO
 from io import StringIO
 
 from cfv import osutil
@@ -129,7 +130,7 @@ def PeekFileNonseekable(fileobj, filename, encoding):
 def PeekFileGzip(filename, encoding):
     import gzip
     if filename == '-':
-        f = gzip.GzipFile(mode='rb', fileobj=StringIO(sys.stdin.read()))  # lovely hack since gzip.py requires a bunch of seeking.. bleh.
+        f = gzip.GzipFile(mode='rb', fileobj=BytesIO())  # lovely hack since gzip.py requires a bunch of seeking.. bleh.
     else:
         f = gzip.open(filename, 'rb')
     try:
