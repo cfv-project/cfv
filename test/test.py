@@ -1351,7 +1351,7 @@ def test_encoding2():
         raw_fnok = 0
         files_fnok = files_fnerrs = 0
         raw_files_fnok = raw_files_fnerrs = 0
-        dirn = filter(lambda s: not s.endswith('torrent'), os.listdir(d))[0]
+        dirn = list(filter(lambda s: not s.endswith('torrent'), os.listdir(d)))[0]
         try:
             files = [os.path.join(dirn, s) for s in os.listdir(os.path.join(d, dirn))]
         except EnvironmentError:
