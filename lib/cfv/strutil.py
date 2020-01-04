@@ -36,7 +36,7 @@ def chomp(line):
 
 
 def chompnulls(line):
-    p = line.find('\0')
+    p = line.find(b'\0')
     if p < 0:
         return line
     else:
