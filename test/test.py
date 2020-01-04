@@ -227,6 +227,8 @@ def logr(text):
 
 
 def log(text):
+    if isinstance(text, bytes):
+        text = text.decode()
     logr(text + '\n')
 
 
