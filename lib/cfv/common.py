@@ -592,7 +592,7 @@ class ChksumType(object):
         return 1
 
     def do_f_enverror(self, l_filename, ex, foundok=0):
-        if ex[0] == errno.ENOENT:
+        if ex.args[0] == errno.ENOENT:
             if foundok:
                 return
             stats.notfound += 1
