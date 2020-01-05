@@ -1117,17 +1117,36 @@ class Torrent(ChksumType):
     descinfo = 'name,size,SHA1(piecewise)'
 
     @staticmethod
+    def _decode_str(s, encoding):
+        """
+        Try decoding using the torrent's specified encoding. If it doesn't work then try utf-8.
+        """
+        if isinstance(s, str):
+            s = s.encode('utf-8')
+        try:
+            return s.decode(encoding)
+        except UnicodeDecodeError:
+            return s.decode('utf-8')
+
+    @staticmethod
     def auto_chksumfile_match(file):
         return file.peek(1) == b'd' and file.peek(4096).find(b'8:announce') >= 0
 
     def do_test_chksumfile(self, file):
         try:
             metainfo = bencode.bdecode(file.read())
+            # Decode fields using the encoding specified in the torrent file
+            encoding = metainfo.get('encoding', b'utf-8').decode('utf-8')
+            metainfo['announce'] = self._decode_str(metainfo['announce'], encoding)
+            if 'comment' in metainfo:
+                metainfo['comment'] = self._decode_str(metainfo['comment'], encoding)
+            metainfo['info']['name'] = self._decode_str(metainfo['info']['name'], encoding)
+            for file_info in metainfo.get('info', {}).get('files', []):
+                file_info['path'] = [self._decode_str(part, encoding) for part in file_info['path']]
+
             btformats.check_message(metainfo)
         except ValueError as e:
             raise EnvironmentError(str(e) or 'invalid or corrupt torrent')
-
-        encoding = metainfo.get('encoding')
 
         comments = []
         if 'creation date' in metainfo:
@@ -1137,22 +1156,13 @@ class Torrent(ChksumType):
                 comments.append('created ' + repr(metainfo['creation date']))
         if 'comment' in metainfo:
             try:
-                comments.append(cfdecode(metainfo['comment'], encoding))
+                comments.append(metainfo['comment'])
             except UnicodeError:
                 pass
         self.do_test_chksumfile_print_testingline(file, ', '.join(comments))
 
         def init_file(filenameparts, ftotpos, filesize):
             done = 0
-            try:
-                filenameparts = [cffndecode(p.encode(), encoding) for p in filenameparts]
-            except LookupError as e:  # lookup error is raised when specified encoding isn't found.
-                raise EnvironmentError(str(e))
-            except (UnicodeError, FilenameError) as e:
-                stats.cferror += 1
-                view.ev_test_cf_filenameencodingerror(file.name, repr(filenameparts), e)
-                done = 1
-                l_filename = filename = None
             if not done:
                 filename = osutil.path_join(*filenameparts)
                 if not config.docrcchecks:  # if we aren't testing checksums, just use the standard test_file function, so that -s and such will work.

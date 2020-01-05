@@ -66,7 +66,7 @@ def decode_int(x, f):
     return n, newf + 1
 
 
-def decode_string(x, f, try_decode_utf8=True, force_decode_utf8=False):
+def decode_string(x, f, try_decode_utf8=False, force_decode_utf8=False):
     # type: (bytes, int, bool, bool) -> Tuple[bytes, int]
     """Decode torrent bencoded 'string' in x starting at f.
 
@@ -141,7 +141,7 @@ def decode_dict(x, f, force_sort=True):
     r, f = OrderedDict(), f + 1
 
     while x[f:f + 1] != b'e':
-        k, f = decode_string(x, f, force_decode_utf8=True)
+        k, f = decode_string(x, f, try_decode_utf8=True, force_decode_utf8=True)
         r[k], f = decode_func[x[f:f + 1]](x, f)
 
     if force_sort:
