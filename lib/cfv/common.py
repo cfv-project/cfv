@@ -67,7 +67,9 @@ class FilenameError(ValueError):
 
 def cfdecode(s, preferred=None):
     if config.encoding != 'raw':
-        s = str(s, config.getencoding(preferred))
+        s = s.decode(config.getencoding(preferred))
+    else:
+        s = s.decode('utf-8', errors='ignore')
     return s
 
 
