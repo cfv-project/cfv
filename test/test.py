@@ -1364,7 +1364,7 @@ def test_encoding2():
             for fn in files:
                 flag_ok_raw = flag_ok_files = 0
                 for srcfn, destfn in datafns:
-                    if os.path.join(u'\u3070\u304B', destfn).encode('utf-8') == fn:
+                    if os.path.join(u'\u3070\u304B', destfn) == fn:
                         raw_fnok += 1
                         flag_ok_raw = 1
                 try:
