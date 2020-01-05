@@ -777,6 +777,8 @@ def gnu_sum(algo):
         @staticmethod
         def auto_chksumfile_match(file, _autorem=re.compile(r'[0-9a-fA-F]{%d} [ *].' % hexlen)):
             line = file.peekline(4096)
+            if isinstance(line, bytes):
+                return False
             while line:
                 if line[0] not in ';#':
                     return _autorem.match(line) is not None
@@ -835,6 +837,8 @@ class SHA1(FooSum_Base, SHA1_MixIn):
     @staticmethod
     def auto_chksumfile_match(file, _autorem=re.compile(r'[0-9a-fA-F]{40} [ *].')):
         line = file.peekline(4096)
+        if isinstance(line, bytes):
+            return False
         while line:
             if line[0] not in ';#':
                 return _autorem.match(line) is not None
@@ -873,6 +877,8 @@ class MD5(FooSum_Base, MD5_MixIn):
     @staticmethod
     def auto_chksumfile_match(file, _autorem=re.compile(r'[0-9a-fA-F]{32} [ *].')):
         line = file.peekline(4096)
+        if isinstance(line, bytes):
+            return False
         while line:
             if line[0] not in ';#':
                 return _autorem.match(line) is not None
@@ -903,7 +909,10 @@ class BSDMD5(TextChksumType, MD5_MixIn):
 
     @staticmethod
     def auto_chksumfile_match(file, _autorem=re.compile(r'MD5 \(.+\) = [0-9a-fA-F]{32}' + '[\r\n]*$')):
-        return _autorem.match(file.peekline(4096)) is not None
+        line = file.peekline(4096)
+        if isinstance(line, bytes):
+            return False
+        return _autorem.match(line) is not None
 
     auto_filename_match = b'^md5$'
 
