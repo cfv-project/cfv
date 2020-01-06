@@ -1864,7 +1864,7 @@ def make(cftype, ifilename, testfiles):
         try:
             (filecrc, filesize), dat = cf.make_addfile(f)
         except EnvironmentError as a:
-            if a[0] == errno.ENOENT:
+            if a.errno == errno.ENOENT:
                 stats.notfound += 1
             else:
                 stats.ferror += 1
