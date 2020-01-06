@@ -141,11 +141,6 @@ class FileNameFilter(object):
             fn = osutil.path_join(reldir[-1], fn)
             if config.ignorecase:
                 fn = fn.lower()
-            if config.encoding == 'raw' and isinstance(fn, str):
-                try:
-                    fn = fn.encode(osutil.fsencoding)
-                except UnicodeError:
-                    pass
             self.testfiles.add(fn)
 
     def should_test(self, fn):
