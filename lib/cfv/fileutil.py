@@ -169,9 +169,14 @@ def open_write(filename, config):
 
     if config.gzip >= 2 or (config.gzip >= 0 and filename[-3:].lower() == '.gz'):
         import gzip
+        import io
         if filename == '-':
-            return gzip.GzipFile(filename=filename, mode=mode, fileobj=sys.stdout)
-        return gzip.open(filename, mode)
+            res = gzip.GzipFile(filename=filename, mode=mode, fileobj=sys.stdout)
+        else:
+            res = gzip.open(filename, mode)
+        if mode == 'w':
+            res = io.TextIOWrapper(res, encoding=encoding)
+        return res
     else:
         if filename == '-':
             return NoCloseFile(sys.stdout)
