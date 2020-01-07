@@ -131,12 +131,7 @@ def PeekFileGzip(filename, encoding):
         f = gzip.GzipFile(mode='rb', fileobj=sys.stdin)
     else:
         f = gzip.open(filename, 'rb')
-    try:
-        f.tell()
-    except (AttributeError, IOError):
-        return PeekFileNonseekable(f, filename, encoding)  # gzip.py prior to python2.2 doesn't support seeking, and prior to 2.0 doesn't support readline(size)
-    else:
-        return PeekFile(f, filename, encoding)
+    return PeekFile(f, filename, encoding)
 
 
 class NoCloseFile(object):
