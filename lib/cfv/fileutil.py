@@ -128,7 +128,7 @@ def PeekFileNonseekable(fileobj, filename, encoding):
 def PeekFileGzip(filename, encoding):
     import gzip
     if filename == '-':
-        f = gzip.GzipFile(mode='rb', fileobj=BytesIO())  # lovely hack since gzip.py requires a bunch of seeking.. bleh.
+        f = gzip.GzipFile(mode='rb', fileobj=sys.stdin)
     else:
         f = gzip.open(filename, 'rb')
     try:
