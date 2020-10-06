@@ -38,6 +38,7 @@ jobs:
          pip install check-manifest
          pip install twine
          pip install wheel
+         pip install flake8
          pip list
          
       - name: Compile code
@@ -54,7 +55,11 @@ jobs:
         
       - name: Check the completeness of MANIFEST.in
         run: check-manifest .
-        
+      
+      - name: Run flake
+        continue-on-error: true
+        run: flake8 --exclude=build,venv --ignore= --max-line-length=200 --max-complexity=75 --show-source --statistics .
+          
       - name: Check distribution
         run: |
           python setup.py sdist bdist_wheel
