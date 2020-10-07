@@ -3,17 +3,17 @@ import unicodedata
 from StringIO import StringIO
 
 
-def safesort(l):
+def safesort(line):
     sl = []
     ul = []
-    for s in l:
+    for s in line:
         if isinstance(s, str):
             sl.append(s)
         else:
             ul.append(s)
     sl.sort()
     ul.sort()
-    l[:] = ul + sl
+    line[:] = ul + sl
 
 
 def showfn(s):
