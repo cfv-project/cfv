@@ -903,8 +903,9 @@ def ren_test(f, extra=None, verify=None, t=None):
                 fn = n is not None and fl % n or fl
                 try:
                     with open(fn, 'rb') as f2:
-                        o = f2.read()
-                    r = o != t
+                        d = f2.read()
+                    r = d != t
+                    o = repr(d)
                 except IOError as e:
                     r = 1
                     o = str(e)
