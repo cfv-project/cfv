@@ -56,31 +56,12 @@ else:
     preferredencoding = 'ascii'
 
 
-def is_undecodable(s):
-    if isinstance(s, str):
-        try:
-            # this is for python < 2.3, where os.listdir never returns unicode.
-            str(s, preferredencoding)
-            return 0
-        except UnicodeError:
-            return 1
-    else:
-        return 0
-
-
 def is_encodable(s, enc=preferredencoding):
-    if not isinstance(s, str):
-        try:
-            # this is for python < 2.3, where os.listdir never returns unicode.
-            str(s, preferredencoding)  # note: using preferredencoding not enc, since this assumes the string is coming from os.listdir, and thus we should decode with the system's encoding.
-            return 1
-        except UnicodeError:
-            return 0
     try:
         s.encode(enc)
-        return 1
+        return True
     except UnicodeError:
-        return 0
+        return False
 
 
 fmt_info = {
@@ -759,16 +740,10 @@ def C_funkynames_test(t):
     def is_fmtencodable(s, enc=fmt_preferredencoding(t)):
         return is_encodable(s, enc)
 
-    def is_fmtokfn(s, enc=fmt_preferredencoding(t)):
+    def is_fmtokfn(s):
         if fmt_istext(t):
-            if isinstance(s, str):
-                try:
-                    # this is for python < 2.3, where os.listdir never returns unicode.
-                    s = str(s, enc)
-                except UnicodeError:
-                    pass
             return len(('a' + s + 'a').splitlines()) == 1
-        return 1
+        return True
 
     for deep in (0, 1):
         d = tempfile.mkdtemp()
@@ -796,7 +771,7 @@ def C_funkynames_test(t):
         try:
             cnum = create_funkynames(t, d3, chr, deep=deep)
             ulist = os.listdir(str(d3))
-            numundecodable = len(list(filter(is_undecodable, ulist)))
+            numundecodable = 0  # listdir always returns filenames of type str if we use a path of type str (and this is what we do)
             okcnum = len(ulist) - numundecodable
             dcfn = os.path.join(d3, 'funky3%s.%s' % (deep and 'deep' or '', t))
             # cfv -C, undecodable filenames on disk, with --encoding=raw just put everything in like before
