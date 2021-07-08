@@ -1806,12 +1806,12 @@ def make(cftype, ifilename, testfiles):
         stats.cferror += 1
         file = IOError  # just need some special value to indicate a cferror so that recursive mode still continues to work, IOError seems like a good choice ;)
     if not testfiles:
-        tfauto = 1
+        tfauto = True
         testfiles = osutil.listdir(osutil.curdiru)
         if config.dirsort:
             strutil.safesort(testfiles)
     else:
-        tfauto = 0
+        tfauto = False
     testdirs = []
 
     cf_stats = stats.make_sub_stats()
