@@ -1843,7 +1843,7 @@ def make(cftype, ifilename, testfiles):
         if file is IOError:
             continue
         if config.encoding != 'raw':
-            if isinstance(f, str):
+            if isinstance(f, bytes):
                 stats.ferror += 1
                 view.ev_make_filenamedecodingerror(f)
                 continue
