@@ -631,12 +631,12 @@ def gzC_test(f, extra=None, verify=None, t=None, d=None):
         test_generic('%s -C -f %s %s' % (cmd, f, d), cfv_test)
 
         try:
-            with gzip.open(f) as ifd1:
+            with gzip.open(f, 'rt') as ifd1:
                 if1 = ifd1.read()
         except (IOError, zlib.error) as e:
             if1 = '%s: %s' % (f, e)
         try:
-            with gzip.open(f2) as ifd2:
+            with gzip.open(f2, 'rt') as ifd2:
                 if2 = ifd2.read()
         except (IOError, zlib.error) as e:
             if2 = '%s: %s' % (f2, e)
