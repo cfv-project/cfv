@@ -22,7 +22,6 @@ from __future__ import print_function
 
 from future import standard_library
 standard_library.install_aliases()
-from past.builtins import cmp
 from builtins import chr
 from builtins import zip
 from builtins import map
@@ -385,10 +384,8 @@ class OneOf(object):
     def __init__(self, *possibilities):
         self.possible = possibilities
 
-    def __cmp__(self, a):
-        if a in self.possible:
-            return 0
-        return cmp(a, self.possible[0])
+    def __eq__(self, a):
+        return a in self.possible
 
     def __repr__(self):
         return 'OneOf' + repr(self.possible)
