@@ -4,7 +4,7 @@ import re
 _cftypes = {}
 _user_cf_fn_regexs = []
 _cf_fn_exts, _cf_fn_matches, _cf_fn_searches = [], [], []
-_cf_matchers = []
+_cftypes_match_order = []
 
 
 def add_user_cf_fn_regex(match, typename):
@@ -20,8 +20,8 @@ def auto_filename_match(*names):
 
 
 def auto_chksumfile_match(file):
-    for p, matchfunc, cftype in _cf_matchers:
-        if matchfunc(file):
+    for cftype in _cftypes_match_order:
+        if cftype.auto_chksumfile_match(file):
             return cftype
     return None
 
@@ -37,9 +37,8 @@ def register_cftype(cftype):
         else:
             _cf_fn_searches.append((re.compile(cftype.auto_filename_match, re.I).search, cftype))
 
-    _cf_matchers.append((getattr(cftype, 'auto_chksumfile_order', 0), cftype.auto_chksumfile_match, cftype))
-    _cf_matchers.sort(key=lambda m: m[2].__name__)
-    _cf_matchers.reverse()
+    _cftypes_match_order.append(cftype)
+    _cftypes_match_order.sort(key=lambda t: (getattr(t, 'auto_chksumfile_order', 0), cftype.name), reverse=True)
 
 
 def get_handler_names():
