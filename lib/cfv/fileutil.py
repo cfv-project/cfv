@@ -3,7 +3,7 @@ standard_library.install_aliases()
 from builtins import object
 import codecs
 import sys
-from io import StringIO
+from io import StringIO, TextIOWrapper
 
 from cfv import osutil
 from cfv import strutil
@@ -166,13 +166,22 @@ def open_write(filename, config, force_raw=False):
         mode = 'wb'  # write all files in binary mode. (Otherwise we can run into problems with some encodings, and also with binary files like torrent)
     else:
         encoding = config.getencoding()
-        mode = 'w'
+        mode = 'wt'
 
     if config.gzip >= 2 or (config.gzip >= 0 and filename[-3:].lower() == '.gz'):
         import gzip
+        kwargs = {
+            'filename': filename,
+            'mode': mode.replace('t', ''),
+        }
         if filename == '-':
-            return gzip.GzipFile(filename=filename, mode=mode, fileobj=sys.stdout)
-        return gzip.open(filename, mode, encoding=encoding)
+            kwargs['fileobj'] = sys.stdout
+
+        binary_file = gzip.GzipFile(**kwargs)
+        if 't' in mode:
+            return TextIOWrapper(binary_file, encoding)
+        else:
+            return binary_file
     else:
         if filename == '-':
             return NoCloseFile(sys.stdout)
