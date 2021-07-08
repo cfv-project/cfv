@@ -160,8 +160,8 @@ def open_read(filename, config):
         return PeekFile(open(filename, mode), filename, config.encoding)
 
 
-def open_write(filename, config):
-    if config.encoding == 'raw':
+def open_write(filename, config, force_raw=False):
+    if force_raw or config.encoding == 'raw':
         encoding = None
         mode = 'wb'  # write all files in binary mode. (Otherwise we can run into problems with some encodings, and also with binary files like torrent)
     else:

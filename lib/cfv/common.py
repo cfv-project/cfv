@@ -1312,7 +1312,7 @@ class Torrent(ChksumType):
     def make_chksumfile_create(self, filename):
         if config.announceurl is None:
             raise EnvironmentError('announce url required')
-        file = fileutil.open_write_raw(filename, config)
+        file = fileutil.open_write(filename, config, force_raw=True)
         self.sh = hash.sha_new()
         self.files = []
         self.pieces = []
