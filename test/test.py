@@ -746,7 +746,7 @@ def create_funkynames(t, d, chr, deep):
             # (If the piece size doesn't match the file size, then some
             # files that it can find will still be marked bad since it
             # can't find the rest of the piece.)
-            f.write('%02x' % i)
+            f.write(b'%02x' % i)
             f.close()
         except (EnvironmentError, UnicodeError):
             pass  # stupid filesystem doesn't allow the character we wanted, oh well.
