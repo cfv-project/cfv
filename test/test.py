@@ -1532,7 +1532,7 @@ def private_torrent_test():
     cmd = cfvcmd
     tmpd = tempfile.mkdtemp()
     try:
-        needle = '7:privatei1'
+        needle = b'7:privatei1'
         f = os.path.join(tmpd, 'test.torrent')
         test_generic('%s -C -f %s data1' % (cmd, f), cfv_test)
         data = readfile(f)
