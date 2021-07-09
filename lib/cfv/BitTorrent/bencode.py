@@ -276,18 +276,13 @@ def encode_dict(x, r):
 
 encode_func = {
     type(Bencached(0)): encode_bencached,
+    bool: encode_int,
     int: encode_int,
     bytes: encode_string,
     list: encode_list,
     tuple: encode_list,
     dict: encode_dict,
 }
-
-try:
-    from types import BooleanType
-    encode_func[BooleanType] = encode_int
-except ImportError:
-    pass
 
 
 def bencode(x):
