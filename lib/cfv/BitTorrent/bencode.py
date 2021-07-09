@@ -7,26 +7,26 @@ from builtins import str
 
 def decode_int(x, f):
     f += 1
-    newf = x.index('e', f)
+    newf = x.index(b'e', f)
     try:
         n = int(x[f:newf])
     except (OverflowError, ValueError):
         n = int(x[f:newf])
-    if x[f] == '-':
-        if x[f + 1] == '0':
+    if x[f:f + 1] == b'-':
+        if x[f + 1:f + 2] == b'0':
             raise ValueError
-    elif x[f] == '0' and newf != f + 1:
+    elif x[f:f + 1] == b'0' and newf != f + 1:
         raise ValueError
     return n, newf + 1
 
 
 def decode_string(x, f):
-    colon = x.index(':', f)
+    colon = x.index(b':', f)
     try:
         n = int(x[f:colon])
     except (OverflowError, ValueError):
         n = int(x[f:colon])
-    if x[f] == '0' and colon != f + 1:
+    if x[f:f + 1] == b'0' and colon != f + 1:
         raise ValueError
     colon += 1
     return x[colon:colon + n], colon + n
@@ -34,8 +34,8 @@ def decode_string(x, f):
 
 def decode_list(x, f):
     r, f = [], f + 1
-    while x[f] != 'e':
-        v, f = decode_func[x[f]](x, f)
+    while x[f:f + 1] != b'e':
+        v, f = decode_func[x[f:f + 1]](x, f)
         r.append(v)
     return r, f + 1
 
@@ -43,35 +43,35 @@ def decode_list(x, f):
 def decode_dict(x, f):
     r, f = {}, f + 1
     lastkey = None
-    while x[f] != 'e':
+    while x[f:f + 1] != b'e':
         k, f = decode_string(x, f)
         if lastkey >= k:
             raise ValueError
         lastkey = k
-        r[k], f = decode_func[x[f]](x, f)
+        r[k], f = decode_func[x[f:f + 1]](x, f)
     return r, f + 1
 
 
 decode_func = {
-    'l': decode_list,
-    'd': decode_dict,
-    'i': decode_int,
-    '0': decode_string,
-    '1': decode_string,
-    '2': decode_string,
-    '3': decode_string,
-    '4': decode_string,
-    '5': decode_string,
-    '6': decode_string,
-    '7': decode_string,
-    '8': decode_string,
-    '9': decode_string,
+    b'l': decode_list,
+    b'd': decode_dict,
+    b'i': decode_int,
+    b'0': decode_string,
+    b'1': decode_string,
+    b'2': decode_string,
+    b'3': decode_string,
+    b'4': decode_string,
+    b'5': decode_string,
+    b'6': decode_string,
+    b'7': decode_string,
+    b'8': decode_string,
+    b'9': decode_string,
 }
 
 
 def bdecode(x):
     try:
-        r, pos = decode_func[x[0]](x, 0)
+        r, pos = decode_func[x[0:1]](x, 0)
     except (IndexError, KeyError):
         raise ValueError
     if pos != len(x):
@@ -81,161 +81,161 @@ def bdecode(x):
 
 def test_bdecode():
     try:
-        bdecode('0:0:')
+        bdecode(b'0:0:')
         assert 0
     except ValueError:
         pass
     try:
-        bdecode('ie')
+        bdecode(b'ie')
         assert 0
     except ValueError:
         pass
     try:
-        bdecode('i341foo382e')
+        bdecode(b'i341foo382e')
         assert 0
     except ValueError:
         pass
-    assert bdecode('i4e') == 4
-    assert bdecode('i0e') == 0
-    assert bdecode('i123456789e') == 123456789
-    assert bdecode('i-10e') == -10
+    assert bdecode(b'i4e') == 4
+    assert bdecode(b'i0e') == 0
+    assert bdecode(b'i123456789e') == 123456789
+    assert bdecode(b'i-10e') == -10
     try:
-        bdecode('i-0e')
-        assert 0
-    except ValueError:
-        pass
-    try:
-        bdecode('i123')
+        bdecode(b'i-0e')
         assert 0
     except ValueError:
         pass
     try:
-        bdecode('')
+        bdecode(b'i123')
         assert 0
     except ValueError:
         pass
     try:
-        bdecode('i6easd')
+        bdecode(b'')
         assert 0
     except ValueError:
         pass
     try:
-        bdecode('35208734823ljdahflajhdf')
+        bdecode(b'i6easd')
         assert 0
     except ValueError:
         pass
     try:
-        bdecode('2:abfdjslhfld')
-        assert 0
-    except ValueError:
-        pass
-    assert bdecode('0:') == ''
-    assert bdecode('3:abc') == 'abc'
-    assert bdecode('10:1234567890') == '1234567890'
-    try:
-        bdecode('02:xy')
+        bdecode(b'35208734823ljdahflajhdf')
         assert 0
     except ValueError:
         pass
     try:
-        bdecode('l')
+        bdecode(b'2:abfdjslhfld')
         assert 0
     except ValueError:
         pass
-    assert bdecode('le') == []
+    assert bdecode(b'0:') == b''
+    assert bdecode(b'3:abc') == b'abc'
+    assert bdecode(b'10:1234567890') == b'1234567890'
     try:
-        bdecode('leanfdldjfh')
-        assert 0
-    except ValueError:
-        pass
-    assert bdecode('l0:0:0:e') == ['', '', '']
-    try:
-        bdecode('relwjhrlewjh')
-        assert 0
-    except ValueError:
-        pass
-    assert bdecode('li1ei2ei3ee') == [1, 2, 3]
-    assert bdecode('l3:asd2:xye') == ['asd', 'xy']
-    assert bdecode('ll5:Alice3:Bobeli2ei3eee') == [['Alice', 'Bob'], [2, 3]]
-    try:
-        bdecode('d')
+        bdecode(b'02:xy')
         assert 0
     except ValueError:
         pass
     try:
-        bdecode('defoobar')
+        bdecode(b'l')
         assert 0
     except ValueError:
         pass
-    assert bdecode('de') == {}
-    assert bdecode('d3:agei25e4:eyes4:bluee') == {'age': 25, 'eyes': 'blue'}
-    assert bdecode('d8:spam.mp3d6:author5:Alice6:lengthi100000eee') == {'spam.mp3': {'author': 'Alice', 'length': 100000}}
+    assert bdecode(b'le') == []
     try:
-        bdecode('d3:fooe')
+        bdecode(b'leanfdldjfh')
         assert 0
     except ValueError:
         pass
+    assert bdecode(b'l0:0:0:e') == [b'', b'', b'']
     try:
-        bdecode('di1e0:e')
+        bdecode(b'relwjhrlewjh')
         assert 0
     except ValueError:
         pass
+    assert bdecode(b'li1ei2ei3ee') == [1, 2, 3]
+    assert bdecode(b'l3:asd2:xye') == [b'asd', b'xy']
+    assert bdecode(b'll5:Alice3:Bobeli2ei3eee') == [[b'Alice', b'Bob'], [2, 3]]
     try:
-        bdecode('d1:b0:1:a0:e')
-        assert 0
-    except ValueError:
-        pass
-    try:
-        bdecode('d1:a0:1:a0:e')
+        bdecode(b'd')
         assert 0
     except ValueError:
         pass
     try:
-        bdecode('i03e')
+        bdecode(b'defoobar')
+        assert 0
+    except ValueError:
+        pass
+    assert bdecode(b'de') == {}
+    assert bdecode(b'd3:agei25e4:eyes4:bluee') == {b'age': 25, b'eyes': b'blue'}
+    assert bdecode(b'd8:spam.mp3d6:author5:Alice6:lengthi100000eee') == {b'spam.mp3': {b'author': b'Alice', b'length': 100000}}
+    try:
+        bdecode(b'd3:fooe')
         assert 0
     except ValueError:
         pass
     try:
-        bdecode('l01:ae')
+        bdecode(b'di1e0:e')
         assert 0
     except ValueError:
         pass
     try:
-        bdecode('9999:x')
+        bdecode(b'd1:b0:1:a0:e')
         assert 0
     except ValueError:
         pass
     try:
-        bdecode('l0:')
+        bdecode(b'd1:a0:1:a0:e')
         assert 0
     except ValueError:
         pass
     try:
-        bdecode('d0:0:')
+        bdecode(b'i03e')
         assert 0
     except ValueError:
         pass
     try:
-        bdecode('d0:')
+        bdecode(b'l01:ae')
         assert 0
     except ValueError:
         pass
     try:
-        bdecode('00:')
+        bdecode(b'9999:x')
         assert 0
     except ValueError:
         pass
     try:
-        bdecode('l-3:e')
+        bdecode(b'l0:')
         assert 0
     except ValueError:
         pass
     try:
-        bdecode('i-03e')
+        bdecode(b'd0:0:')
         assert 0
     except ValueError:
         pass
-    bdecode('d0:i3ee')
+    try:
+        bdecode(b'd0:')
+        assert 0
+    except ValueError:
+        pass
+    try:
+        bdecode(b'00:')
+        assert 0
+    except ValueError:
+        pass
+    try:
+        bdecode(b'l-3:e')
+        assert 0
+    except ValueError:
+        pass
+    try:
+        bdecode(b'i-03e')
+        assert 0
+    except ValueError:
+        pass
+    bdecode(b'd0:i3ee')
 
 
 class Bencached(object):
@@ -250,34 +250,34 @@ def encode_bencached(x, r):
 
 
 def encode_int(x, r):
-    r.extend(('i', str(x), 'e'))
+    r.extend((b'i', b'%d' % x, b'e'))
 
 
 def encode_string(x, r):
-    r.extend((str(len(x)), ':', x))
+    r.extend((b'%d' % len(x), b':', x))
 
 
 def encode_list(x, r):
-    r.append('l')
+    r.append(b'l')
     for i in x:
         encode_func[type(i)](i, r)
-    r.append('e')
+    r.append(b'e')
 
 
 def encode_dict(x, r):
-    r.append('d')
+    r.append(b'd')
     ilist = list(x.items())
     ilist.sort()
     for k, v in ilist:
-        r.extend((str(len(k)), ':', k))
+        r.extend((b'%d' % len(k), b':', k))
         encode_func[type(v)](v, r)
-    r.append('e')
+    r.append(b'e')
 
 
 encode_func = {
     type(Bencached(0)): encode_bencached,
     int: encode_int,
-    str: encode_string,
+    bytes: encode_string,
     list: encode_list,
     tuple: encode_list,
     dict: encode_dict,
@@ -293,26 +293,26 @@ except ImportError:
 def bencode(x):
     r = []
     encode_func[type(x)](x, r)
-    return ''.join(r)
+    return b''.join(r)
 
 
 def test_bencode():
-    assert bencode(4) == 'i4e'
-    assert bencode(0) == 'i0e'
-    assert bencode(-10) == 'i-10e'
-    assert bencode(12345678901234567890) == 'i12345678901234567890e'
-    assert bencode('') == '0:'
-    assert bencode('abc') == '3:abc'
-    assert bencode('1234567890') == '10:1234567890'
-    assert bencode([]) == 'le'
-    assert bencode([1, 2, 3]) == 'li1ei2ei3ee'
-    assert bencode([['Alice', 'Bob'], [2, 3]]) == 'll5:Alice3:Bobeli2ei3eee'
-    assert bencode({}) == 'de'
-    assert bencode({'age': 25, 'eyes': 'blue'}) == 'd3:agei25e4:eyes4:bluee'
-    assert bencode({'spam.mp3': {'author': 'Alice', 'length': 100000}}) == 'd8:spam.mp3d6:author5:Alice6:lengthi100000eee'
-    assert bencode(Bencached(bencode(3))) == 'i3e'
+    assert bencode(4) == b'i4e'
+    assert bencode(0) == b'i0e'
+    assert bencode(-10) == b'i-10e'
+    assert bencode(12345678901234567890) == b'i12345678901234567890e'
+    assert bencode(b'') == b'0:'
+    assert bencode(b'abc') == b'3:abc'
+    assert bencode(b'1234567890') == b'10:1234567890'
+    assert bencode([]) == b'le'
+    assert bencode([1, 2, 3]) == b'li1ei2ei3ee'
+    assert bencode([[b'Alice', b'Bob'], [2, 3]]) == b'll5:Alice3:Bobeli2ei3eee'
+    assert bencode({}) == b'de'
+    assert bencode({b'age': 25, b'eyes': b'blue'}) == b'd3:agei25e4:eyes4:bluee'
+    assert bencode({b'spam.mp3': {b'author': b'Alice', b'length': 100000}}) == b'd8:spam.mp3d6:author5:Alice6:lengthi100000eee'
+    assert bencode(Bencached(bencode(3))) == b'i3e'
     try:
-        bencode({1: 'foo'})
+        bencode({1: b'foo'})
     except TypeError:
         return
     assert 0

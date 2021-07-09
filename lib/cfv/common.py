@@ -1113,17 +1113,19 @@ class Torrent(ChksumType):
         except ValueError as e:
             raise EnvironmentError(str(e) or 'invalid or corrupt torrent')
 
-        encoding = metainfo.get('encoding')
+        encoding = metainfo.get(b'encoding')
+        if encoding is not None:
+            encoding = encoding.decode('ascii')
 
         comments = []
-        if 'creation date' in metainfo:
+        if b'creation date' in metainfo:
             try:
-                comments.append('created ' + time.ctime(metainfo['creation date']))
+                comments.append('created ' + time.ctime(metainfo[b'creation date']))
             except TypeError:
-                comments.append('created ' + repr(metainfo['creation date']))
-        if 'comment' in metainfo:
+                comments.append('created ' + repr(metainfo[b'creation date']))
+        if b'comment' in metainfo:
             try:
-                comments.append(cfdecode(metainfo['comment'], encoding))
+                comments.append(cfdecode(metainfo[b'comment'], encoding))
             except UnicodeError:
                 pass
         self.do_test_chksumfile_print_testingline(file, ', '.join(comments))
@@ -1166,16 +1168,16 @@ class Torrent(ChksumType):
                     l_filename = None
             return Data(totpos=ftotpos, size=filesize, filename=filename, l_filename=l_filename, done=done)
 
-        info = metainfo['info']
-        piecelen = info['piece length']
-        hashes = re.compile('.' * 20, re.DOTALL).findall(info['pieces'])
-        if 'length' in info:
-            total_len = info['length']
-            files = [init_file([info['name']], 0, total_len)]
+        info = metainfo[b'info']
+        piecelen = info[b'piece length']
+        hashes = re.compile(b'.' * 20, re.DOTALL).findall(info[b'pieces'])
+        if b'length' in info:
+            total_len = info[b'length']
+            files = [init_file([info[b'name']], 0, total_len)]
         else:
-            dirpart = [info['name']]
+            dirpart = [info[b'name']]
             if config.strippaths == 0:
-                dirname = info['name']
+                dirname = info[b'name']
                 try:
                     dirname = cffndecode(dirname, encoding)
                 except (LookupError, UnicodeError, FilenameError) as e:  # lookup error is raised when specified encoding isn't found.
@@ -1198,9 +1200,9 @@ class Torrent(ChksumType):
             #     pinfo('enabling .torrent path strip hack')
             files = []
             total_len = 0
-            for finfo in info['files']:
-                flength = finfo['length']
-                files.append(init_file(dirpart + finfo['path'], total_len, flength))
+            for finfo in info[b'files']:
+                flength = finfo[b'length']
+                files.append(init_file(dirpart + finfo[b'path'], total_len, flength))
                 total_len += flength
 
         if not config.docrcchecks:
@@ -1348,37 +1350,37 @@ class Torrent(ChksumType):
         def cfencode_utf8pref(s):
             return cfencode(s, 'UTF-8')
 
-        self.files.append({'length': fs, 'path': list(map(cfencode_utf8pref, osutil.path_split(filename)))})
+        self.files.append({b'length': fs, b'path': list(map(cfencode_utf8pref, osutil.path_split(filename)))})
         return ('pieces %i..%i' % (firstpiece, len(self.pieces)), fs), ''
 
     def make_chksumfile_finish(self, file):
         if self.piece_done > 0:
             self.pieces.append(self.sh.digest())
 
-        info = {'pieces': ''.join(self.pieces), 'piece length': self.piece_length}
+        info = {b'pieces': b''.join(self.pieces), b'piece length': self.piece_length}
         if config.private_torrent:
-            info['private'] = 1
-        if len(self.files) == 1 and len(self.files[0]['path']) == 1:
-            info['length'] = self.files[0]['length']
-            info['name'] = self.files[0]['path'][0]
+            info[b'private'] = 1
+        if len(self.files) == 1 and len(self.files[0][b'path']) == 1:
+            info[b'length'] = self.files[0][b'length']
+            info[b'name'] = self.files[0][b'path'][0]
         else:
-            commonroot = self.files[0]['path'][0]
+            commonroot = self.files[0][b'path'][0]
             for fileinfo in self.files[1:]:
-                if commonroot != fileinfo['path'][0]:
+                if commonroot != fileinfo[b'path'][0]:
                     commonroot = None
                     break
             if commonroot:
                 for fileinfo in self.files:
-                    del fileinfo['path'][0]
+                    del fileinfo[b'path'][0]
             else:
                 commonroot = cfencode(os.path.split(osutil.getcwdu())[1], 'UTF-8')
-            info['files'] = self.files
-            info['name'] = commonroot
+            info[b'files'] = self.files
+            info[b'name'] = commonroot
 
         btformats.check_info(info)
-        data = {'info': info, 'announce': cfencode(config.announceurl.strip(), 'UTF-8'), 'creation date': int(time.time())}
+        data = {b'info': info, b'announce': cfencode(config.announceurl.strip(), 'UTF-8'), b'creation date': int(time.time())}
         if config.encoding != 'raw':
-            data['encoding'] = str(config.getencoding('UTF-8'))
+            data[b'encoding'] = config.getencoding('UTF-8').encode('ascii')
         # if comment:
         #     data['comment'] = comment
         file.write(bencode.bencode(data))
