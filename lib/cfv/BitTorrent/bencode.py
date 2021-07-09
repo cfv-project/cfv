@@ -45,7 +45,7 @@ def decode_dict(x, f):
     lastkey = None
     while x[f:f + 1] != b'e':
         k, f = decode_string(x, f)
-        if lastkey >= k:
+        if lastkey is not None and lastkey >= k:
             raise ValueError
         lastkey = k
         r[k], f = decode_func[x[f:f + 1]](x, f)
