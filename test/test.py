@@ -1335,7 +1335,7 @@ def test_encoding2():
             for fn in files:
                 flag_ok_raw = flag_ok_files = 0
                 for srcfn, destfn in datafns:
-                    if os.path.join(u'\u3070\u304B', destfn).encode('utf-8') == fn:
+                    if os.path.join(u'\u3070\u304B', destfn) == fn:
                         raw_fnok += 1
                         flag_ok_raw = 1
                 try:
@@ -1351,10 +1351,10 @@ def test_encoding2():
                     raw_files_fnerrs += 1
 
         raw_fnerrs = len(datafns) - raw_fnok
-        # print len(files), files
-        # print 'raw', raw_fnok, raw_fnerrs
-        # print 'files', files_fnok, files_fnerrs
-        # print 'raw_files', raw_files_fnok, raw_files_fnerrs
+        # print(len(files), files)
+        # print('raw', raw_fnok, raw_fnerrs)
+        # print('files', files_fnok, files_fnerrs)
+        # print('raw_files', raw_files_fnok, raw_files_fnerrs)
 
         if files:
             test_generic(cfvcmd + ' -v -m -T -p ' + d + ' ' + ' '.join(files), rcurry(cfv_all_test, ok=files_fnok, notfound=files_fnerrs))
