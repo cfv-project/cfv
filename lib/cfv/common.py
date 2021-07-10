@@ -52,11 +52,12 @@ from cfv.BitTorrent import bencode, btformats
 
 def cfencode(s, preferred=None):
     if config.encoding == 'raw':
-        if isinstance(s, str):
-            return s.encode(osutil.fsencoding)
-        return s
+        encoding = osutil.fsencoding
+        encodeerrors = osutil.fsencodeerrors
     else:
-        return s.encode(config.getencoding(preferred))
+        encoding = config.getencoding(preferred)
+        encodeerrors = 'strict'
+    return s.encode(encoding, errors=encodeerrors)
 
 
 class FilenameError(ValueError):
@@ -64,9 +65,13 @@ class FilenameError(ValueError):
 
 
 def cfdecode(s, preferred=None):
-    if config.encoding != 'raw':
-        s = str(s, config.getencoding(preferred))
-    return s
+    if config.encoding == 'raw':
+        encoding = osutil.fsencoding
+        encodeerrors = osutil.fsencodeerrors
+    else:
+        encoding = config.getencoding(preferred)
+        encodeerrors = 'strict'
+    return s.decode(encoding, errors=encodeerrors)
 
 
 def cffndecode(s, preferred=None):
@@ -137,11 +142,6 @@ class FileNameFilter(object):
             fn = osutil.path_join(reldir[-1], fn)
             if config.ignorecase:
                 fn = fn.lower()
-            if config.encoding == 'raw' and isinstance(fn, str):
-                try:
-                    fn = fn.encode(osutil.fsencoding)
-                except UnicodeError:
-                    pass
             self.testfiles.add(fn)
 
     def should_test(self, fn):
@@ -1844,18 +1844,20 @@ def make(cftype, ifilename, testfiles):
         if file is IOError:
             continue
         if config.encoding != 'raw':
-            if isinstance(f, bytes):
+            # Try decode with errors=strict (surrogates disabled)
+            try:
+                f = os.fsencode(f).decode(osutil.fsencoding)
+            except UnicodeError as e:
                 stats.ferror += 1
-                view.ev_make_filenamedecodingerror(f)
+                view.ev_make_filenamedecodingerror(f, e)
                 continue
-        else:
-            if isinstance(f, str):
-                try:
-                    f = f.encode(osutil.fsencoding)
-                except UnicodeError as e:
-                    stats.ferror += 1
-                    view.ev_make_filenameencodingerror(f, e)
-                    continue
+            # Try encode in target encoding
+            try:
+                f.encode(config.getencoding())
+            except UnicodeError as e:
+                stats.ferror += 1
+                view.ev_make_filenameencodingerror(f, e)
+                continue
         if not cftype.filename_ok(f):
             stats.ferror += 1
             view.ev_make_filenameinvalid(f)
@@ -1930,12 +1932,6 @@ def show_unverified_dir(path, unvchild=0):
     unv = 0
     unv_sub_dirs = []
     for fn in pathfiles:
-        sfn = fn
-        if config.encoding == 'raw' and isinstance(fn, str):
-            try:
-                sfn = fn.encode(osutil.fsencoding)
-            except UnicodeError:
-                pass
         filename = osutil.path_join(path, fn)
         try:
             st = os.stat(filename)
@@ -1946,7 +1942,7 @@ def show_unverified_dir(path, unvchild=0):
                 if stats.unverified - dunvsave and not dv:  # if this directory (and its subdirs) had unverified files and no verified files
                     unv_sub_dirs.append(filename)
             elif pathcache:
-                if not (pathcache.get(fn, {}).get('_verified') or pathcache.get(sfn, {}).get('_verified')):
+                if not (pathcache.get(fn, {}).get('_verified') or pathcache.get(fn, {}).get('_verified')):
                     if S_ISREG(st.st_mode):
                         show_unverified_file(filename)
             else:
@@ -1971,18 +1967,12 @@ def show_unverified_dir_verbose(path):
     pathcache = cache.getpathcache(path)
     pathfiles = osutil.listdir(path or osutil.curdiru)
     for fn in pathfiles:
-        sfn = fn
-        if config.encoding == 'raw' and isinstance(fn, str):
-            try:
-                sfn = fn.encode(osutil.fsencoding)
-            except UnicodeError:
-                pass
         filename = osutil.path_join(path, fn)
         try:
             st = os.stat(filename)
             if S_ISDIR(st.st_mode) and visit_dir(filename, st, noisy=0):
                 show_unverified_dir_verbose(filename)
-            elif not (pathcache.get(fn, {}).get('_verified') or pathcache.get(sfn, {}).get('_verified')):
+            elif not (pathcache.get(fn, {}).get('_verified') or pathcache.get(fn, {}).get('_verified')):
                 if S_ISREG(st.st_mode):
                     show_unverified_file(filename)
         except OSError:

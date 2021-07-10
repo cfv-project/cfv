@@ -17,6 +17,12 @@ else:
     fsencoding = preferredencoding
 
 
+if hasattr(sys, 'getfilesystemencodeerrors'):
+    fsencodeerrors = sys.getfilesystemencodeerrors()
+else:
+    fsencodeerrors = 'surrogateescape'
+
+
 def getencoding(encoding, preferred=None):
     assert encoding != 'raw'
     if encoding == 'auto':

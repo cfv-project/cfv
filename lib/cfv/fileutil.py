@@ -26,29 +26,30 @@ class PeekFile(object):
 
     def _init_decodeobj(self, encoding):
         self._encoding = None
+        self._encodeerrors = 'markbadbytes'
         self._decode_start = 0
         self._decode_errs = 0
         if encoding == 'raw':
-            self.decodeobj = self.fileobj
-        else:
-            if encoding == 'auto':
-                magic = self.fileobj.read(4)
-                # utf32 are tested first, since utf-32le BOM starts the same as utf-16le's.
-                if magic in (b'\x00\x00\xfe\xff', b'\xff\xfe\x00\x00'):
-                    self._encoding = 'UTF-32'
-                elif magic[:2] in (b'\xfe\xff', b'\xff\xfe'):
-                    self._encoding = 'UTF-16'
-                elif magic.startswith(b'\xef\xbb\xbf'):
-                    self._encoding = 'UTF-8'
-                    self._decode_start = 3
-            if not self._encoding:
-                self._encoding = osutil.getencoding(encoding)
+            self._encoding = osutil.fsencoding
+            self._encodeerrors = osutil.fsencodeerrors
+        elif encoding == 'auto':
+            magic = self.fileobj.read(4)
+            # utf32 are tested first, since utf-32le BOM starts the same as utf-16le's.
+            if magic in (b'\x00\x00\xfe\xff', b'\xff\xfe\x00\x00'):
+                self._encoding = 'UTF-32'
+            elif magic[:2] in (b'\xfe\xff', b'\xff\xfe'):
+                self._encoding = 'UTF-16'
+            elif magic.startswith(b'\xef\xbb\xbf'):
+                self._encoding = 'UTF-8'
+                self._decode_start = 3
+        if self._encoding is None:
+            self._encoding = osutil.getencoding(encoding)
         self._reset_decodeobj()
 
     def _reset_decodeobj(self):
         self.fileobj.seek(self._decode_start)
-        if self._encoding:
-            self.decodeobj = codecs.getreader(self._encoding)(self.fileobj, errors='markbadbytes')
+        if self._encoding is not None:
+            self.decodeobj = codecs.getreader(self._encoding)(self.fileobj, errors=self._encodeerrors)
         self._prevlineend = None
 
     def _readline(self, *args):
@@ -58,7 +59,7 @@ class PeekFile(object):
             self._prevlineend = None
             return self._readline(*args)
         self._prevlineend = line[-1:]
-        if self._encoding:
+        if self._encodeerrors == 'markbadbytes':
             badbytecount = line.count(_badbytesmarker)
             if badbytecount:
                 raise UnicodeError('%r codec: %i decode errors' % (self._encoding, badbytecount))
@@ -155,28 +156,29 @@ def open_read(filename, config):
 
 
 def open_write(filename, config, force_raw=False):
-    if force_raw or config.encoding == 'raw':
-        encoding = None
-        mode = 'wb'  # write all files in binary mode. (Otherwise we can run into problems with some encodings, and also with binary files like torrent)
-    else:
-        encoding = config.getencoding()
-        mode = 'wt'
-
     if config.gzip >= 2 or (config.gzip >= 0 and filename[-3:].lower() == '.gz'):
         import gzip
         kwargs = {
             'filename': filename,
-            'mode': mode.replace('t', ''),
+            'mode': 'wb',
         }
         if filename == '-':
             kwargs['fileobj'] = sys.stdout
 
         binary_file = gzip.GzipFile(**kwargs)
-        if 't' in mode:
-            return TextIOWrapper(binary_file, encoding)
-        else:
-            return binary_file
     else:
         if filename == '-':
-            return NoCloseFile(sys.stdout)
-        return open(filename, mode, encoding=encoding)
+            binary_file = NoCloseFile(sys.stdout)
+        else:
+            binary_file = open(filename, 'wb')
+
+    if force_raw:
+        return binary_file
+    else:
+        if config.encoding == 'raw':
+            encoding = osutil.fsencoding
+            encodeerrors = osutil.fsencodeerrors
+        else:
+            encoding = config.getencoding()
+            encodeerrors = None
+        return TextIOWrapper(binary_file, encoding, errors=encodeerrors)
