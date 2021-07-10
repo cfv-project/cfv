@@ -24,13 +24,21 @@ else:
 
 
 def getencoding(encoding, preferred=None):
-    assert encoding != 'raw'
-    if encoding == 'auto':
+    if encoding == 'raw':
+        return fsencoding
+    elif encoding == 'auto':
         if preferred:
             return preferred
         return preferredencoding
     else:
         return encoding
+
+
+def getencodeerrors(encoding, default=None):
+    if encoding == 'raw':
+        return fsencodeerrors
+    else:
+        return default
 
 
 try:

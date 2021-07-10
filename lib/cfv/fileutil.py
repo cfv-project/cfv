@@ -26,13 +26,9 @@ class PeekFile(object):
 
     def _init_decodeobj(self, encoding):
         self._encoding = None
-        self._encodeerrors = 'markbadbytes'
         self._decode_start = 0
         self._decode_errs = 0
-        if encoding == 'raw':
-            self._encoding = osutil.fsencoding
-            self._encodeerrors = osutil.fsencodeerrors
-        elif encoding == 'auto':
+        if encoding == 'auto':
             magic = self.fileobj.read(4)
             # utf32 are tested first, since utf-32le BOM starts the same as utf-16le's.
             if magic in (b'\x00\x00\xfe\xff', b'\xff\xfe\x00\x00'):
@@ -44,6 +40,7 @@ class PeekFile(object):
                 self._decode_start = 3
         if self._encoding is None:
             self._encoding = osutil.getencoding(encoding)
+        self._encodeerrors = osutil.getencodeerrors(encoding, default='markbadbytes')
         self._reset_decodeobj()
 
     def _reset_decodeobj(self):
@@ -175,10 +172,4 @@ def open_write(filename, config, force_raw=False):
     if force_raw:
         return binary_file
     else:
-        if config.encoding == 'raw':
-            encoding = osutil.fsencoding
-            encodeerrors = osutil.fsencodeerrors
-        else:
-            encoding = config.getencoding()
-            encodeerrors = None
-        return TextIOWrapper(binary_file, encoding, errors=encodeerrors)
+        return TextIOWrapper(binary_file, config.getencoding(), errors=config.getencodeerrors())

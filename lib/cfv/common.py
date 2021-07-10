@@ -51,13 +51,7 @@ from cfv.BitTorrent import bencode, btformats
 
 
 def cfencode(s, preferred=None):
-    if config.encoding == 'raw':
-        encoding = osutil.fsencoding
-        encodeerrors = osutil.fsencodeerrors
-    else:
-        encoding = config.getencoding(preferred)
-        encodeerrors = 'strict'
-    return s.encode(encoding, errors=encodeerrors)
+    return s.encode(config.getencoding(preferred), errors=config.getencodeerrors(default='strict'))
 
 
 class FilenameError(ValueError):
@@ -65,13 +59,7 @@ class FilenameError(ValueError):
 
 
 def cfdecode(s, preferred=None):
-    if config.encoding == 'raw':
-        encoding = osutil.fsencoding
-        encodeerrors = osutil.fsencodeerrors
-    else:
-        encoding = config.getencoding(preferred)
-        encodeerrors = 'strict'
-    return s.decode(encoding, errors=encodeerrors)
+    return s.decode(config.getencoding(preferred), errors=config.getencodeerrors(default='strict'))
 
 
 def cffndecode(s, preferred=None):
@@ -281,6 +269,9 @@ class Config(object):
 
     def getencoding(self, preferred=None):
         return osutil.getencoding(self.encoding, preferred)
+
+    def getencodeerrors(self, default=None):
+        return osutil.getencodeerrors(self.encoding, default=default)
 
     def setencoding(self, v):
         if v in ('raw', 'auto'):
