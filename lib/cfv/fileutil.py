@@ -134,8 +134,12 @@ def PeekFileGzip(filename, encoding):
 
 class NoCloseFile(object):
     def __init__(self, fileobj):
-        self.write = fileobj.write
-        self.close = fileobj.flush
+        self.fileobj = fileobj
+
+    def __getattr__(self, attr):
+        if attr == 'close':
+            attr = 'flush'
+        return getattr(self.fileobj, attr)
 
 
 def open_read(filename, config):
