@@ -4,6 +4,8 @@ from builtins import str
 import binascii
 import unicodedata
 
+from cfv import osutil
+
 
 def safesort(l):
     sl = []
@@ -19,9 +21,7 @@ def safesort(l):
 
 
 def showfn(s):
-    if isinstance(s, bytes):
-        return s.decode('ascii', 'replace')
-    return s
+    return osutil.fsencode(s).decode(osutil.fsencoding, errors='replace')
 
 
 def chomp(line):

@@ -1836,7 +1836,7 @@ def make(cftype, ifilename, testfiles):
         if config.encoding != 'raw':
             # Try decode with errors=strict (surrogates disabled)
             try:
-                f = os.fsencode(f).decode(osutil.fsencoding)
+                f = osutil.fsencode(f).decode(osutil.fsencoding)
             except UnicodeError as e:
                 stats.ferror += 1
                 view.ev_make_filenamedecodingerror(f, e)

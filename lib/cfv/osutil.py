@@ -41,6 +41,9 @@ def getencodeerrors(encoding, default=None):
         return default
 
 
+fsencode = os.fsencode
+
+
 try:
     os.stat(os.curdir + u'\0foobarbaz')
     fs_nullsok = 0  # if os.stat succeeded, it means the filename was cut off at the null (or the user has funny files ;)
