@@ -126,7 +126,7 @@ def PeekFileNonseekable(fileobj, filename, encoding):
 def PeekFileGzip(filename, encoding):
     import gzip
     if filename == '-':
-        f = gzip.GzipFile(mode='rb', fileobj=sys.stdin)
+        f = gzip.GzipFile(mode='rb', fileobj=sys.stdin.buffer)
     else:
         f = gzip.open(filename, 'rb')
     return PeekFile(f, filename, encoding)
@@ -148,7 +148,7 @@ def open_read(filename, config):
         return PeekFileGzip(filename, config.encoding)
     else:
         if filename == '-':
-            return PeekFileNonseekable(sys.stdin, filename, config.encoding)
+            return PeekFileNonseekable(sys.stdin.buffer, filename, config.encoding)
         return PeekFile(open(filename, mode), filename, config.encoding)
 
 
@@ -160,12 +160,12 @@ def open_write(filename, config, force_raw=False):
             'mode': 'wb',
         }
         if filename == '-':
-            kwargs['fileobj'] = sys.stdout
+            kwargs['fileobj'] = sys.stdout.buffer
 
         binary_file = gzip.GzipFile(**kwargs)
     else:
         if filename == '-':
-            binary_file = NoCloseFile(sys.stdout)
+            binary_file = NoCloseFile(sys.stdout.buffer)
         else:
             binary_file = open(filename, 'wb')
 

@@ -29,7 +29,7 @@ _FALLBACK_MMAP = 2 ** 31 - 1
 
 def _getfilechecksum(filename, hasher, callback):
     if filename == '':
-        f = sys.stdin
+        f = sys.stdin.buffer
     else:
         f = open(filename, 'rb')
 
@@ -43,7 +43,7 @@ def _getfilechecksum(filename, hasher, callback):
             if callback:
                 callback(s)
 
-    if f == sys.stdin or _nommap or callback:
+    if f == sys.stdin.buffer or _nommap or callback:
         return finish(hasher(), 0)
     else:
         s = os.path.getsize(filename)
@@ -105,7 +105,7 @@ try:
 
     def getfilemd5(filename, callback):
         if filename == '':
-            f = sys.stdin
+            f = sys.stdin.buffer
         else:
             f = open(filename, 'rb')
         if isinstance(filename, str):
@@ -117,7 +117,7 @@ try:
 
     def getfilecrc(filename, callback):
         if filename == '':
-            f = sys.stdin
+            f = sys.stdin.buffer
         else:
             f = open(filename, 'rb')
         if isinstance(filename, str):

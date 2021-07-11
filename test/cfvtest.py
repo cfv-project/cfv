@@ -123,8 +123,9 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
         os.dup2(fileno, sys.stdin.fileno())
         os.close(fileno)
 
-    from io import StringIO
-    obuf = StringIO()
+    from io import BytesIO, TextIOWrapper
+    obuf = BytesIO()
+    obuftext = TextIOWrapper(obuf)
     saved = sys.stdin, sys.stdout, sys.stderr, sys.argv
     cwd = os.getcwd()
 
@@ -132,15 +133,15 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
         if file:
             if file == "/dev/null":
                 return nullfile
-            return open(file, 'wb')
+            return open(file, 'wt')
         else:
-            return obuf
+            return obuftext
 
     try:
         if stdin:
-            sys.stdin = open(stdin, 'rb')
+            sys.stdin = open(stdin, 'rt')
         else:
-            sys.stdin = StringIO()
+            sys.stdin = TextIOWrapper(BytesIO())
         sys.stdout = open_output(stdout)
         sys.stderr = open_output(stderr)
         sys.argv = [cfvfn] + expand_cmdline(cmd)
@@ -172,7 +173,7 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
         except KeyboardInterrupt:
             raise
         except Exception:
-            traceback.print_exc(file=obuf)
+            traceback.print_exc(file=obuftext)
             s = 1
     finally:
         sys.stdin, sys.stdout, sys.stderr, sys.argv = saved
@@ -180,7 +181,8 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
             os.dup2(saved_stdin_fileno, sys.stdin.fileno())
             os.close(saved_stdin_fileno)
         os.chdir(cwd)
-    o = obuf.getvalue()
+    obuftext.flush()
+    o = obuf.getvalue().decode()
     if o:
         if o[-2:] == '\r\n':
             o = o[:-2]
