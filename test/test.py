@@ -1388,11 +1388,11 @@ def largefile2GB_test():
     fn = os.path.join('bigfile2', 'bigfile')
     f = open(fn, 'wb')
     try:
-        f.write('hi')
+        f.write(b'hi')
         f.seek(2 ** 30)
-        f.write('foo')
+        f.write(b'foo')
         f.seek(2 ** 31)
-        f.write('bar')
+        f.write(b'bar')
         f.close()
         test_generic(cfvcmd + ' -v -T -p %s' % 'bigfile2', rcurry(cfv_all_test, ok=6))
     finally:
@@ -1404,13 +1404,13 @@ def largefile4GB_test():
     fn = os.path.join('bigfile', 'bigfile')
     f = open(fn, 'wb')
     try:
-        f.write('hi')
+        f.write(b'hi')
         f.seek(2 ** 30)
-        f.write('foo')
+        f.write(b'foo')
         f.seek(2 ** 31)
-        f.write('bar')
+        f.write(b'bar')
         f.seek(2 ** 32)
-        f.write('baz')
+        f.write(b'baz')
         f.close()
         test_generic(cfvcmd + ' -v -T -p %s' % 'bigfile', rcurry(cfv_all_test, ok=10))
     finally:
