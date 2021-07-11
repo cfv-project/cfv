@@ -121,7 +121,7 @@ def rchoplen(line, max):
 
 
 def hexlify(data):
-    return binascii.hexlify(data).decode()
+    return binascii.hexlify(data).decode('ascii')
 
 
 def unhexlify(data):
