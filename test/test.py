@@ -174,8 +174,12 @@ def pathjoin_and_mkdir(*components):
     return result
 
 
-def readfile(fn):
-    with open(fn, 'rb') as f:
+def readfile(fn, textmode=False):
+    if textmode:
+        mode = 't'
+    else:
+        mode = 'b'
+    with open(fn, 'r' + mode) as f:
         d = f.read()
     return d
 
@@ -316,10 +320,10 @@ def cfv_stdin_progress_test(t, file):
             if not x2:
                 raise cst_err(5)
             if t == 'crc':
-                c1 = readfile(cf1).replace(file, ' ' * len(file))
+                c1 = readfile(cf1, textmode=True).replace(file, ' ' * len(file))
             else:
-                c1 = readfile(cf1).replace(file, '')
-            c2 = readfile(cf2)
+                c1 = readfile(cf1, textmode=True).replace(file, '')
+            c2 = readfile(cf2, textmode=True)
             if c1 != c2:
                 raise cst_err(6)
         except cst_err as er:
