@@ -15,6 +15,9 @@ class INF(object):
     def __cmp__(self, other):
         return 1
 
+    def __lt__(self, other):
+        return False
+
     def __mul__(self, other):
         return self
 
