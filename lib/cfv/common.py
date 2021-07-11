@@ -418,7 +418,7 @@ class Config(object):
         if not os.path.isfile(filename):
             filename = os.path.expanduser(os.path.join('~', '_cfvrc'))
         if os.path.isfile(filename):
-            with open(filename, 'r') as f:
+            with open(filename, 'rt') as f:
                 line_number = 0
                 while 1:
                     line_number += 1
