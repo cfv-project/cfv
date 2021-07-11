@@ -741,6 +741,9 @@ def create_funkynames(t, d, chr, deep):
 
 
 def C_funkynames_test(t):
+    def fschr(i):
+        return os.fsdecode(b'%c' % i)
+
     def is_fmtencodable(s, enc=fmt_preferredencoding(t)):
         return is_encodable(s, enc)
 
@@ -773,7 +776,7 @@ def C_funkynames_test(t):
 
         d3 = tempfile.mkdtemp()
         try:
-            cnum = create_funkynames(t, d3, chr, deep=deep)
+            cnum = create_funkynames(t, d3, fschr, deep=deep)
             ulist = os.listdir(str(d3))
             numundecodable = 0  # listdir always returns filenames of type str if we use a path of type str (and this is what we do)
             okcnum = len(ulist) - numundecodable
@@ -832,7 +835,7 @@ def C_funkynames_test(t):
 
         d3 = tempfile.mkdtemp()
         try:
-            cnum = create_funkynames(t, d3, chr, deep=deep)
+            cnum = create_funkynames(t, d3, fschr, deep=deep)
             ulist = os.listdir(str(d3))
             okcnum = len(list(filter(is_fmtokfn, list(filter(is_fmtencodable, ulist)))))
             numerr = len(ulist) - okcnum
