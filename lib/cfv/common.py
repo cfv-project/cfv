@@ -25,7 +25,6 @@ from builtins import map
 from builtins import object
 from builtins import range
 from builtins import str
-from past.utils import old_div
 
 __version__ = '2.0.1.dev0'
 __homepage__ = 'https://github.com/cfv-project/cfv'
@@ -233,7 +232,7 @@ class Stats(object):
         if elapsed == 0.0:
             s += '%.1fK' % (self.bytesread / 1024.0)
         else:
-            s += '%.1fK/s' % (old_div(self.bytesread, elapsed / 1024.0))
+            s += '%.1fK/s' % (self.bytesread / elapsed / 1024.0)
 
         return s
 
@@ -1062,7 +1061,7 @@ class PAR2(ChksumType, MD5_MixIn):
                 if expected_file_ids is None:
                     expected_file_ids = []
                     slice_size, num_files = struct.unpack(main_pkt_fmt, d[:main_pkt_size])
-                    num_nonrecovery = old_div((len(d) - main_pkt_size), 16) - num_files
+                    num_nonrecovery = (len(d) - main_pkt_size) // 16 - num_files
                     for i in range(main_pkt_size, main_pkt_size + (num_files + num_nonrecovery) * 16, 16):
                         expected_file_ids.append(d[i:i + 16])
             else:

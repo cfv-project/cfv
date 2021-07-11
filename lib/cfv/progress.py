@@ -4,7 +4,6 @@ import os
 import time
 
 from builtins import object
-from past.utils import old_div
 
 from cfv import strutil
 
@@ -22,7 +21,13 @@ class INF(object):
     def __div__(self, other):
         return self
 
+    def __floordiv__(self, other):
+        return self
+
     def __rdiv__(self, other):
+        return 0
+
+    def __rfloordiv__(self, other):
         return 0
 
 
@@ -64,7 +69,7 @@ class ProgressMeter(object):
         elif size <= self.steps:
             self.stepsize = 1
         else:
-            self.stepsize = old_div(size, self.steps)
+            self.stepsize = size // self.steps
         self.nextstep = self.stepsize
         self.spinneridx = 0
         self.needrefresh = 1
@@ -72,14 +77,14 @@ class ProgressMeter(object):
 
     def update(self, cursize):
         if self.needrefresh:
-            donesteps = old_div(cursize, self.stepsize)
+            donesteps = cursize // self.stepsize
             stepsleft = self.steps - donesteps
             self.nextstep = self.stepsize * (donesteps + 1)
             self.fd.write('%s : %s' % (self.name, '#' * donesteps + '.' * stepsleft) + '\b' * stepsleft)
             self.fd.flush()
             self.needrefresh = 0
         elif self.nextstep < cursize:
-            updsteps = old_div((cursize - self.nextstep), self.stepsize) + 1
+            updsteps = (cursize - self.nextstep) // self.stepsize + 1
             self.nextstep += self.stepsize * updsteps
             self.fd.write('#' * updsteps)
             self.fd.flush()
