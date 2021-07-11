@@ -1459,13 +1459,13 @@ def specialfile_test(cfpath):
 
         def pusher(fpath):
             with open(fpath, 'wb') as f:
-                f.write('a' * 0x4000)
+                f.write(b'a' * 0x4000)
                 f.flush()
                 time.sleep(0.1)
-                f.write('b' * 0x4000)
+                f.write(b'b' * 0x4000)
                 f.flush()
                 time.sleep(0.1)
-                f.write('c' * 0x4000)
+                f.write(b'c' * 0x4000)
 
         t = threading.Thread(target=pusher, args=(fpath,))
         t.start()
