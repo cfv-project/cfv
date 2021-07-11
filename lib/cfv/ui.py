@@ -104,8 +104,8 @@ class View(object):
     def ev_make_filenameencodingerror(self, filename, e):
         self.perror('%s : unencodable filename: %s' % (self.perhaps_showpath(filename), e))
 
-    def ev_make_filenamedecodingerror(self, filename):
-        self.perror('%s : undecodable filename' % self.perhaps_showpath(filename))
+    def ev_make_filenamedecodingerror(self, filename, e):
+        self.perror('%s : undecodable filename: %s' % (self.perhaps_showpath(filename), e))
 
     def ev_make_filenameinvalid(self, filename):
         self.perror('%s : filename invalid for this cftype' % (self.perhaps_showpath(filename)))
