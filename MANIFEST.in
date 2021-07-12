@@ -1,5 +1,7 @@
 include COPYING
 include Changelog
+include cfv.1
+include README.md
 include lib/cfv/BitTorrent/LICENSE.txt
 prune Release.md
 prune debian
