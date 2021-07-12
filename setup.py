@@ -9,13 +9,13 @@ RE_VERSION = r"^__version__\s*=\s*'([^']*)'$"
 
 
 def _read(path):
-    with open(path, 'r', encoding='utf8') as f:
+    with open(path, 'rt', encoding='utf8') as f:
         return f.read()
 
 
 def _get_version(path):
     re_version = re.compile(RE_VERSION)
-    with open(path, 'r') as f:
+    with open(path, 'rt') as f:
         for line in f:
             m = re_version.match(line)
             if m is not None:
