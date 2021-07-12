@@ -54,7 +54,7 @@ jobs:
         run: pyroma -n 9 .
         
       - name: Check the completeness of MANIFEST.in
-        run: check-manifest .
+        run: check-manifest --ignore=Release.md .
       
       - name: Run flake
         continue-on-error: true
