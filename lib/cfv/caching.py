@@ -1,8 +1,8 @@
-import errno
-import os
-
 from builtins import object
 from builtins import range
+
+import errno
+import os
 
 from cfv import osutil
 

@@ -1,4 +1,5 @@
 from builtins import object
+
 import codecs
 import sys
 from io import BytesIO, TextIOWrapper

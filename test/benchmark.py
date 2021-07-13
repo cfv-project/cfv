@@ -20,6 +20,8 @@
 from __future__ import division
 from __future__ import print_function
 
+from builtins import chr
+
 import argparse
 import math
 import os
@@ -28,8 +30,6 @@ import sys
 import tempfile
 import timeit
 from functools import partial
-
-from builtins import chr
 
 import cfvtest
 

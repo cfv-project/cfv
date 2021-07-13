@@ -1,9 +1,9 @@
+from builtins import str
+
 import locale
 import os
 import re
 import sys
-
-from builtins import str
 
 
 if hasattr(locale, 'getpreferredencoding'):

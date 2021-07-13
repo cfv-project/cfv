@@ -1,9 +1,9 @@
 from __future__ import division
 
+from builtins import object
+
 import os
 import time
-
-from builtins import object
 
 from cfv import strutil
 

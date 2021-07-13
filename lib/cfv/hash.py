@@ -1,11 +1,11 @@
+from builtins import object
+
 from hashlib import sha1
 from hashlib import md5
 import os
 import struct
 import sys
 from zlib import crc32
-
-from builtins import object
 
 
 try:
