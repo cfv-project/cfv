@@ -252,7 +252,7 @@ def all_unittests_suite():
         try:
             suite = DocTestSuite(module)
         except ValueError as e:
-            if len(e.args) != 2 or e[1] != 'has no docstrings':
+            if len(e.args) != 2 or e.args[1] != 'has no docstrings':
                 print(e)
         else:
             alltests.addTest(suite)
