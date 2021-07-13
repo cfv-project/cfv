@@ -1447,8 +1447,6 @@ def manyfiles_test(t):
 
 
 def specialfile_test(cfpath):
-    if run_internal and cfvtest.ver_fchksum:  # current versions of fchksum don't release the GIL, so this deadlocks if doing internal testing and using fchksum.
-        return
     try:
         import threading
     except ImportError:
@@ -1874,11 +1872,6 @@ try:
     print('>>> testing...')
     failed += all_unittest_tests()
     failed += all_tests()
-    if cfvtest.ver_fchksum:
-        print('>>> testing without fchksum...')
-        cfvtest.setenv('CFV_NOFCHKSUM', 'x')
-        assert not cfvtest.ver_fchksum
-        failed += all_tests()
     if cfvtest.ver_mmap:
         print('>>> testing without mmap...')
         cfvtest.setenv('CFV_NOMMAP', 'x')

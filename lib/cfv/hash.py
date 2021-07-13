@@ -1,4 +1,5 @@
 import os
+import struct
 import sys
 
 from builtins import object
@@ -91,63 +92,27 @@ def getfilesha1(filename, callback):
 
 
 try:
-    if os.environ.get('CFV_NOFCHKSUM'):
-        raise ImportError
-    import fchksum
-
-    try:
-        if fchksum.version() < 5:
-            raise ImportError
-    except Exception:
-        # can't use perror yet since config hasn't been done..
-        sys.stderr.write('old fchksum version installed, using std python modules. please update.\n')
-        raise ImportError
-
-    def getfilemd5(filename, callback):
-        if filename == '':
-            f = sys.stdin.buffer
-        else:
-            f = open(filename, 'rb')
-        if isinstance(filename, str):
-            sname = filename.encode(osutil.fsencoding, 'replace')
-        else:
-            sname = filename
-        c, s = fchksum.fmd5(sname, callback, 0.03, fileno=f.fileno())
-        return c, s
-
-    def getfilecrc(filename, callback):
-        if filename == '':
-            f = sys.stdin.buffer
-        else:
-            f = open(filename, 'rb')
-        if isinstance(filename, str):
-            sname = filename.encode(osutil.fsencoding, 'replace')
-        else:
-            sname = filename
-        c, s = fchksum.fcrc32d(sname, callback, 0.03, fileno=f.fileno())
-        return c, s
+    from zlib import crc32 as _crc32
 except ImportError:
-    import struct
+    from binascii import crc32 as _crc32
 
-    try:
-        from zlib import crc32 as _crc32
-    except ImportError:
-        from binascii import crc32 as _crc32
 
-    class CRC32(object):
-        digest_size = 4
+class CRC32(object):
+    digest_size = 4
 
-        def __init__(self, s=b''):
-            self.value = _crc32(s)
+    def __init__(self, s=b''):
+        self.value = _crc32(s)
 
-        def update(self, s):
-            self.value = _crc32(s, self.value)
+    def update(self, s):
+        self.value = _crc32(s, self.value)
 
-        def digest(self):
-            return struct.pack('>I', self.value & 0xFFFFFFFF)
+    def digest(self):
+        return struct.pack('>I', self.value & 0xFFFFFFFF)
 
-    def getfilemd5(filename, callback):
-        return _getfilechecksum(filename, md5_new, callback)
 
-    def getfilecrc(filename, callback):
-        return _getfilechecksum(filename, CRC32, callback)
+def getfilemd5(filename, callback):
+    return _getfilechecksum(filename, md5_new, callback)
+
+
+def getfilecrc(filename, callback):
+    return _getfilechecksum(filename, CRC32, callback)

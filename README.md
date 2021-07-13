@@ -24,8 +24,6 @@ For Python 2 support, see the [master branch](https://github.com/cfv-project/cfv
 * [Python Imaging Library (PIL)](https://www.pythonware.com/products/pil/) or
   [Pillow](https://python-pillow.org/) – only needed if you want to create the
   dimensions column of .crc files.
-* [python-fchksum](http://code.fluffytapeworm.com/projects) – may speed up checksumming
-  speed a bit, especially if your python was not built with the mmap module.
 
 ## Install
 

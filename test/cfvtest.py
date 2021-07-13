@@ -39,7 +39,7 @@ from unittest import main
 cfvenv = ''
 
 cfvfn = None
-ver_cfv = ver_mmap = ver_fchksum = None
+ver_cfv = ver_mmap = None
 runcfv = None
 testpath = os.path.split(__file__)[0] or os.curdir
 datapath = os.path.join(testpath, 'testdata')
@@ -114,13 +114,6 @@ def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
 
 # TODO: make the runcfv_* functions (optionally?) take args as a list instead of a string
 def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
-    if stdin is not None and ver_fchksum:
-        fileno = os.open(stdin, os.O_RDONLY | getattr(os, 'O_BINARY', 0))
-        assert fileno >= 0
-        saved_stdin_fileno = os.dup(sys.stdin.fileno())
-        os.dup2(fileno, sys.stdin.fileno())
-        os.close(fileno)
-
     from io import BytesIO, TextIOWrapper
     obuf = BytesIO()
     obuftext = TextIOWrapper(obuf)
@@ -175,9 +168,6 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
             s = 1
     finally:
         sys.stdin, sys.stdout, sys.stderr, sys.argv = saved
-        if 'saved_stdin_fileno' in locals():
-            os.dup2(saved_stdin_fileno, sys.stdin.fileno())
-            os.close(saved_stdin_fileno)
         os.chdir(cwd)
     obuftext.flush()
     o = obuf.getvalue().decode()
@@ -190,13 +180,12 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
 
 
 def get_version_flags():
-    global ver_cfv, ver_fchksum, ver_mmap
+    global ver_cfv, ver_mmap
     s, o = runcfv("--version", need_reload=1)
     if o.find('cfv ') >= 0:
         ver_cfv = o[o.find('cfv ') + 4:].splitlines()[0]
     else:
         ver_cfv = None
-    ver_fchksum = o.find('fchksum') >= 0
     ver_mmap = o.find('mmap') >= 0
 
 

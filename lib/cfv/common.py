@@ -2250,10 +2250,6 @@ def main(argv=None):
                         print('+mmap')
                 except NameError:
                     pass
-                try:
-                    print('fchksum %s' % fchksum.version())
-                except NameError:
-                    pass
                 print('python %08x-%s' % (sys.hexversion, sys.platform))
                 sys.exit(0)
             prevopt = o
