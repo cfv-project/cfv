@@ -7,8 +7,6 @@ from zlib import crc32
 
 from builtins import object
 
-from cfv import osutil
-
 
 try:
     if os.environ.get('CFV_NOMMAP'):
