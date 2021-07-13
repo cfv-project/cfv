@@ -2,7 +2,7 @@
 
 import re
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 
 RE_VERSION = r"^__version__\s*=\s*'([^']*)'$"
