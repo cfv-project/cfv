@@ -41,14 +41,14 @@ jobs:
          pip install flake8
          pip list
          
-      - name: Compile code
+      - name: Check syntax by compiling code
         run: python -m compileall -f .
           
       - name: Run unit tests
         run: test/test.py --unit --exit-early
         
       - name: Run integration tests
-        run: test/test.py
+        run: test/test.py --exit-early
         
       - name: Check package quality
         run: pyroma -n 9 .
