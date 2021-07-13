@@ -1,5 +1,6 @@
-2019-xx-xx - v2.0.1.dev0:
-	* Nothing yet.
+2021-xx-xx - v3.0.0.dev0:
+	* Support for Python 3.
+	* Python 3.5 is now the minimum supported version.
 
 2019-03-27 - v2.0.0:
 	* Now fully unicode aware.  Work is done internally in unicode, only translating to encoded form on input/output.
