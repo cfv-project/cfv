@@ -1,6 +1,9 @@
+from hashlib import sha1
+from hashlib import md5
 import os
 import struct
 import sys
+from zlib import crc32
 
 from builtins import object
 
@@ -67,16 +70,6 @@ def _getfilechecksum(filename, hasher, callback):
         return m.digest(), s
 
 
-try:
-    from hashlib import sha1 as sha_new
-except ImportError:
-    from sha import new as sha_new
-try:
-    from hashlib import md5 as md5_new
-except ImportError:
-    from md5 import new as md5_new
-
-
 def getfilechecksumgeneric(algo):
     import hashlib
     if hasattr(hashlib, algo):
@@ -88,30 +81,24 @@ def getfilechecksumgeneric(algo):
 
 
 def getfilesha1(filename, callback):
-    return _getfilechecksum(filename, sha_new, callback)
-
-
-try:
-    from zlib import crc32 as _crc32
-except ImportError:
-    from binascii import crc32 as _crc32
+    return _getfilechecksum(filename, sha1, callback)
 
 
 class CRC32(object):
     digest_size = 4
 
     def __init__(self, s=b''):
-        self.value = _crc32(s)
+        self.value = crc32(s)
 
     def update(self, s):
-        self.value = _crc32(s, self.value)
+        self.value = crc32(s, self.value)
 
     def digest(self):
         return struct.pack('>I', self.value & 0xFFFFFFFF)
 
 
 def getfilemd5(filename, callback):
-    return _getfilechecksum(filename, md5_new, callback)
+    return _getfilechecksum(filename, md5, callback)
 
 
 def getfilecrc(filename, callback):
