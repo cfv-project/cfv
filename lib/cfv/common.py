@@ -581,7 +581,7 @@ class ChksumType(object):
         return 1
 
     def do_f_enverror(self, l_filename, ex, foundok=0):
-        if ex.args[0] == errno.ENOENT:
+        if isinstance(ex, EnvironmentError) and ex.errno == errno.ENOENT:
             if foundok:
                 return
             stats.notfound += 1
@@ -635,7 +635,7 @@ class ChksumType(object):
                     try:
                         os.link(found_fn, filename)
                     except (EnvironmentError, AttributeError) as e:
-                        if isinstance(e, EnvironmentError) and e[0] not in (errno.EXDEV, errno.EPERM):
+                        if isinstance(e, EnvironmentError) and e.errno not in (errno.EXDEV, errno.EPERM):
                             raise
                         verb = 'copied', 'copying'
                         prep = 'from'
