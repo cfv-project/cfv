@@ -76,7 +76,7 @@ def expand_cmdline(cmd):
 
 
 def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
-    import subprocess  # subprocess module only in python >= 2.4, but it works on windows, unlike commands
+    import subprocess
 
     def open_output(fn):
         if fn == '/dev/null' and not os.path.exists(fn):

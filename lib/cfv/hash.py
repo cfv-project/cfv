@@ -13,9 +13,6 @@ from cfv import osutil
 try:
     if os.environ.get('CFV_NOMMAP'):
         raise ImportError
-    # mmap is broken in python 2.4.2 and leaks file descriptors
-    if sys.version_info[:3] == (2, 4, 2):
-        raise ImportError
     import mmap
 
     def dommap(fileno, len):  # generic mmap.  ACCESS_* args work on both nix and win.

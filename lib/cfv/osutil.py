@@ -52,25 +52,17 @@ except EnvironmentError:
 except (TypeError, ValueError):
     fs_nullsok = 0
 
+
 def getcwdu():
     try:
         return os.getcwd()
     except UnicodeError:
         return os.getcwdb()
 
+
 curdiru = str(os.curdir)
 
-if sys.hexversion >= 0x020300f0:
-    listdir = os.listdir
-else:
-    def listdir(path):
-        r = []
-        for fn in os.listdir(path):
-            try:
-                r.append(str(fn, fsencoding))
-            except UnicodeError:
-                r.append(fn)
-        return r
+listdir = os.listdir
 
 
 def path_join(*paths):
