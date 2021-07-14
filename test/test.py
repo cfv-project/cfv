@@ -1431,7 +1431,7 @@ def manyfiles_test(t):
     if not run_long_tests and max_open > 4096:
         print('max open files is big (%i)' % max_open, end=' ')
         max_open = 4096
-        print('clipping to %i.  Use --full to try the real value' % max_open)
+        print('clipping to %i.  Use --long to try the real value' % max_open)
     num = max_open + 1
     d = tempfile.mkdtemp()
     try:
@@ -1559,7 +1559,7 @@ def show_help_and_exit(err=None):
     if err:
         print('error:', err)
         print()
-    print('usage: test.py [-i|-e] [--full] [cfv]')
+    print('usage: test.py [-i|-e] [--long] [--unit] [--exit-early] [cfv]')
     print(' -i      run tests internally')
     print(' -e      launch seperate cfv process for each test')
     print(' --long  include tests that may use large amounts of CPU or disk')
