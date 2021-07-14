@@ -42,7 +42,7 @@ class AbsTestCase(TestCase):
         if head and not os.path.exists(fullhead):
             os.makedirs(fullhead)
         fullpath = os.path.join(fullhead, tail)
-        with open(fullpath, 'w') as f:
+        with open(fullpath, 'wt') as f:
             f.write(contents)
         return fullpath
 
@@ -64,7 +64,7 @@ class RelTestCase(TestCase):
         head, tail = os.path.split(name)
         if head and not os.path.exists(head):
             os.makedirs(head)
-        with open(name, 'w') as f:
+        with open(name, 'wt') as f:
             f.write(contents)
         return name
 

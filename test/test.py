@@ -530,13 +530,15 @@ def cfv_listdata_bad_test(s, o):
 
 def cfv_version_test(s, o):
     x = re.search(r'cfv v([\d.]+(?:\.dev\d+)?) -', o)
-    x3 = re.search(r' v([\d.]+(?:\.dev\d+)?):', open(os.path.join(cfvtest.testpath, os.pardir, 'Changelog')).readline())
+    with open(os.path.join(cfvtest.testpath, os.pardir, 'Changelog'), 'rt') as f:
+        x3 = re.search(r' v([\d.]+(?:\.dev\d+)?):', f.readline())
     if x:
         log('cfv: ' + x.group(1))
     if x3:
         log('Changelog: ' + x3.group(1))
     # if os.path.isdir(os.path.join(os.pardir, 'debian')):
-    #     x4 = re.search(r'cfv \(([\d.]+)-\d+\) ', open(os.path.join(os.pardir, 'debian', 'changelog')).readline())
+    #     with open(os.path.join(os.pardir, 'debian', 'changelog'), 'rt') as f:
+    #         x4 = re.search(r'cfv \(([\d.]+)-\d+\) ', f.readline())
     #     if x4:
     #         log('deb changelog: ' + x4.group(1))
     #     if not x or not x4 or x4.group(1) != x.group(1):
@@ -688,11 +690,11 @@ def C_test(f, extra=None, verify=None, t=None, d='data?'):
     def C_test_encoding(enc):
         d = tempfile.mkdtemp()
         try:
-            with open(os.path.join(d, 'aoeu'), 'w') as f2:
+            with open(os.path.join(d, 'aoeu'), 'wt') as f2:
                 f2.write('a')
-            with open(os.path.join(d, 'kakexe'), 'w') as f2:
+            with open(os.path.join(d, 'kakexe'), 'wt') as f2:
                 f2.write('ba')
-            with open(os.path.join(d, 'foo bar.baz'), 'w') as f2:
+            with open(os.path.join(d, 'foo bar.baz'), 'wt') as f2:
                 f2.write('baz')
             test_generic(cfvcmd + ' --encoding=%s -v -C -p %s -t %s' % (enc, d, t), rcurry(cfv_all_test, ok=3))
             test_generic(cfvcmd + ' --encoding=%s -v -T -p %s' % (enc, d,), rcurry(cfv_all_test, ok=3))
@@ -1042,7 +1044,7 @@ def search_test(t, test_nocrc=0, extra=None):
         test_generic(cmd + ' -v -uu -s -T -p %s -f %s' % (d, cfn), rcurry(cfv_all_test, files=4, ok=1, misnamed=1, notfound=3, unv=0))
         test_generic(cmd + ' -v -uu -s -n -T -p %s -f %s' % (d, cfn), rcurry(cfv_all_test, files=4, ok=1, misnamed=1, notfound=3, unv=0))
 
-        open(os.path.join(d, 'data1'), 'w').close()
+        open(os.path.join(d, 'data1'), 'wb').close()
         if hassize:
             experrs = {'badsize': 1}
         else:
@@ -1144,8 +1146,8 @@ def symlink_test():
             test_generic(cfvcmd + ' -l -r -C -p ' + dir, rcurry(cfv_test, operator.eq, 0))
             test_generic(cfvcmd + ' -L -r -C -p ' + dir, rcurry(cfv_test, operator.eq, 0))
 
-        open(os.path.join(dir, dir1, 'foo'), 'w').close()
-        open(os.path.join(dir, dir2, 'bar'), 'w').close()
+        open(os.path.join(dir, dir1, 'foo'), 'wb').close()
+        open(os.path.join(dir, dir2, 'bar'), 'wb').close()
 
         def r_unv_test(s, o):
             if cfv_unvonly_test(s, o, 2):
@@ -1201,8 +1203,8 @@ def deep_unverified_test():
                    join(e2_e2s, 'DaTaE'), join(e2_e2u, 'unVe2'),)
         lower_datafns = list(map(lambda s: s.lower(), datafns))
         for fn in datafns:
-            open(join(dir, fn), 'w').close()
-        with open(join(dir, 'deep.md5'), 'w') as f:
+            open(join(dir, fn), 'wb').close()
+        with open(join(dir, 'deep.md5'), 'wt') as f:
             s = ('d41d8cd98f00b204e9800998ecf8427e *%s\n' * 6) % (
                 os.path.join('b', 'DaTa3'),
                 os.path.join('B', 'ushAllOw', 'D', 'daTa5'),
@@ -1437,7 +1439,7 @@ def manyfiles_test(t):
     try:
         for i in range(0, num):
             n = '%04i' % i
-            with open(os.path.join(d, n), 'w') as f:
+            with open(os.path.join(d, n), 'wt') as f:
                 f.write(n)
         cfn = os.path.join(d, 'manyfiles.' + t)
         test_generic(cfvcmd + ' -C -p %s -t %s -f %s' % (d, t, cfn), rcurry(cfv_all_test, ok=num))
@@ -1607,7 +1609,7 @@ if run_unittests_only:
 # set everything to default in case user has different in config file
 cfvcmd = '-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url --noprivate_torrent'
 
-logfile = open(os.path.join(tempfile.gettempdir(), 'cfv_%s_test-%s.log' % (cfvtest.ver_cfv, time.strftime('%Y%m%dT%H%M%S'))), 'w')
+logfile = open(os.path.join(tempfile.gettempdir(), 'cfv_%s_test-%s.log' % (cfvtest.ver_cfv, time.strftime('%Y%m%dT%H%M%S'))), 'wt')
 
 
 def all_tests():
@@ -1817,7 +1819,7 @@ def all_tests():
         test_generic(cfvcmd + ' -T --strippaths=%s -p foo2missing -f %s foo1 foo4' % (strip, os.path.join(os.pardir, 'foo.torrent')), rcurry(cfv_all_test, ok=0, badcrc=2))
     d = tempfile.mkdtemp()
     try:
-        open(os.path.join(d, 'foo'), 'w').close()
+        open(os.path.join(d, 'foo'), 'wb').close()
         cmd = cfvcmd.replace(' --announceurl=url', '')
         test_generic(cmd + ' -C -p %s -f foo.torrent' % d, rcurry(cfv_all_test, files=1, cferror=1))
         test_log_results('non-creation of empty torrent on missing announceurl?', '', repr(os.listdir(d)), len(os.listdir(d)) > 1, {})

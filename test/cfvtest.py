@@ -196,11 +196,13 @@ def setcfv(fn=None, internal=None):
 
     assert os.path.isfile(fn)
     cfvfn = os.path.abspath(fn)
-    _cfv_code = open(cfvfn, 'r').read().replace('\r\n', '\n').replace('\r', '\n')
+    with open(cfvfn, 'rt') as f:
+        _cfv_code = f.read()
     cfv_compiled = compile(_cfv_code, cfvfn, 'exec')
 
-    # This is so that the sys.path modification of the wrapper (if it has one) will be executed..
-    imp.load_source('cfvwrapper', cfvfn, open(cfvfn))
+    with open(cfvfn, 'rt') as f:
+        # This is so that the sys.path modification of the wrapper (if it has one) will be executed..
+        imp.load_source('cfvwrapper', cfvfn, f)
 
     get_version_flags()
 
