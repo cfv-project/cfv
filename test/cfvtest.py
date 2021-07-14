@@ -80,12 +80,12 @@ def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
 
     def open_output(fn):
         if fn == '/dev/null' and not os.path.exists(fn):
-            fn = 'nul'
-        return open(fn, 'wb')
+            fn = subprocess.DEVNULL
+        return open(fn, 'wt')
 
     p_stdin = p_stdout = p_stderr = subprocess.PIPE
     if stdin:
-        p_stdin = open(stdin, 'rb')
+        p_stdin = open(stdin, 'rt')
     if stdout:
         p_stdout = open_output(stdout)
     else:
@@ -93,7 +93,7 @@ def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
     if stderr:
         p_stderr = open_output(stderr)
     argv = [cfvfn] + expand_cmdline(cmd)
-    proc = subprocess.Popen(argv, stdin=p_stdin, stdout=p_stdout, stderr=p_stderr)
+    proc = subprocess.Popen(argv, stdin=p_stdin, stdout=p_stdout, stderr=p_stderr, universal_newlines=True)
     for f in p_stdin, p_stdout, p_stderr:
         if f not in (subprocess.PIPE, subprocess.STDOUT, None):
             f.close()
