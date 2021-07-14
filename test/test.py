@@ -383,7 +383,7 @@ def intize(s):
 def icomp(foo):
     exp, act = foo
     if exp == -1:
-        return 0
+        return False
     return exp != act
 
 
@@ -1346,18 +1346,18 @@ def test_encoding2():
             files = []
         else:
             for fn in files:
-                flag_ok_raw = flag_ok_files = 0
+                flag_ok_raw = flag_ok_files = False
                 for srcfn, destfn in datafns:
                     if os.path.join(u'\u3070\u304B', destfn) == fn:
                         raw_fnok += 1
-                        flag_ok_raw = 1
+                        flag_ok_raw = True
                 try:
                     open(os.path.join(d, fn), 'rb')
                 except (EnvironmentError, UnicodeError):
                     files_fnerrs += 1
                 else:
                     files_fnok += 1
-                    flag_ok_files = 1
+                    flag_ok_files = True
                 if flag_ok_files and flag_ok_raw:
                     raw_files_fnok += 1
                 else:

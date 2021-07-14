@@ -46,11 +46,11 @@ fsencode = os.fsencode
 
 try:
     os.stat(os.curdir + u'\0foobarbaz')
-    fs_nullsok = 0  # if os.stat succeeded, it means the filename was cut off at the null (or the user has funny files ;)
+    fs_nullsok = False  # if os.stat succeeded, it means the filename was cut off at the null (or the user has funny files ;)
 except EnvironmentError:
-    fs_nullsok = 1
+    fs_nullsok = True
 except (TypeError, ValueError):
-    fs_nullsok = 0
+    fs_nullsok = False
 
 
 def getcwdu():

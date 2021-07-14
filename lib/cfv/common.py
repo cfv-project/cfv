@@ -578,7 +578,7 @@ class ChksumType(object):
 
     @staticmethod
     def filename_ok(fn):
-        return 1
+        return True
 
     def do_f_enverror(self, l_filename, ex, foundok=0):
         if isinstance(ex, EnvironmentError) and ex.errno == errno.ENOENT:
