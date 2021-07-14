@@ -20,8 +20,6 @@
 from __future__ import division
 from __future__ import print_function
 
-from builtins import chr
-
 import argparse
 import math
 import os
@@ -71,7 +69,7 @@ def create_test_file(path, max_size, verbose=False):
     with open(path, 'wb') as f:
         # TODO: make this more efficient.
         while size:
-            f.write(chr(random.randint(0, 255)))
+            f.write(b'%c' % random.randint(0, 255))
             size -= 1
 
 
