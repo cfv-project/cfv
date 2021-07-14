@@ -105,9 +105,7 @@ def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
         o = obuf
     s = proc.returncode
     if o:
-        if o[-2:] == '\r\n':
-            o = o[:-2]
-        elif o[-1:] in '\r\n':
+        if o[-1:] == '\n':
             o = o[:-1]
     return s, o
 
@@ -172,9 +170,7 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
     obuftext.flush()
     o = obuf.getvalue().decode()
     if o:
-        if o[-2:] == '\r\n':
-            o = o[:-2]
-        elif o[-1:] in '\r\n':
+        if o[-1:] == '\n':
             o = o[:-1]
     return s, o
 
