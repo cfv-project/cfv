@@ -7,7 +7,7 @@ from io import BytesIO, TextIOWrapper
 from cfv import osutil
 
 
-_badbytesmarker = u'\ufffe'
+_badbytesmarker = '\ufffe'
 
 
 def _markbadbytes(exc):
@@ -71,7 +71,7 @@ class PeekFile(object):
             return self.decodeobj.read(*args)
         except UnicodeError:
             self._decode_errs = 1
-            return u''
+            return ''
 
     def peekline(self, *args):
         self._reset_decodeobj()
@@ -79,14 +79,14 @@ class PeekFile(object):
             return self._readline(*args)
         except UnicodeError:
             self._decode_errs = 1
-            return u''
+            return ''
 
     def peeknextline(self, *args):
         try:
             return self._readline(*args)
         except UnicodeError:
             self._decode_errs = 1
-            return u''
+            return ''
 
     def _done_peeking(self, raw):
         if raw:

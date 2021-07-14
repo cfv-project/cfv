@@ -45,7 +45,7 @@ fsencode = os.fsencode
 
 
 try:
-    os.stat(os.curdir + u'\0foobarbaz')
+    os.stat(os.curdir + '\0foobarbaz')
     fs_nullsok = False  # if os.stat succeeded, it means the filename was cut off at the null (or the user has funny files ;)
 except EnvironmentError:
     fs_nullsok = True

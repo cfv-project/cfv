@@ -162,10 +162,10 @@ class View(object):
         self.perror('%s : not verified' % self.perhaps_showpath(filename))
 
     def ev_unverified_dir(self, path):
-        self.ev_unverified_file(osutil.path_join(path, u'*'))
+        self.ev_unverified_file(osutil.path_join(path, '*'))
 
     def ev_unverified_dirrecursive(self, path):
-        self.ev_unverified_file(osutil.path_join(path, u'**'))
+        self.ev_unverified_file(osutil.path_join(path, '**'))
 
     def ev_unverified_file_plistf(self, filename):
         if self.config.list & LISTUNVERIFIED:

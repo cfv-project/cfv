@@ -24,89 +24,89 @@ from cfvtest import TestCase
 
 class uwidthTestCase(TestCase):
     def test_simple(self):
-        self.assertEqual(uwidth(u'hello world'), 11)
+        self.assertEqual(uwidth('hello world'), 11)
 
     def test_nonspacing(self):
-        self.assertEqual(uwidth(u'\0'), 0)
-        self.assertEqual(uwidth(u'\u200b'), 0)
-        self.assertEqual(uwidth(u'\u3099'), 0)
-        self.assertEqual(uwidth(u'\u0327'), 0)
+        self.assertEqual(uwidth('\0'), 0)
+        self.assertEqual(uwidth('\u200b'), 0)
+        self.assertEqual(uwidth('\u3099'), 0)
+        self.assertEqual(uwidth('\u0327'), 0)
 
     def test_wide(self):
-        self.assertEqual(uwidth(u'\u3053\u3093\u306b\u3061\u306f'), 10)
-        self.assertEqual(uwidth(u'\u304c\u304e\u3050\u3052\u3054'), 10)
-        self.assertEqual(uwidth(u'\u304b\u3099\u304d\u3099\u304f\u3099\u3051\u3099\u3053\u3099'), 10)
+        self.assertEqual(uwidth('\u3053\u3093\u306b\u3061\u306f'), 10)
+        self.assertEqual(uwidth('\u304c\u304e\u3050\u3052\u3054'), 10)
+        self.assertEqual(uwidth('\u304b\u3099\u304d\u3099\u304f\u3099\u3051\u3099\u3053\u3099'), 10)
 
     def test_halfwidth(self):
-        self.assertEqual(uwidth(u'\uFF79'), 1)
-        self.assertEqual(uwidth(u'\uFF73\uFF79\uFF79\uFF79'), 4)
+        self.assertEqual(uwidth('\uFF79'), 1)
+        self.assertEqual(uwidth('\uFF73\uFF79\uFF79\uFF79'), 4)
 
     def test_compose_noprecombined(self):
-        self.assertEqual(uwidth(u'\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308'), 6)
+        self.assertEqual(uwidth('\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308'), 6)
 
 
 class chopTestCase(TestCase):
     def test_lchoplen_simple(self):
-        self.assertEqual(lchoplen(u'hello world', 12), u'hello world')
-        self.assertEqual(lchoplen(u'hello world', 11), u'hello world')
-        self.assertEqual(lchoplen(u'hello world', 10), u'...o world')
-        self.assertEqual(lchoplen(u'hello world', 3), u'...')
+        self.assertEqual(lchoplen('hello world', 12), 'hello world')
+        self.assertEqual(lchoplen('hello world', 11), 'hello world')
+        self.assertEqual(lchoplen('hello world', 10), '...o world')
+        self.assertEqual(lchoplen('hello world', 3), '...')
 
     def test_rchoplen_simple(self):
-        self.assertEqual(rchoplen(u'hello world', 12), u'hello world')
-        self.assertEqual(rchoplen(u'hello world', 11), u'hello world')
-        self.assertEqual(rchoplen(u'hello world', 10), u'hello w...')
-        self.assertEqual(rchoplen(u'hello world', 3), u'...')
+        self.assertEqual(rchoplen('hello world', 12), 'hello world')
+        self.assertEqual(rchoplen('hello world', 11), 'hello world')
+        self.assertEqual(rchoplen('hello world', 10), 'hello w...')
+        self.assertEqual(rchoplen('hello world', 3), '...')
 
     def test_lchoplen_wide(self):
-        self.assertEqual(lchoplen(u'\u3053\u3093\u306b\u3061\u306f', 11), u'\u3053\u3093\u306b\u3061\u306f')
-        self.assertEqual(lchoplen(u'\u3053\u3093\u306b\u3061\u306f', 10), u'\u3053\u3093\u306b\u3061\u306f')
-        self.assertEqual(lchoplen(u'\u3053\u3093\u306b\u3061\u306f', 9), u'...\u306b\u3061\u306f')
-        self.assertEqual(lchoplen(u'\u3053\u3093\u306b\u3061\u306f', 8), u'...\u3061\u306f')
-        self.assertEqual(lchoplen(u'\u3053\u3093\u306b\u3061\u306f', 4), u'...')
-        self.assertEqual(lchoplen(u'\u3053\u3093\u306b\u3061\u306f', 3), u'...')
+        self.assertEqual(lchoplen('\u3053\u3093\u306b\u3061\u306f', 11), '\u3053\u3093\u306b\u3061\u306f')
+        self.assertEqual(lchoplen('\u3053\u3093\u306b\u3061\u306f', 10), '\u3053\u3093\u306b\u3061\u306f')
+        self.assertEqual(lchoplen('\u3053\u3093\u306b\u3061\u306f', 9), '...\u306b\u3061\u306f')
+        self.assertEqual(lchoplen('\u3053\u3093\u306b\u3061\u306f', 8), '...\u3061\u306f')
+        self.assertEqual(lchoplen('\u3053\u3093\u306b\u3061\u306f', 4), '...')
+        self.assertEqual(lchoplen('\u3053\u3093\u306b\u3061\u306f', 3), '...')
 
     def test_rchoplen_wide(self):
-        self.assertEqual(rchoplen(u'\u3053\u3093\u306b\u3061\u306f', 11), u'\u3053\u3093\u306b\u3061\u306f')
-        self.assertEqual(rchoplen(u'\u3053\u3093\u306b\u3061\u306f', 10), u'\u3053\u3093\u306b\u3061\u306f')
-        self.assertEqual(rchoplen(u'\u3053\u3093\u306b\u3061\u306f', 9), u'\u3053\u3093\u306b...')
-        self.assertEqual(rchoplen(u'\u3053\u3093\u306b\u3061\u306f', 8), u'\u3053\u3093...')
-        self.assertEqual(rchoplen(u'\u3053\u3093\u306b\u3061\u306f', 4), u'...')
-        self.assertEqual(rchoplen(u'\u3053\u3093\u306b\u3061\u306f', 3), u'...')
+        self.assertEqual(rchoplen('\u3053\u3093\u306b\u3061\u306f', 11), '\u3053\u3093\u306b\u3061\u306f')
+        self.assertEqual(rchoplen('\u3053\u3093\u306b\u3061\u306f', 10), '\u3053\u3093\u306b\u3061\u306f')
+        self.assertEqual(rchoplen('\u3053\u3093\u306b\u3061\u306f', 9), '\u3053\u3093\u306b...')
+        self.assertEqual(rchoplen('\u3053\u3093\u306b\u3061\u306f', 8), '\u3053\u3093...')
+        self.assertEqual(rchoplen('\u3053\u3093\u306b\u3061\u306f', 4), '...')
+        self.assertEqual(rchoplen('\u3053\u3093\u306b\u3061\u306f', 3), '...')
 
     def test_lchoplen_compose(self):
         self.assertEqual(lchoplen(
-            u'\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 7),
-            u'\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308')
+            '\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 7),
+            '\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308')
         self.assertEqual(lchoplen(
-            u'\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 6),
-            u'\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308')
+            '\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 6),
+            '\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308')
         self.assertEqual(lchoplen(
-            u'\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 5),
-            u'...\u01b9\u0327\u0308\u01ba\u0327\u0308')
+            '\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 5),
+            '...\u01b9\u0327\u0308\u01ba\u0327\u0308')
         self.assertEqual(lchoplen(
-            u'\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 4),
-            u'...\u01ba\u0327\u0308')
+            '\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 4),
+            '...\u01ba\u0327\u0308')
         self.assertEqual(lchoplen(
-            u'\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 3),
-            u'...')
+            '\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 3),
+            '...')
 
     def test_rchoplen_compose(self):
         self.assertEqual(rchoplen(
-            u'\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 7),
-            u'\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308')
+            '\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 7),
+            '\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308')
         self.assertEqual(rchoplen(
-            u'\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 6),
-            u'\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308')
+            '\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 6),
+            '\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308')
         self.assertEqual(rchoplen(
-            u'\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 5),
-            u'\u01b5\u0327\u0308\u01b6\u0327\u0308...')
+            '\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 5),
+            '\u01b5\u0327\u0308\u01b6\u0327\u0308...')
         self.assertEqual(rchoplen(
-            u'\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 4),
-            u'\u01b5\u0327\u0308...')
+            '\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 4),
+            '\u01b5\u0327\u0308...')
         self.assertEqual(rchoplen(
-            u'\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 3),
-            u'...')
+            '\u01b5\u0327\u0308\u01b6\u0327\u0308\u01b7\u0327\u0308\u01b8\u0327\u0308\u01b9\u0327\u0308\u01ba\u0327\u0308', 3),
+            '...')
 
 
 if __name__ == '__main__':

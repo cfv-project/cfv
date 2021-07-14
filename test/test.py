@@ -1255,15 +1255,15 @@ def test_encoding_detection():
     try:
         datafns = ['data1', 'data3', 'data4']
         destfns = [
-            u'\u0061',  # LATIN SMALL LETTER A
-            u'\u00c4',  # LATIN CAPITAL LETTER A WITH DIAERESIS
-            u'\u03a0',  # GREEK CAPITAL LETTER PI
-            u'\u0470',  # CYRILLIC CAPITAL LETTER PSI
-            u'\u2605',  # BLACK STAR
-            u'\u3052',  # HIRAGANA LETTER GE
-            u'\u6708',  # CJK UNIFIED IDEOGRAPH-6708
+            '\u0061',  # LATIN SMALL LETTER A
+            '\u00c4',  # LATIN CAPITAL LETTER A WITH DIAERESIS
+            '\u03a0',  # GREEK CAPITAL LETTER PI
+            '\u0470',  # CYRILLIC CAPITAL LETTER PSI
+            '\u2605',  # BLACK STAR
+            '\u3052',  # HIRAGANA LETTER GE
+            '\u6708',  # CJK UNIFIED IDEOGRAPH-6708
         ]
-        BOM = u'\uFEFF'
+        BOM = '\uFEFF'
         utfencodings = ['utf-8', 'utf-16le', 'utf-16be', 'utf-32le', 'utf-32be', ]
         fnerrs = fnok = 0
         for i, destfn in enumerate(destfns):
@@ -1300,14 +1300,14 @@ def test_encoding2():
     d = tempfile.mkdtemp()
     d2 = tempfile.mkdtemp()
     try:
-        cfn = os.path.join(d, u'\u3070\u304B.torrent')
+        cfn = os.path.join(d, '\u3070\u304B.torrent')
         shutil.copyfile('testencoding2.torrent.foo', cfn)
 
         datafns = [
-            ('data1', u'\u2605'),
-            ('data2', u'\u2606'),
-            ('data3', u'\u262E'),
-            ('data4', u'\u2600'),
+            ('data1', '\u2605'),
+            ('data2', '\u2606'),
+            ('data3', '\u262E'),
+            ('data4', '\u2600'),
         ]
         fnerrs = fnok = 0
         for srcfn, destfn in datafns:
@@ -1320,7 +1320,7 @@ def test_encoding2():
 
         test_generic(cfvcmd + ' -q -T -p ' + d, rcurry(cfv_status_test, notfound=fnok, ferror=fnerrs))
         test_generic(cfvcmd + ' -v -T -p ' + d, rcurry(cfv_all_test, ok=0, notfound=fnok, ferror=fnerrs))
-        bakad = os.path.join(d, u'\u3070\u304B')
+        bakad = os.path.join(d, '\u3070\u304B')
         os.mkdir(bakad)
         for srcfn, destfn in datafns:
             try:
@@ -1348,7 +1348,7 @@ def test_encoding2():
             for fn in files:
                 flag_ok_raw = flag_ok_files = False
                 for srcfn, destfn in datafns:
-                    if os.path.join(u'\u3070\u304B', destfn) == fn:
+                    if os.path.join('\u3070\u304B', destfn) == fn:
                         raw_fnok += 1
                         flag_ok_raw = True
                 try:
@@ -1756,7 +1756,7 @@ def all_tests():
         else:
             if t == 'par':
                 try:
-                    open(str(u'data1'.encode('utf-16le'), 'utf-16be'), 'rb')
+                    open(str('data1'.encode('utf-16le'), 'utf-16be'), 'rb')
                 except UnicodeError:
                     nf = 0
                     err = 4

@@ -74,7 +74,7 @@ class Data(object):
 
 
 curdir = osutil.getcwdu()
-reldir = [u'']
+reldir = ['']
 prevdir = []
 
 
@@ -277,7 +277,7 @@ class Config(object):
             pass
         else:
             try:
-                u'a'.encode(v)
+                'a'.encode(v)
             except (UnicodeError, LookupError) as e:
                 raise CFVValueError('invalid encoding option: %s' % e)
         self.encoding = v
@@ -1812,7 +1812,7 @@ def make(cftype, ifilename, testfiles):
         f = testfiles[i]
         i += 1
         if not tfauto and f == '-':
-            f = u''
+            f = ''
         elif not os.path.isfile(f):
             if config.recursive and visit_dir(f):
                 if config.recursive == 1:
@@ -1987,9 +1987,9 @@ def show_unverified_files(filelist):
     else:
         _visited_dirs.clear()
         if config.showunverified == 2:
-            show_unverified_dir_verbose(u'')
+            show_unverified_dir_verbose('')
         else:
-            show_unverified_dir(u'')
+            show_unverified_dir('')
 
 
 # md5sum/sha1sum files have no standard extension, so just search for
