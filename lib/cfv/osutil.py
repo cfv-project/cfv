@@ -88,19 +88,19 @@ def path_split(filename):
 def strippath(filename, num='a', _splitdrivere=re.compile(r'[a-z]:[/\\]', re.I)):
     """Strip off path components from the left side of the filename.
 
-    >>> strippath(os.path.join('c:','foo','bar','baz'))
+    >>> strippath(os.path.join('c:' + os.sep,'foo','bar','baz'))
     'baz'
-    >>> path_split(strippath(os.path.join('c:','foo','bar','baz'), 'n'))
+    >>> path_split(strippath(os.path.join('c:' + os.sep,'foo','bar','baz'), 'n'))
     ['c:', 'foo', 'bar', 'baz']
-    >>> path_split(strippath(os.path.join('c:','foo','bar','baz'), 0))
+    >>> path_split(strippath(os.path.join('c:' + os.sep,'foo','bar','baz'), 0))
     ['foo', 'bar', 'baz']
     >>> path_split(strippath(os.path.join(os.sep,'foo','bar','baz'), 0))
     ['foo', 'bar', 'baz']
-    >>> path_split(strippath(os.path.join('c:','foo','bar','baz'), 1))
+    >>> path_split(strippath(os.path.join('c:' + os.sep,'foo','bar','baz'), 1))
     ['bar', 'baz']
-    >>> strippath(os.path.join('c:','foo','bar','baz'), 2)
+    >>> strippath(os.path.join('c:' + os.sep,'foo','bar','baz'), 2)
     'baz'
-    >>> strippath(os.path.join('c:','foo','bar','baz'), 3)
+    >>> strippath(os.path.join('c:' + os.sep,'foo','bar','baz'), 3)
     'baz'
     """
     if num == 'a':  # split all the path off
