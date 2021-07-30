@@ -2094,15 +2094,6 @@ view = ui.View(config)
 filenamefilter = FileNameFilter()
 
 
-def decode_arg(a):
-    if isinstance(a, str):
-        return a
-    try:
-        return str(a, osutil.preferredencoding)
-    except UnicodeError:
-        return a
-
-
 def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
@@ -2119,7 +2110,6 @@ def main(argv=None):
     except getopt.error as a:
         view.perror('cfv: %s' % a)
         printusage(1)
-    args = list(map(decode_arg, args))
 
     try:
         if config.cmdlineglob == 'y' or (config.cmdlineglob == 'a' and os.name in ('os2', 'nt', 'dos')):
@@ -2140,7 +2130,6 @@ def main(argv=None):
 
         prevopt = ''
         for o, a in optlist:
-            a = decode_arg(a)
             if o == '-T':
                 mode = 0
             elif o == '-C':
