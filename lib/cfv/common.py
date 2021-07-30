@@ -1013,8 +1013,8 @@ class PAR2(ChksumType, MD5_MixIn):
                 if not d:
                     return None
                 magic, pkt_len, pkt_md5, set_id, pkt_type = struct.unpack(pkt_header_fmt, d)
-                if pkt_type == 'PAR 2.0\0Creator\0':
-                    return strutil.chompnulls(file.read(pkt_len - pkt_header_size))
+                if pkt_type == b'PAR 2.0\0Creator\0':
+                    return cfdecode(strutil.chompnulls(file.read(pkt_len - pkt_header_size)))
                 else:
                     file.seek(pkt_len - pkt_header_size, 1)
 

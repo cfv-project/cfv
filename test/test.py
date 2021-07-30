@@ -896,7 +896,7 @@ def ren_test(f, extra=None, verify=None, t=None):
                 except IOError as e:
                     r = 1
                     o = str(e)
-                test_log_results('cmp %s for %s' % (fn, t), r, o, r, None)
+                test_log_results('cmp %s for %s' % (fn, t.decode('ascii')), r, o, r, None)
 
         flsw(b'hello')
         test_generic('%s -C -t %s' % (cmd, f), cfv_test)
