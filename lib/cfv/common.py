@@ -917,7 +917,7 @@ cftypes.register_cftype(BSDMD5)
 def ver2str(v):
     vers = []
     while v or len(vers) < 3:
-        vers.insert(0, str(v & 0xFF))
+        vers.insert(0, '%d' % (v & 0xFF))
         v >>= 8
     return '.'.join(vers)
 
@@ -1603,7 +1603,7 @@ def getimagedimensions(filename):
 
 
 def commaize(n):
-    n = str(n)
+    n = '%d' % n
     s = n[-3:]
     n = n[:-3]
     while n:
