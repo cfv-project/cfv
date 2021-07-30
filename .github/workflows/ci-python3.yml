@@ -48,10 +48,16 @@ jobs:
         run: python -bb test/test.py --unit --exit-early
         
       - name: Run integration tests (internal)
-        run: python -bb test/test.py -i --exit-early
+        run: |
+          ulimit -n
+          ulimit -n 4096
+          python -bb test/test.py -i --exit-early
         
       - name: Run integration tests (external process)
-        run: test/test.py -e --exit-early
+        run: |
+          ulimit -n
+          ulimit -n 4096
+          test/test.py -e --exit-early
         
       - name: Check package quality
         run: pyroma -n 9 .
