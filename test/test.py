@@ -765,7 +765,7 @@ def C_funkynames_test(t):
         try:
             num = create_funkynames(t, d, chr, deep=deep)
             # numencodable = len(filter(lambda fn: os.path.exists(os.path.join(d,fn)), os.listdir(d)))
-            numencodable = len(list(filter(is_fmtencodable, os.listdir(str(d)))))
+            numencodable = len(list(filter(is_fmtencodable, os.listdir(d))))
             # cfv -C, unencodable filenames on disk, ferror on unencodable filename and ignore it
             numunencodable = num - numencodable
             cfn = os.path.join(d, 'funky%s.%s' % (deep and 'deep' or '', t))
@@ -780,12 +780,12 @@ def C_funkynames_test(t):
             test_generic(cfvcmd + ' -v --encoding=utf-8 -T -p %s -f %s' % (d, cfn), rcurry(cfv_all_test, files=num, ok=num))
             test_generic(cfvcmd + ' -v --encoding=utf-8 -u -T -p %s -f %s' % (d, cfn), rcurry(cfv_all_test, files=num, ok=num, unv=0))
         finally:
-            shutil.rmtree(str(d))
+            shutil.rmtree(d)
 
         d3 = tempfile.mkdtemp()
         try:
             cnum = create_funkynames(t, d3, fschr, deep=deep)
-            ulist = os.listdir(str(d3))
+            ulist = os.listdir(d3)
             numundecodable = 0  # listdir always returns filenames of type str if we use a path of type str (and this is what we do)
             okcnum = len(ulist) - numundecodable
             dcfn = os.path.join(d3, 'funky3%s.%s' % (deep and 'deep' or '', t))
@@ -804,7 +804,7 @@ def C_funkynames_test(t):
             if not deep:
                 renamelist = []
                 numrenamed = 0
-                for fn in os.listdir(str(d3)):
+                for fn in os.listdir(d3):
                     if os.path.join(d3, fn) == dcfn:
                         continue
                     newfn = 'ren%3s' % numrenamed
@@ -821,7 +821,7 @@ def C_funkynames_test(t):
 
                 cnum += 1
                 # okcnum += 1
-                ulist = os.listdir(str(d3))
+                ulist = os.listdir(d3)
                 okcnum = len(list(filter(is_fmtencodable, ulist)))
                 numerr = len(ulist) - okcnum
                 dcfn = os.path.join(d3, 'funky3%s2.%s' % (deep and 'deep' or '', t))
@@ -844,7 +844,7 @@ def C_funkynames_test(t):
         d3 = tempfile.mkdtemp()
         try:
             cnum = create_funkynames(t, d3, fschr, deep=deep)
-            ulist = os.listdir(str(d3))
+            ulist = os.listdir(d3)
             okcnum = len(list(filter(is_fmtokfn, list(filter(is_fmtencodable, ulist)))))
             numerr = len(ulist) - okcnum
             dcfn = os.path.join(d3, 'funky3%s3.%s' % (deep and 'deep' or '', t))
@@ -1292,7 +1292,7 @@ def test_encoding_detection():
                         test_generic(cfvcmd + ' -T -p %s -f %s' % (datad, bommedcfn), rcurry(cfv_all_test, ok=fnok))
     finally:
         shutil.rmtree(d)
-        shutil.rmtree(str(datad))
+        shutil.rmtree(datad)
 
 
 def test_encoding2():
@@ -1387,8 +1387,8 @@ def test_encoding2():
     except Exception:
         test_log_results('test_encoding2', 'foobar', ''.join(traceback.format_exception(*sys.exc_info())), 'foobar', {})  # yuck.  I really should switch this crap all to unittest ...
     # finally:
-    shutil.rmtree(str(d2))
-    shutil.rmtree(str(d))
+    shutil.rmtree(d2)
+    shutil.rmtree(d)
 
 
 def largefile2GB_test():
