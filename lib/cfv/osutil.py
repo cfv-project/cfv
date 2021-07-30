@@ -53,15 +53,8 @@ except (TypeError, ValueError):
     fs_nullsok = False
 
 
-def getcwdu():
-    try:
-        return os.getcwd()
-    except UnicodeError:
-        return os.getcwdb()
-
-
-curdiru = str(os.curdir)
-
+getcwdu = os.getcwd
+curdiru = os.curdir
 listdir = os.listdir
 
 

@@ -765,7 +765,7 @@ def C_funkynames_test(t):
         try:
             num = create_funkynames(t, d, chr, deep=deep)
             # numencodable = len(filter(lambda fn: os.path.exists(os.path.join(d,fn)), os.listdir(d)))
-            numencodable = len(list(filter(is_fmtencodable, os.listdir(str(d)))))
+            numencodable = len(list(filter(is_fmtencodable, os.listdir(d))))
             # cfv -C, unencodable filenames on disk, ferror on unencodable filename and ignore it
             numunencodable = num - numencodable
             cfn = os.path.join(d, 'funky%s.%s' % (deep and 'deep' or '', t))
@@ -780,12 +780,12 @@ def C_funkynames_test(t):
             test_generic(cfvcmd + ' -v --encoding=utf-8 -T -p %s -f %s' % (d, cfn), rcurry(cfv_all_test, files=num, ok=num))
             test_generic(cfvcmd + ' -v --encoding=utf-8 -u -T -p %s -f %s' % (d, cfn), rcurry(cfv_all_test, files=num, ok=num, unv=0))
         finally:
-            shutil.rmtree(str(d))
+            shutil.rmtree(d)
 
         d3 = tempfile.mkdtemp()
         try:
             cnum = create_funkynames(t, d3, fschr, deep=deep)
-            ulist = os.listdir(str(d3))
+            ulist = os.listdir(d3)
             numundecodable = 0  # listdir always returns filenames of type str if we use a path of type str (and this is what we do)
             okcnum = len(ulist) - numundecodable
             dcfn = os.path.join(d3, 'funky3%s.%s' % (deep and 'deep' or '', t))
@@ -804,7 +804,7 @@ def C_funkynames_test(t):
             if not deep:
                 renamelist = []
                 numrenamed = 0
-                for fn in os.listdir(str(d3)):
+                for fn in os.listdir(d3):
                     if os.path.join(d3, fn) == dcfn:
                         continue
                     newfn = 'ren%3s' % numrenamed
@@ -821,7 +821,7 @@ def C_funkynames_test(t):
 
                 cnum += 1
                 # okcnum += 1
-                ulist = os.listdir(str(d3))
+                ulist = os.listdir(d3)
                 okcnum = len(list(filter(is_fmtencodable, ulist)))
                 numerr = len(ulist) - okcnum
                 dcfn = os.path.join(d3, 'funky3%s2.%s' % (deep and 'deep' or '', t))
@@ -844,7 +844,7 @@ def C_funkynames_test(t):
         d3 = tempfile.mkdtemp()
         try:
             cnum = create_funkynames(t, d3, fschr, deep=deep)
-            ulist = os.listdir(str(d3))
+            ulist = os.listdir(d3)
             okcnum = len(list(filter(is_fmtokfn, list(filter(is_fmtencodable, ulist)))))
             numerr = len(ulist) - okcnum
             dcfn = os.path.join(d3, 'funky3%s3.%s' % (deep and 'deep' or '', t))
@@ -896,7 +896,7 @@ def ren_test(f, extra=None, verify=None, t=None):
                 except IOError as e:
                     r = 1
                     o = str(e)
-                test_log_results('cmp %s for %s' % (fn, t), r, o, r, None)
+                test_log_results('cmp %s for %s' % (fn, t.decode('ascii')), r, o, r, None)
 
         flsw(b'hello')
         test_generic('%s -C -t %s' % (cmd, f), cfv_test)
@@ -1280,7 +1280,7 @@ def test_encoding_detection():
             if fmt_istext(t):
                 utf8cfn = os.path.join(d, 'utf8nobom.' + t)
                 test_generic(cfvcmd + ' -C --encoding=utf-8 -p %s -t %s -f %s' % (datad, t, utf8cfn), rcurry(cfv_all_test, ok=fnok))
-                chksumdata = str(readfile(utf8cfn), 'utf-8')
+                chksumdata = readfile(utf8cfn).decode('utf-8')
                 for enc in utfencodings:
                     bommedcfn = os.path.join(d, enc + '.' + t)
                     try:
@@ -1292,7 +1292,7 @@ def test_encoding_detection():
                         test_generic(cfvcmd + ' -T -p %s -f %s' % (datad, bommedcfn), rcurry(cfv_all_test, ok=fnok))
     finally:
         shutil.rmtree(d)
-        shutil.rmtree(str(datad))
+        shutil.rmtree(datad)
 
 
 def test_encoding2():
@@ -1387,8 +1387,8 @@ def test_encoding2():
     except Exception:
         test_log_results('test_encoding2', 'foobar', ''.join(traceback.format_exception(*sys.exc_info())), 'foobar', {})  # yuck.  I really should switch this crap all to unittest ...
     # finally:
-    shutil.rmtree(str(d2))
-    shutil.rmtree(str(d))
+    shutil.rmtree(d2)
+    shutil.rmtree(d)
 
 
 def largefile2GB_test():
@@ -1758,7 +1758,7 @@ def all_tests():
         else:
             if t == 'par':
                 try:
-                    open(str('data1'.encode('utf-16le'), 'utf-16be'), 'rb')
+                    open('data1'.encode('utf-16le').decode('utf-16be'), 'rb')
                 except UnicodeError:
                     nf = 0
                     err = 4
@@ -1770,7 +1770,7 @@ def all_tests():
                 test_generic(cfvcmd + ' --encoding=cp500 -i -T -f test.' + t, rcurry(cfv_all_test, cferror=4))
             else:
                 try:
-                    open(str('data1', 'cp500'), 'rb')
+                    open(b'data1'.decode('cp500'), 'rb')
                 except UnicodeError:
                     nf = 0
                     err = 4

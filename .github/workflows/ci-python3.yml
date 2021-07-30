@@ -45,10 +45,10 @@ jobs:
         run: python -m compileall -f .
           
       - name: Run unit tests
-        run: test/test.py --unit --exit-early
+        run: python -bb test/test.py --unit --exit-early
         
       - name: Run integration tests (internal)
-        run: test/test.py -i --exit-early
+        run: python -bb test/test.py -i --exit-early
         
       - name: Run integration tests (external process)
         run: test/test.py -e --exit-early

@@ -917,7 +917,7 @@ cftypes.register_cftype(BSDMD5)
 def ver2str(v):
     vers = []
     while v or len(vers) < 3:
-        vers.insert(0, str(v & 0xFF))
+        vers.insert(0, '%d' % (v & 0xFF))
         v >>= 8
     return '.'.join(vers)
 
@@ -1013,8 +1013,8 @@ class PAR2(ChksumType, MD5_MixIn):
                 if not d:
                     return None
                 magic, pkt_len, pkt_md5, set_id, pkt_type = struct.unpack(pkt_header_fmt, d)
-                if pkt_type == 'PAR 2.0\0Creator\0':
-                    return strutil.chompnulls(file.read(pkt_len - pkt_header_size))
+                if pkt_type == b'PAR 2.0\0Creator\0':
+                    return cfdecode(strutil.chompnulls(file.read(pkt_len - pkt_header_size)))
                 else:
                     file.seek(pkt_len - pkt_header_size, 1)
 
@@ -1603,7 +1603,7 @@ def getimagedimensions(filename):
 
 
 def commaize(n):
-    n = str(n)
+    n = '%d' % n
     s = n[-3:]
     n = n[:-3]
     while n:
@@ -2094,15 +2094,6 @@ view = ui.View(config)
 filenamefilter = FileNameFilter()
 
 
-def decode_arg(a):
-    if isinstance(a, str):
-        return a
-    try:
-        return str(a, osutil.preferredencoding)
-    except UnicodeError:
-        return a
-
-
 def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
@@ -2119,7 +2110,6 @@ def main(argv=None):
     except getopt.error as a:
         view.perror('cfv: %s' % a)
         printusage(1)
-    args = list(map(decode_arg, args))
 
     try:
         if config.cmdlineglob == 'y' or (config.cmdlineglob == 'a' and os.name in ('os2', 'nt', 'dos')):
@@ -2140,7 +2130,6 @@ def main(argv=None):
 
         prevopt = ''
         for o, a in optlist:
-            a = decode_arg(a)
             if o == '-T':
                 mode = 0
             elif o == '-C':
