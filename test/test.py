@@ -1280,7 +1280,7 @@ def test_encoding_detection():
             if fmt_istext(t):
                 utf8cfn = os.path.join(d, 'utf8nobom.' + t)
                 test_generic(cfvcmd + ' -C --encoding=utf-8 -p %s -t %s -f %s' % (datad, t, utf8cfn), rcurry(cfv_all_test, ok=fnok))
-                chksumdata = str(readfile(utf8cfn), 'utf-8')
+                chksumdata = readfile(utf8cfn).decode('utf-8')
                 for enc in utfencodings:
                     bommedcfn = os.path.join(d, enc + '.' + t)
                     try:
@@ -1758,7 +1758,7 @@ def all_tests():
         else:
             if t == 'par':
                 try:
-                    open(str('data1'.encode('utf-16le'), 'utf-16be'), 'rb')
+                    open('data1'.encode('utf-16le').decode('utf-16be'), 'rb')
                 except UnicodeError:
                     nf = 0
                     err = 4
@@ -1770,7 +1770,7 @@ def all_tests():
                 test_generic(cfvcmd + ' --encoding=cp500 -i -T -f test.' + t, rcurry(cfv_all_test, cferror=4))
             else:
                 try:
-                    open(str('data1', 'cp500'), 'rb')
+                    open(b'data1'.decode('cp500'), 'rb')
                 except UnicodeError:
                     nf = 0
                     err = 4
