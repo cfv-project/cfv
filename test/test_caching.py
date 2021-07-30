@@ -136,35 +136,35 @@ class AbsPathKeyTest(AbsTestCase):
 class RelPathKeyTest(RelTestCase):
     def test_nocase_findfile(self):
         cache = FileInfoCache()
-        a1 = self.mkfile('aAaA/AaA1', '1')
-        self.mkfile('aAaA/Aaa2', '2')
-        self.mkfile('aAaA/AAa2', '3')
+        a1 = self.mkfile(os.path.join('aAaA', 'AaA1'), '1')
+        self.mkfile(os.path.join('aAaA', 'Aaa2'), '2')
+        self.mkfile(os.path.join('aAaA', 'AAa2'), '3')
 
-        a2_content = self.readfile('aAaA/Aaa2')
+        a2_content = self.readfile(os.path.join('aAaA', 'Aaa2'))
         self.assertIn(a2_content, ('2', '3'))
         fs_case_sensitive = a2_content == '2'
         if not fs_case_sensitive:
             print('Skipping some tests due to case-insensitive filesystem')
 
-        self.assertEquals(a1, cache.nocase_findfile(self.mkpath('aaAA/aaa1')))
+        self.assertEquals(a1, cache.nocase_findfile(self.mkpath(os.path.join('aaAA', 'aaa1'))))
         with self.assertRaises(IOError) as cm:
-            cache.nocase_findfile(self.mkpath('aaAb/aaa1'))
+            cache.nocase_findfile(self.mkpath(os.path.join('aaAb', 'aaa1')))
         self.assertEquals(errno.ENOENT, cm.exception.errno)
 
         with self.assertRaises(IOError) as cm:
-            cache.nocase_findfile(self.mkpath('aaAA/aab1'))
+            cache.nocase_findfile(self.mkpath(os.path.join('aaAA', 'aab1')))
         self.assertEquals(errno.ENOENT, cm.exception.errno)
 
         if fs_case_sensitive:
             with self.assertRaises(IOError) as cm:
-                cache.nocase_findfile(self.mkpath('aaAA/aaa2'))
+                cache.nocase_findfile(self.mkpath(os.path.join('aaAA', 'aaa2')))
             self.assertEquals(errno.EEXIST, cm.exception.errno)
 
     def test_nocase_findfile_parent(self):
         cache = FileInfoCache()
-        self.mkfile('aaaA/aaA1', '1')
+        self.mkfile(os.path.join('aaaA', 'aaA1'), '1')
         fs_case_sensitive = not os.path.exists('aAaA')
-        self.mkfile('aAaA/aaa2', '2')
+        self.mkfile(os.path.join('aAaA', 'aaa2'), '2')
 
         if not fs_case_sensitive:
             print('Skipping some tests due to case-insensitive filesystem')
@@ -174,5 +174,5 @@ class RelPathKeyTest(RelTestCase):
         # one.
         if fs_case_sensitive:
             with self.assertRaises(IOError) as cm:
-                cache.nocase_findfile(self.mkpath('aaAA/aaa2'))
+                cache.nocase_findfile(self.mkpath(os.path.join('aaAA', 'aaa2')))
             self.assertEquals(errno.EEXIST, cm.exception.errno)
