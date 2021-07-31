@@ -1712,11 +1712,17 @@ def all_tests():
     test_generic(cfvcmd + ' -r -u -p a ' + os.path.join('C', 'foo.bar'), cfv_test)
     test_generic(cfvcmd + ' -ri -u -p a ' + os.path.join('c', 'fOo.BaR'), cfv_test)
 
+    def cfv_notfound_or_bad_test(path):
+        if os.path.exists(path):
+            return cfv_bad_test
+        else:
+            return cfv_notfound_test
+
     test_generic(cfvcmd + ' --strippaths=0 -T -f teststrip0.csv4', cfv_test)
     test_generic(cfvcmd + ' --strippaths=1 -T -f teststrip1.csv4', cfv_test)
     test_generic(cfvcmd + ' --strippaths=2 -T -f teststrip2.csv4', cfv_test)
     test_generic(cfvcmd + ' --strippaths=all -T -f teststrip-1.csv4', cfv_test)
-    test_generic(cfvcmd + ' --strippaths=none -T -f teststrip-none.csv4', cfv_notfound_test)
+    test_generic(cfvcmd + ' --strippaths=none -T -f teststrip-none.csv4', cfv_notfound_or_bad_test('/data1'))
     test_generic(cfvcmd + r' --strippaths=0 --fixpaths \\/ -T -f testdrivestrip.md5', rcurry(cfv_all_test, ok=4))
     test_generic(cfvcmd + r' --strippaths=0 --unquote=yes --fixpaths \\/ -T -f testdrivestripquoted.md5', rcurry(cfv_all_test, ok=4))
     test_generic(cfvcmd + r' --strippaths=0 --unquote=yes --fixpaths \\/ -T -f testdrivestripquoted.md5 data1 data3 data4', rcurry(cfv_all_test, ok=3))
