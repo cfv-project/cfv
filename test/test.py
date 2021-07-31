@@ -1712,11 +1712,17 @@ def all_tests():
     test_generic(cfvcmd + ' -r -u -p a ' + os.path.join('C', 'foo.bar'), cfv_test)
     test_generic(cfvcmd + ' -ri -u -p a ' + os.path.join('c', 'fOo.BaR'), cfv_test)
 
+    def cfv_notfound_or_bad_test(path):
+        if os.path.exists(path):
+            return cfv_bad_test
+        else:
+            return cfv_notfound_test
+
     test_generic(cfvcmd + ' --strippaths=0 -T -f teststrip0.csv4', cfv_test)
     test_generic(cfvcmd + ' --strippaths=1 -T -f teststrip1.csv4', cfv_test)
     test_generic(cfvcmd + ' --strippaths=2 -T -f teststrip2.csv4', cfv_test)
     test_generic(cfvcmd + ' --strippaths=all -T -f teststrip-1.csv4', cfv_test)
-    test_generic(cfvcmd + ' --strippaths=none -T -f teststrip-none.csv4', cfv_notfound_test)
+    test_generic(cfvcmd + ' --strippaths=none -T -f teststrip-none.csv4', cfv_notfound_or_bad_test('/data1'))
     test_generic(cfvcmd + r' --strippaths=0 --fixpaths \\/ -T -f testdrivestrip.md5', rcurry(cfv_all_test, ok=4))
     test_generic(cfvcmd + r' --strippaths=0 --unquote=yes --fixpaths \\/ -T -f testdrivestripquoted.md5', rcurry(cfv_all_test, ok=4))
     test_generic(cfvcmd + r' --strippaths=0 --unquote=yes --fixpaths \\/ -T -f testdrivestripquoted.md5 data1 data3 data4', rcurry(cfv_all_test, ok=3))
@@ -1736,6 +1742,7 @@ def all_tests():
             def coreutils_verify(f):
                 test_external(fmt + 'sum -c ' + f, status_test)
         else:
+            print('skipping %s verify using external tool %ssum, as it is not installed.' % (fmt, fmt))
             coreutils_verify = None
         C_test(fmt, verify=coreutils_verify)
     C_test('csv')
@@ -1743,6 +1750,7 @@ def all_tests():
         def sfvverify(f):
             test_external('cksfv -f ' + f, status_test)
     else:
+        print('skipping sfv verify using external tool cksfv, as it is not installed.')
         sfvverify = None
     C_test('sfv', verify=sfvverify)
     C_test('sfvmd5', '-t sfvmd5')

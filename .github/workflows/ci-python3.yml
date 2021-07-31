@@ -16,11 +16,11 @@ jobs:
   test:
     # The type of runner that the job will run on
     runs-on: ${{ matrix.os }}
-    
+
     strategy:
       matrix:
-        os: [ubuntu-20.04, ubuntu-18.04]
-        python-version: ['3.5', '3.6', '3.7', '3.8', '3.9']
+        os: [ ubuntu-20.04, ubuntu-18.04 ]
+        python-version: [ '3.5', '3.6', '3.7', '3.8', '3.9' ]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -31,44 +31,45 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      
+
       - name: Install test dependencies
         run: |
-         pip install pyroma
-         pip install check-manifest
-         pip install twine
-         pip install wheel
-         pip install flake8
-         pip list
-         
+          sudo apt install coreutils cksfv
+          pip install pyroma
+          pip install check-manifest
+          pip install twine
+          pip install wheel
+          pip install flake8
+          pip list
+
       - name: Check syntax by compiling code
         run: python -m compileall -f .
-          
+
       - name: Run unit tests
         run: python -bb test/test.py --unit --exit-early
-        
+
       - name: Run integration tests (internal)
         run: |
           ulimit -n
           ulimit -n 4096
           python -bb test/test.py -i --exit-early
-        
+
       - name: Run integration tests (external process)
         run: |
           ulimit -n
           ulimit -n 4096
           test/test.py -e --exit-early
-        
+
       - name: Check package quality
         run: pyroma -n 9 .
-        
+
       - name: Check the completeness of MANIFEST.in
         run: check-manifest --ignore=Release.md .
-      
+
       - name: Run flake
         continue-on-error: true
         run: flake8 --exclude=build,venv --ignore= --max-line-length=200 --max-complexity=75 --show-source --statistics .
-          
+
       - name: Check distribution
         run: |
           python setup.py sdist bdist_wheel
