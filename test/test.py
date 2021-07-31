@@ -1742,6 +1742,7 @@ def all_tests():
             def coreutils_verify(f):
                 test_external(fmt + 'sum -c ' + f, status_test)
         else:
+            print('skipping %s verify using external tool %ssum, as it is not installed.' % (fmt, fmt))
             coreutils_verify = None
         C_test(fmt, verify=coreutils_verify)
     C_test('csv')
@@ -1749,6 +1750,7 @@ def all_tests():
         def sfvverify(f):
             test_external('cksfv -f ' + f, status_test)
     else:
+        print('skipping sfv verify using external tool cksfv, as it is not installed.')
         sfvverify = None
     C_test('sfv', verify=sfvverify)
     C_test('sfvmd5', '-t sfvmd5')
