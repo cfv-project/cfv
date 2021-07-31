@@ -68,6 +68,10 @@ class RelTestCase(TestCase):
             f.write(contents)
         return name
 
+    def readfile(self, name):
+        with open(name, 'rt') as f:
+            return f.read()
+
 
 class AbsPathKeyTest(AbsTestCase):
     def test_get_path_key(self):
@@ -136,6 +140,12 @@ class RelPathKeyTest(RelTestCase):
         self.mkfile('aAaA/Aaa2', '2')
         self.mkfile('aAaA/AAa2', '3')
 
+        a2_content = self.readfile('aAaA/Aaa2')
+        self.assertIn(a2_content, ('2', '3'))
+        fs_case_sensitive = a2_content == '2'
+        if not fs_case_sensitive:
+            print('Skipping some tests due to case-insensitive filesystem')
+
         self.assertEquals(a1, cache.nocase_findfile(self.mkpath('aaAA/aaa1')))
         with self.assertRaises(IOError) as cm:
             cache.nocase_findfile(self.mkpath('aaAb/aaa1'))
@@ -145,18 +155,24 @@ class RelPathKeyTest(RelTestCase):
             cache.nocase_findfile(self.mkpath('aaAA/aab1'))
         self.assertEquals(errno.ENOENT, cm.exception.errno)
 
-        with self.assertRaises(IOError) as cm:
-            cache.nocase_findfile(self.mkpath('aaAA/aaa2'))
-        self.assertEquals(errno.EEXIST, cm.exception.errno)
+        if fs_case_sensitive:
+            with self.assertRaises(IOError) as cm:
+                cache.nocase_findfile(self.mkpath('aaAA/aaa2'))
+            self.assertEquals(errno.EEXIST, cm.exception.errno)
 
     def test_nocase_findfile_parent(self):
         cache = FileInfoCache()
         self.mkfile('aaaA/aaA1', '1')
+        fs_case_sensitive = not os.path.exists('aAaA')
         self.mkfile('aAaA/aaa2', '2')
+
+        if not fs_case_sensitive:
+            print('Skipping some tests due to case-insensitive filesystem')
 
         # right now we don't handle this case, though it would be possible
         # to generate all possible matches and see if the number is exactly
         # one.
-        with self.assertRaises(IOError) as cm:
-            cache.nocase_findfile(self.mkpath('aaAA/aaa2'))
-        self.assertEquals(errno.EEXIST, cm.exception.errno)
+        if fs_case_sensitive:
+            with self.assertRaises(IOError) as cm:
+                cache.nocase_findfile(self.mkpath('aaAA/aaa2'))
+            self.assertEquals(errno.EEXIST, cm.exception.errno)
