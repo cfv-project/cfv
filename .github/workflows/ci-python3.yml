@@ -34,6 +34,7 @@ jobs:
 
       - name: Install test dependencies
         run: |
+          sudo apt install coreutils cksfv
           pip install pyroma
           pip install check-manifest
           pip install twine
