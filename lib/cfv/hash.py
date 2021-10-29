@@ -1,8 +1,6 @@
 from builtins import object
 
 import hashlib
-from hashlib import sha1
-from hashlib import md5
 import os
 import struct
 import sys
@@ -25,6 +23,10 @@ except ImportError:
 
 _MAX_MMAP = 2 ** 32 - 1
 _FALLBACK_MMAP = 2 ** 31 - 1
+
+
+md5 = hashlib.md5
+sha1 = hashlib.sha1
 
 
 def _getfilechecksum(filename, hasher, callback):
