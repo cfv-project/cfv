@@ -1,5 +1,6 @@
 from builtins import object
 
+import hashlib
 from hashlib import sha1
 from hashlib import md5
 import os
@@ -66,17 +67,12 @@ def _getfilechecksum(filename, hasher, callback):
 
 
 def getfilechecksumgeneric(algo):
-    import hashlib
     if hasattr(hashlib, algo):
         hasher = getattr(hashlib, algo)
     else:
         def hasher():
             return hashlib.new(algo)
     return lambda filename, callback: _getfilechecksum(filename, hasher, callback), hasher().digest_size
-
-
-def getfilesha1(filename, callback):
-    return _getfilechecksum(filename, sha1, callback)
 
 
 class CRC32(object):
@@ -90,10 +86,6 @@ class CRC32(object):
 
     def digest(self):
         return struct.pack('>I', self.value & 0xFFFFFFFF)
-
-
-def getfilemd5(filename, callback):
-    return _getfilechecksum(filename, md5, callback)
 
 
 def getfilecrc(filename, callback):
