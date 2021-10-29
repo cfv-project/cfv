@@ -155,14 +155,6 @@ def getfilehash(filename, hashname, hashfunc):
     return finfo[hashname], finfo['size']
 
 
-def getfilesha1(filename):
-    return getfilehash(filename, 'sha1', hash.getfilesha1)
-
-
-def getfilemd5(filename):
-    return getfilehash(filename, 'md5', hash.getfilemd5)
-
-
 def getfilecrc(filename):
     return getfilehash(filename, 'crc', hash.getfilecrc)
 
@@ -752,7 +744,7 @@ def gnu_sum(algo):
     class GnuSum_Base(FooSum_Base):
         name = algo
         description = 'GNU %ssum' % algo
-        descinfo = '%s,name' % algo
+        descinfo = '%s,name' % algo.upper()
 
         def do_test_file(self, filename, filecrc):
             c = getfilehash(filename, algo, hasher)[0]
@@ -802,84 +794,28 @@ try:
 except (ImportError, ValueError):
     pass
 
+try:
+    cftypes.register_cftype(gnu_sum('sha1'))
+except (ImportError, ValueError):
+    pass
 
-# ---------- sha1sum ----------
-
-class SHA1_MixIn(object):
-    def do_test_file(self, filename, filecrc):
-        c = getfilesha1(filename)[0]
-        if c != filecrc:
-            return c
-
-
-class SHA1(FooSum_Base, SHA1_MixIn):
-    name = 'sha1'
-    description = 'GNU sha1sum'
-    descinfo = 'SHA1,name'
-
-    @staticmethod
-    def auto_chksumfile_match(file, _autorem=re.compile(r'[0-9a-fA-F]{40} [ *].')):
-        line = file.peekline(4096)
-        while line:
-            if line[0] not in ';#':
-                return _autorem.match(line) is not None
-            line = file.peeknextline(4096)
-
-    auto_filename_match = 'sha1'
-
-    _foosum_rem = re.compile(r'([0-9a-fA-F]{40}) ([ *])([^\r\n]+)[\r\n]*$')
-
-    @staticmethod
-    def make_std_filename(filename):
-        return filename + '.sha1'
-
-    def make_addfile(self, filename):
-        crc = strutil.hexlify(getfilesha1(filename)[0])
-        return (crc, -1), '%s *%s' % (crc, filename) + os.linesep
-
-
-cftypes.register_cftype(SHA1)
-
-
-# ---------- md5 ----------
-
-class MD5_MixIn(object):
-    def do_test_file(self, filename, filecrc):
-        c = getfilemd5(filename)[0]
-        if c != filecrc:
-            return c
-
-
-class MD5(FooSum_Base, MD5_MixIn):
-    name = 'md5'
-    description = 'GNU md5sum'
-    descinfo = 'MD5,name'
-
-    @staticmethod
-    def auto_chksumfile_match(file, _autorem=re.compile(r'[0-9a-fA-F]{32} [ *].')):
-        line = file.peekline(4096)
-        while line:
-            if line[0] not in ';#':
-                return _autorem.match(line) is not None
-            line = file.peeknextline(4096)
-
-    auto_filename_match = 'md5'
-
-    _foosum_rem = re.compile(r'([0-9a-fA-F]{32}) ([ *])([^\r\n]+)[\r\n]*$')
-
-    @staticmethod
-    def make_std_filename(filename):
-        return filename + '.md5'
-
-    def make_addfile(self, filename):
-        crc = strutil.hexlify(getfilemd5(filename)[0])
-        return (crc, -1), '%s *%s' % (crc, filename) + os.linesep
-
-
-cftypes.register_cftype(MD5)
+try:
+    cftypes.register_cftype(gnu_sum('md5'))
+except (ImportError, ValueError):
+    pass
 
 
 # ---------- bsdmd5 ----------
+
+class MD5_MixIn(object):
+    def __init__(self):
+        self.hasher, _ = hash.getfilechecksumgeneric('md5')
+
+    def do_test_file(self, filename, filecrc):
+        c = getfilehash(filename, 'md5', self.hasher)[0]
+        if c != filecrc:
+            return c
+
 
 class BSDMD5(TextChksumType, MD5_MixIn):
     name = 'bsdmd5'
@@ -905,7 +841,7 @@ class BSDMD5(TextChksumType, MD5_MixIn):
         return filename + '.md5'
 
     def make_addfile(self, filename):
-        crc = strutil.hexlify(getfilemd5(filename)[0])
+        crc = strutil.hexlify(getfilehash(filename, 'md5', self.hasher)[0])
         return (crc, -1), 'MD5 (%s) = %s' % (filename, crc) + os.linesep
 
 
@@ -1461,7 +1397,7 @@ class SFVMD5(SFV_Base, MD5_MixIn):
         return filename + '.md5'
 
     def make_addfile(self, filename):
-        crc = strutil.hexlify(getfilemd5(filename)[0])
+        crc = strutil.hexlify(getfilehash(filename, 'md5', self.hasher)[0])
         return (crc, -1), '%s %s' % (filename, crc) + os.linesep
 
 
