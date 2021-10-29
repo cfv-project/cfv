@@ -752,7 +752,7 @@ def gnu_sum(algo):
     class GnuSum_Base(FooSum_Base):
         name = algo
         description = 'GNU %ssum' % algo
-        descinfo = '%s,name' % algo
+        descinfo = '%s,name' % algo.upper()
 
         def do_test_file(self, filename, filecrc):
             c = getfilehash(filename, algo, hasher)[0]
