@@ -1,0 +1,80 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI python3 FreeBSD
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  push:
+    branches: [ python3 ]
+  pull_request:
+    branches: [ python3 ]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  test:
+    # The type of runner that the job will run on
+    runs-on: macos-10.15
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v2
+
+    - name: Test in FreeBSD
+      uses: vmactions/freebsd-vm@v0.1.5
+      with:
+        usesh: true
+        prepare: pkg install -y python3 py38-pip coreutils cksfv git-tiny
+        run: |
+          set -ex
+
+          pwd
+          ls -lah
+          whoami
+          env
+          freebsd-version
+
+          ln -s /usr/local/bin/python3 /usr/local/bin/python
+          ln -s /usr/local/bin/gmd5sum /usr/local/bin/md5sum
+          ln -s /usr/local/bin/gsha1sum /usr/local/bin/sha1sum
+          ln -s /usr/local/bin/gsha224sum /usr/local/bin/sha224sum
+          ln -s /usr/local/bin/gsha256sum /usr/local/bin/sha256sum
+          ln -s /usr/local/bin/gsha384sum /usr/local/bin/sha384sum
+          ln -s /usr/local/bin/gsha512sum /usr/local/bin/sha512sum
+
+          pw useradd runner -u 501 -g staff -d /Users/runner
+
+          # Install test dependencies
+          pip install pyroma
+          pip install check-manifest
+          pip install twine
+          pip install wheel
+          pip install flake8
+          pip list
+
+          # Check syntax by compiling code
+          python -m compileall -f .
+
+          # Run unit tests
+          su runner -c 'python -bb test/test.py --unit --exit-early'
+
+          # Run integration tests (internal)
+          su runner -c 'ulimit -n; ulimit -n 4096; python -bb test/test.py -i --exit-early'
+
+          # Run integration tests (external process)
+          su runner -c 'ulimit -n; ulimit -n 4096; test/test.py -e --exit-early'
+
+          # Check package quality
+          pyroma -n 9 .
+
+          # Check the completeness of MANIFEST.in
+          check-manifest --ignore=Release.md .
+
+          # Run flake
+          flake8 --exclude=build,venv --ignore= --max-line-length=200 --max-complexity=75 --show-source --statistics . || true
+
+          # Check distribution
+          python setup.py sdist bdist_wheel
+          twine check dist/*
