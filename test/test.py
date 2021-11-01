@@ -1874,6 +1874,7 @@ def copytree(src, dst, ignore=None):
 
 # copy the testdata into a temp dir in order to avoid .svn dirs breaking some tests
 tmpdatapath = tempfile.mkdtemp()
+orig_path = os.getcwd()
 try:
     copytree(cfvtest.datapath, tmpdatapath, ignore=['.svn'])
     os.chdir(tmpdatapath)  # do this after the setcfv, since the user may have specified a relative path
@@ -1889,4 +1890,5 @@ try:
         failed += all_tests()
     sys.exit(failed)
 finally:
+    os.chdir(orig_path)
     shutil.rmtree(tmpdatapath)
