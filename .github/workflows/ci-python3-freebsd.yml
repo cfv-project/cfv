@@ -17,6 +17,10 @@ jobs:
     # The type of runner that the job will run on
     runs-on: macos-12
 
+    strategy:
+      matrix:
+        freebsd-release: [ '12.3', '13.0', '13.1' ]
+
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -25,6 +29,7 @@ jobs:
     - name: Test in FreeBSD
       uses: vmactions/freebsd-vm@v0.2.9
       with:
+        release: ${{ matrix.freebsd-release }}
         usesh: true
         prepare: pkg install -y python3 py38-pip coreutils cksfv git-tiny
         run: |
