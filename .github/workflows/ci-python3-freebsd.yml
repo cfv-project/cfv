@@ -19,7 +19,7 @@ jobs:
 
     strategy:
       matrix:
-        freebsd-release: [ '12.3', '13.0', '13.1' ]
+        freebsd-release: [ '12.3', '13.1' ]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
