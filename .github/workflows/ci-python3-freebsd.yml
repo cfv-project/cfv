@@ -15,7 +15,7 @@ jobs:
   # This workflow contains a single job called "build"
   test:
     # The type of runner that the job will run on
-    runs-on: macos-10.15
+    runs-on: macos-12
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -23,7 +23,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Test in FreeBSD
-      uses: vmactions/freebsd-vm@v0.1.5
+      uses: vmactions/freebsd-vm@v0.2.9
       with:
         usesh: true
         prepare: pkg install -y python3 py38-pip coreutils cksfv git-tiny
