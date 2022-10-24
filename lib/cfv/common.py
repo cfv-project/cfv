@@ -2,7 +2,7 @@
 
 #    cfv - Command-line File Verify
 #    Copyright (C) 2000-2013  Matthew Mueller <donut AT dakotacom DOT net>
-#    Copyright (C) 2018-2019  David Gnedt <cfv-project AT davizone DOT at>
+#    Copyright (C) 2018-2022  David Gnedt <cfv-project AT davizone DOT at>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -2005,7 +2005,7 @@ def printusage(err=0):
 
 
 def printhelp():
-    view.pinfo('cfv v%s - Copyright (C) 2000-2013 Matthew Mueller - Copyright (C) 2018-2019 David Gnedt - GPL license' % __version__)
+    view.pinfo('cfv v%s - Copyright (C) 2000-2013 Matthew Mueller - Copyright (C) 2018-2022 David Gnedt - GPL license' % __version__)
     printusage()
 
 
