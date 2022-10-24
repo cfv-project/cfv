@@ -17,7 +17,7 @@ This is a [friendly fork of cfv](https://github.com/cfv-project/cfv) maintained 
 ## Requirements
 
 Python ≥ 3.5 – older versions might work, but are unsupported.
-For Python 2 support, see the [master branch](https://github.com/cfv-project/cfv/tree/master).
+For Python 2 support, see the [python2 branch](https://github.com/cfv-project/cfv/tree/python2).
 
 ### Optional
 
