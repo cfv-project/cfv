@@ -15,7 +15,11 @@ jobs:
   # This workflow contains a single job called "build"
   test:
     # The type of runner that the job will run on
-    runs-on: macos-10.15
+    runs-on: macos-12
+
+    strategy:
+      matrix:
+        freebsd-release: [ '12.3', '13.1' ]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -23,10 +27,11 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Test in FreeBSD
-      uses: vmactions/freebsd-vm@v0.1.5
+      uses: vmactions/freebsd-vm@v0.2.9
       with:
+        release: ${{ matrix.freebsd-release }}
         usesh: true
-        prepare: pkg install -y python3 py38-pip coreutils cksfv git-tiny
+        prepare: pkg install -y python3 py39-pip coreutils cksfv git-tiny
         run: |
           set -ex
 
@@ -70,7 +75,7 @@ jobs:
           pyroma -n 9 .
 
           # Check the completeness of MANIFEST.in
-          check-manifest --ignore=Release.md .
+          su runner -c 'check-manifest --ignore=Release.md .'
 
           # Run flake
           flake8 --exclude=build,venv --ignore= --max-line-length=200 --max-complexity=75 --show-source --statistics . || true
