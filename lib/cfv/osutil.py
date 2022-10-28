@@ -1,5 +1,3 @@
-from builtins import str
-
 import locale
 import os
 import re

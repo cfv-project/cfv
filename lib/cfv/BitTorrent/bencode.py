@@ -2,7 +2,6 @@
 # see LICENSE.txt for license information
 
 from builtins import object
-from builtins import str
 
 
 def decode_int(x, f):
