@@ -61,7 +61,7 @@ jobs:
           test/test.py -e --exit-early
 
       - name: Check package quality
-        continue-on-error: true
+        continue-on-error: ${{ contains(fromJson('["3.5", "3.6"]'), matrix.python-version) }}
         run: pyroma -n 9 .
 
       - name: Check the completeness of MANIFEST.in
