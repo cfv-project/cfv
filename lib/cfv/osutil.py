@@ -1,5 +1,3 @@
-from builtins import str
-
 import locale
 import os
 import re
@@ -85,7 +83,7 @@ def path_split(filename):
     return parts
 
 
-def strippath(filename, num='a', _splitdrivere=re.compile(r'[a-z]:[/\\]', re.I)):
+def strippath(filename, num='a', _splitdrivere=re.compile(r'[a-z]:[/\\]', re.IGNORECASE)):
     """Strip off path components from the left side of the filename.
 
     >>> strippath(os.path.join('c:','foo','bar','baz'))

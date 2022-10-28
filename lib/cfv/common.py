@@ -724,10 +724,10 @@ class FooSum_Base(TextChksumType):
     def do_test_chksumfile_print_testingline(self, file):
         TextChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(512), ';#'))
 
-    def do_test_chksumline(self, l):
-        if l[0] in ';#':
+    def do_test_chksumline(self, line):
+        if line[0] in ';#':
             return
-        x = self._foosum_rem.match(l)
+        x = self._foosum_rem.match(line)
         if not x:
             return -1
         if x.group(2) == ' ':
@@ -830,8 +830,8 @@ class BSDMD5(TextChksumType, MD5_MixIn):
 
     _bsdmd5rem = re.compile(r'MD5 \((.+)\) = ([0-9a-fA-F]{32})[\r\n]*$')
 
-    def do_test_chksumline(self, l):
-        x = self._bsdmd5rem.match(l)
+    def do_test_chksumline(self, line):
+        x = self._bsdmd5rem.match(line)
         if not x:
             return -1
         self.test_file(x.group(1), strutil.unhexlify(x.group(2)))
@@ -1332,10 +1332,10 @@ class SFV_Base(TextChksumType):
         # override the default testing line to show first SFV comment line, if any
         TextChksumType.do_test_chksumfile_print_testingline(self, file, parse_commentline(file.peekline(512), ';'))
 
-    def do_test_chksumline(self, l):
-        if l[0] == ';':
+    def do_test_chksumline(self, line):
+        if line[0] == ';':
             return
-        x = self._sfvrem.match(l)
+        x = self._sfvrem.match(line)
         if not x:
             return -1
         self.test_file(x.group(1), strutil.unhexlify(x.group(2)))
@@ -1437,8 +1437,8 @@ class CSV(TextChksumType, CRC_MixIn):
 
     _csvrem = re.compile(_csvfnre + r'([0-9]+),([0-9a-fA-F]{8}),')
 
-    def do_test_chksumline(self, l):
-        x = self._csvrem.match(l)
+    def do_test_chksumline(self, line):
+        x = self._csvrem.match(line)
         if not x:
             return -1
         self.test_file(csvunquote(x.group(1), x.group(2)), strutil.unhexlify(x.group(4)), int(x.group(3)))
@@ -1469,8 +1469,8 @@ class CSV4(TextChksumType, CRC_MixIn):
 
     _csv4rem = re.compile(r'%s([0-9]+),([0-9a-fA-F]{8}),%s' % (_csvfnre, _csvstrre))
 
-    def do_test_chksumline(self, l):
-        x = self._csv4rem.match(l)
+    def do_test_chksumline(self, line):
+        x = self._csv4rem.match(line)
         if not x:
             return -1
         name = csvunquote(x.group(1), x.group(2))
@@ -1504,8 +1504,8 @@ class CSV2(TextChksumType):
 
     _csv2rem = re.compile(_csvfnre + r'([0-9]+),')
 
-    def do_test_chksumline(self, l):
-        x = self._csv2rem.match(l)
+    def do_test_chksumline(self, line):
+        x = self._csv2rem.match(line)
         if not x:
             return -1
         self.test_file(csvunquote(x.group(1), x.group(2)), None, int(x.group(3)))
@@ -1581,11 +1581,11 @@ class JPEGSheriff_CRC(TextChksumType, CRC_MixIn):
     _commentboundary = re.compile(r'^-+(\s+-+){1,4}\s*$')
     _nstrip = re.compile(r'[.,]')
 
-    def do_test_chksumline(self, l):
-        if self._commentboundary.match(l):
+    def do_test_chksumline(self, line):
+        if self._commentboundary.match(line):
             self.in_comments = not self.in_comments
             return
-        x = self._crcrem.match(l)
+        x = self._crcrem.match(line)
         if not x:
             if self.in_comments:
                 return
