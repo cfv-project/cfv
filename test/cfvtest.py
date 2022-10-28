@@ -52,7 +52,7 @@ class NullFile(object):
     def write(self, s):
         pass
 
-    def writelines(self, l):
+    def writelines(self, lines):
         pass
 
     def flush(self):

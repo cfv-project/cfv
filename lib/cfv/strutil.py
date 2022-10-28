@@ -6,17 +6,17 @@ import unicodedata
 from cfv import osutil
 
 
-def safesort(l):
+def safesort(seq):
     sl = []
     ul = []
-    for s in l:
+    for s in seq:
         if isinstance(s, str):
             sl.append(s)
         else:
             ul.append(s)
     sl.sort()
     ul.sort()
-    l[:] = ul + sl
+    seq[:] = ul + sl
 
 
 def showfn(s):
