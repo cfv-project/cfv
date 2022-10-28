@@ -68,7 +68,6 @@ jobs:
         run: check-manifest --ignore=Release.md .
 
       - name: Run flake
-        continue-on-error: true
         run: flake8 --exclude=build,venv --ignore= --max-line-length=200 --max-complexity=75 --show-source --statistics .
 
       - name: Check distribution
