@@ -149,7 +149,7 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
             '__package__': None,
         }
         try:
-            exec (cfv_compiled, cfv_ns)
+            exec(cfv_compiled, cfv_ns)
             s = 'no exit?'
         except SystemExit as e:
             s = e.code
