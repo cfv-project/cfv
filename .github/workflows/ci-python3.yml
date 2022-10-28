@@ -19,8 +19,14 @@ jobs:
 
     strategy:
       matrix:
-        os: [ ubuntu-20.04, ubuntu-18.04 ]
+        os: [ ubuntu-22.04, ubuntu-20.04, ubuntu-18.04 ]
         python-version: [ '3.5', '3.6', '3.7', '3.8', '3.9', '3.10', '3.11' ]
+        # Exclude unsupported OS/Python version combinations
+        exclude:
+          - os: ubuntu-22.04
+            python-version: '3.5'
+          - os: ubuntu-22.04
+            python-version: '3.6'
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
