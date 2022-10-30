@@ -8,7 +8,7 @@ Test-only support is available for par, par2.
 cfv was originally written by Matthew Mueller ([original project home](http://cfv.sourceforge.net/)).
 This is a [friendly fork of cfv](https://github.com/cfv-project/cfv) maintained by David Gnedt.
 
-[![Build Status](https://travis-ci.org/cfv-project/cfv.svg?branch=master)](https://travis-ci.org/cfv-project/cfv)
+[![Build Status](https://img.shields.io/github/checks-status/cfv-project/cfv/python3)](https://github.com/cfv-project/cfv/actions?query=branch%3Apython3)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/cfv.svg)](https://pypi.org/project/cfv/)
 [![License](https://img.shields.io/pypi/l/cfv.svg)](https://pypi.org/project/cfv/)
 [![Latest PyPI version](https://img.shields.io/pypi/v/cfv.svg)](https://pypi.org/project/cfv/)
@@ -50,6 +50,18 @@ or checkout the development version via Git.
 ## Contributions
 
 Contributions are welcome, just open a pull request ☺️
+
+## Alternative Tools
+
+Here is a community-compiled list of alternative tools that cover some of cfv's functionality (without warranty):
+
+* GNU coreutils \*sum: md5sum, sha1sum, sha224sum, sha256sum, sha384sum, sha512sum, ...
+* cksfv
+* [rhash](https://github.com/rhash/RHash) (with `-rc` does more or less the same thing as cfv, performance is good and it supports most hash formats including bittorrent. It lacks cfv's `-m` though.)
+* aria2c (to verify torrent checksums)
+* bsdsfv (limited to 1024 files for some reason)
+* pure-sfv (doesn't seem to display progress information, even with `-v`)
+* [bcfv](https://github.com/jarppiko/bcfv) (a Bash frontend to checksum programs (SHA, Blake3, MD5))
 
 ## Copying
 
