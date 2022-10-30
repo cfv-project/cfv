@@ -1,5 +1,4 @@
-2022-10-30 - v3.0.0.dev1:
-	* WARNING: This is a development snapshot, not a stable release.
+2022-10-30 - v3.0.0:
 	* Tested platforms: Linux and FreeBSD. If there is interest in supporting more platforms (e.g. OSX and Windows), please get in contact with the project.
 	* Support for Python 3 (Thanks to Steven Xu for major contributions).
 	* Python 3.5 is now the minimum supported version.
