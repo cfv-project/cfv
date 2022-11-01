@@ -33,19 +33,26 @@ Other distribution ways are work-in-progress, see [issue #4](https://github.com/
 
 ### From PyPI
 
-If you have a working Python installation with pip, you can follow these installation steps:
+If you have a working Python installation with pip, you can install via PyPI:
 
-1. `pip install cfv`
-2. read man page `man cfv` or read usage `cfv -h` and have fun ☺️
+```sh
+pip install cfv
+```
 
 ### From Source
 
 Download a snapshot from the [Github releases page](https://github.com/cfv-project/cfv/releases)
 or checkout the development version via Git.
 
-1. `python setup.py install`
-2. read man page `man cfv` or read usage `cfv -h` and have fun ☺️
-3. optional: run tests to verify correct operation: `cd test; ./test.py`
+```sh
+python setup.py install
+# optional: run tests to verify correct operation
+cd test; ./test.py
+```
+
+## Usage
+
+Please read the man page `man cfv` or the usage `cfv -h` and have fun ☺️
 
 ## Contributions
 
