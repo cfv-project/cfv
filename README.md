@@ -50,6 +50,16 @@ python setup.py install
 cd test; ./test.py
 ```
 
+### From OS-specific Repositories
+
+#### Arch Linux
+
+To install from [AUR](https://aur.archlinux.org/packages/cfv-git) (maintained by @vestingz):
+
+```
+yay -S cfv-git
+```
+
 ## Usage
 
 Please read the man page `man cfv` or the usage `cfv -h` and have fun ☺️
