@@ -54,10 +54,39 @@ cd test; ./test.py
 
 #### Arch Linux
 
-To install from [AUR](https://aur.archlinux.org/packages/cfv-git) (maintained by @vestingz):
+To install the development version from [AUR](https://aur.archlinux.org/packages/cfv-git) (maintained by @vestingz):
 
-```
+```sh
 yay -S cfv-git
+```
+
+#### FreeBSD
+
+A FreeBSD port is available (maintained by @Terry-Kennedy).
+
+To install the pre-built package (updated quarterly, so may be out-of-date):
+
+```sh
+pkg install cfv
+```
+
+To build from source (make sure your source tree is up-to-date via any of the usual methods):
+
+```sh
+cd /usr/ports/security/cfv
+make; make install; make clean
+```
+
+To update the pre-built package:
+
+```sh
+pkg upgrade cfv
+```
+
+To update from source (again, make sure your source tree is up-to-date):
+
+```sh
+portupgrade cfv
 ```
 
 ## Usage
