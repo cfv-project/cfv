@@ -8,7 +8,8 @@ Test-only support is available for par, par2.
 cfv was originally written by Matthew Mueller ([original project home](http://cfv.sourceforge.net/)).
 This is a [friendly fork of cfv](https://github.com/cfv-project/cfv) maintained by David Gnedt.
 
-[![Build Status](https://img.shields.io/github/checks-status/cfv-project/cfv/python3)](https://github.com/cfv-project/cfv/actions?query=branch%3Apython3)
+[![Build Status Linux](https://github.com/cfv-project/cfv/actions/workflows/ci-python3.yml/badge.svg?branch=python3)](https://github.com/cfv-project/cfv/actions/workflows/ci-python3.yml?query=branch%3Apython3)
+[![Build Status FreeBSD](https://github.com/cfv-project/cfv/actions/workflows/ci-python3-freebsd.yml/badge.svg?branch=python3)](https://github.com/cfv-project/cfv/actions/workflows/ci-python3-freebsd.yml?query=branch%3Apython3)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/cfv.svg)](https://pypi.org/project/cfv/)
 [![License](https://img.shields.io/pypi/l/cfv.svg)](https://pypi.org/project/cfv/)
 [![Latest PyPI version](https://img.shields.io/pypi/v/cfv.svg)](https://pypi.org/project/cfv/)
