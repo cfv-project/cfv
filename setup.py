@@ -60,7 +60,7 @@ setup(
     packages=find_packages('lib'),
     package_dir={'': 'lib'},
     include_package_data=True,
-    data_files=[('man/man1', ['cfv.1'])],
+    data_files=[('share/man/man1', ['cfv.1'])],
     entry_points={
         'console_scripts': [
             'cfv=cfv.common:main',
