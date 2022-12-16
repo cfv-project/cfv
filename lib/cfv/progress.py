@@ -12,10 +12,10 @@ class INF(object):
     """object that is always larger than what it is compared to
     """
 
-    def __cmp__(self, other):
+    def __cmp__(self, other) -> int:
         return 1
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         return False
 
     def __mul__(self, other):
@@ -27,10 +27,10 @@ class INF(object):
     def __floordiv__(self, other):
         return self
 
-    def __rdiv__(self, other):
+    def __rdiv__(self, other) -> int:
         return 0
 
-    def __rfloordiv__(self, other):
+    def __rfloordiv__(self, other) -> int:
         return 0
 
 
@@ -51,7 +51,7 @@ _CLR_TO_EOL = '\x1b[K'
 class ProgressMeter(object):
     spinnerchars = r'\|/-'
 
-    def __init__(self, fd, steps=20, scrwidth=80, frobfn=lambda x: x):
+    def __init__(self, fd, steps=20, scrwidth=80, frobfn=lambda x: x) -> None:
         self.wantsteps = steps
         self.needrefresh = 1
         self.filename = None
@@ -59,7 +59,7 @@ class ProgressMeter(object):
         self.frobfn = frobfn
         self.scrwidth = scrwidth
 
-    def init(self, name, size=None, cursize=0):
+    def init(self, name, size=None, cursize=0) -> None:
         self.steps = self.wantsteps
         self.filename = name
         if size is None:
@@ -78,7 +78,7 @@ class ProgressMeter(object):
         self.needrefresh = 1
         self.update(cursize)
 
-    def update(self, cursize):
+    def update(self, cursize) -> None:
         if self.needrefresh:
             donesteps = cursize // self.stepsize
             stepsleft = self.steps - donesteps
@@ -96,18 +96,18 @@ class ProgressMeter(object):
             self.fd.flush()
             self.spinneridx = (self.spinneridx + 1) % len(self.spinnerchars)
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         if not self.needrefresh:
             self.fd.write('\r' + _CLR_TO_EOL)
             self.needrefresh = 1
 
 
 class TimedProgressMeter(ProgressMeter):
-    def __init__(self, *args, **kw):
+    def __init__(self, *args, **kw) -> None:
         ProgressMeter.__init__(self, *args, **kw)
         self.nexttime = 0
 
-    def update(self, cursize):
+    def update(self, cursize) -> None:
         curtime = time.time()
         if curtime > self.nexttime:
             self.nexttime = curtime + 0.06

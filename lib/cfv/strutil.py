@@ -4,9 +4,10 @@ import binascii
 import unicodedata
 
 from cfv import osutil
+from typing import Union
 
 
-def safesort(seq):
+def safesort(seq) -> None:
     sl = []
     ul = []
     for s in seq:
@@ -39,7 +40,7 @@ def chompnulls(line):
         return line[:p]
 
 
-def uwidth(u):
+def uwidth(u) -> int:
     # TODO: should it return -1 or something for control chars, like wcswidth?
     # see http://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c for a sample implementation
     # if isinstance(u, str):
@@ -60,7 +61,7 @@ def uwidth(u):
     return w
 
 
-def lchoplen(line, max):
+def lchoplen(line: Union[bytes, str], max) -> str:
     """Return line cut on left so it takes at most max character cells when printed.
 
     >>> lchoplen('hello world',6)
@@ -89,7 +90,7 @@ def lchoplen(line, max):
     return ''.join(chars)
 
 
-def rchoplen(line, max):
+def rchoplen(line: Union[bytes, str], max) -> str:
     """Return line cut on right so it takes at most max character cells when printed.
 
     >>> rchoplen('hello world',6)
@@ -119,9 +120,9 @@ def rchoplen(line, max):
     return ''.join(chars)
 
 
-def hexlify(data):
+def hexlify(data) -> str:
     return binascii.hexlify(data).decode('ascii')
 
 
-def unhexlify(data):
+def unhexlify(data) -> bytes:
     return binascii.unhexlify(data)

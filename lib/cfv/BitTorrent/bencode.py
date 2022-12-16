@@ -2,9 +2,10 @@
 # see LICENSE.txt for license information
 
 from builtins import object
+from typing import Sized
 
 
-def decode_int(x, f):
+def decode_int(x, f: int) -> tuple:
     f += 1
     newf = x.index(b'e', f)
     try:
@@ -19,7 +20,7 @@ def decode_int(x, f):
     return n, newf + 1
 
 
-def decode_string(x, f):
+def decode_string(x, f) -> tuple:
     colon = x.index(b':', f)
     try:
         n = int(x[f:colon])
@@ -31,7 +32,7 @@ def decode_string(x, f):
     return x[colon:colon + n], colon + n
 
 
-def decode_list(x, f):
+def decode_list(x, f) -> tuple:
     r, f = [], f + 1
     while x[f:f + 1] != b'e':
         v, f = decode_func[x[f:f + 1]](x, f)
@@ -39,7 +40,7 @@ def decode_list(x, f):
     return r, f + 1
 
 
-def decode_dict(x, f):
+def decode_dict(x, f) -> tuple:
     r, f = {}, f + 1
     lastkey = None
     while x[f:f + 1] != b'e':
@@ -68,7 +69,7 @@ decode_func = {
 }
 
 
-def bdecode(x):
+def bdecode(x: Sized):
     try:
         r, pos = decode_func[x[0:1]](x, 0)
     except (IndexError, KeyError):
@@ -78,7 +79,7 @@ def bdecode(x):
     return r
 
 
-def test_bdecode():
+def test_bdecode() -> None:
     try:
         bdecode(b'0:0:')
         assert 0
@@ -240,30 +241,30 @@ def test_bdecode():
 class Bencached(object):
     __slots__ = ['bencoded']
 
-    def __init__(self, s):
+    def __init__(self, s) -> None:
         self.bencoded = s
 
 
-def encode_bencached(x, r):
+def encode_bencached(x, r) -> None:
     r.append(x.bencoded)
 
 
-def encode_int(x, r):
+def encode_int(x, r) -> None:
     r.extend((b'i', b'%d' % x, b'e'))
 
 
-def encode_string(x, r):
+def encode_string(x: Sized, r) -> None:
     r.extend((b'%d' % len(x), b':', x))
 
 
-def encode_list(x, r):
+def encode_list(x, r) -> None:
     r.append(b'l')
     for i in x:
         encode_func[type(i)](i, r)
     r.append(b'e')
 
 
-def encode_dict(x, r):
+def encode_dict(x, r) -> None:
     r.append(b'd')
     ilist = list(x.items())
     ilist.sort()
@@ -284,13 +285,13 @@ encode_func = {
 }
 
 
-def bencode(x):
+def bencode(x) -> bytes:
     r = []
     encode_func[type(x)](x, r)
     return b''.join(r)
 
 
-def test_bencode():
+def test_bencode() -> None:
     assert bencode(4) == b'i4e'
     assert bencode(0) == b'i0e'
     assert bencode(-10) == b'i-10e'

@@ -36,6 +36,10 @@ from unittest import TestCase  # noqa: F401
 from unittest import main
 
 
+from typing import Iterator
+from unittest.suite import TestSuite
+from types import ModuleType
+
 cfvenv = ''
 
 cfvfn = None
@@ -46,26 +50,26 @@ datapath = os.path.join(testpath, 'testdata')
 
 
 class NullFile(object):
-    def isatty(self):
+    def isatty(self) -> int:
         return 0
 
-    def write(self, s):
+    def write(self, s) -> None:
         pass
 
-    def writelines(self, lines):
+    def writelines(self, lines) -> None:
         pass
 
-    def flush(self):
+    def flush(self) -> None:
         pass
 
-    def close(self):
+    def close(self) -> None:
         pass
 
 
 nullfile = NullFile()
 
 
-def expand_cmdline(cmd):
+def expand_cmdline(cmd) -> list:
     argv = []
     for arg in shlex.split(cmd):
         if '*' in arg or '?' in arg or '[' in arg:
@@ -75,7 +79,7 @@ def expand_cmdline(cmd):
     return argv
 
 
-def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
+def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None, need_reload: int=0) -> tuple:
     import subprocess
 
     def open_output(fn):
@@ -111,7 +115,7 @@ def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
 
 
 # TODO: make the runcfv_* functions (optionally?) take args as a list instead of a string
-def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
+def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload: int=0) -> tuple:
     from io import BytesIO, TextIOWrapper
     obuf = BytesIO()
     obuftext = TextIOWrapper(obuf)
@@ -175,7 +179,7 @@ def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0):
     return s, o
 
 
-def get_version_flags():
+def get_version_flags() -> None:
     global ver_cfv, ver_mmap
     s, o = runcfv("--version", need_reload=1)
     if o.find('cfv ') >= 0:
@@ -185,7 +189,7 @@ def get_version_flags():
     ver_mmap = o.find('mmap') >= 0
 
 
-def setcfv(fn=None, internal=None):
+def setcfv(fn=None, internal=None) -> None:
     global cfvfn, cfv_compiled, runcfv
 
     if internal is not None:
@@ -207,14 +211,14 @@ def setcfv(fn=None, internal=None):
     get_version_flags()
 
 
-def setenv(k, v):
+def setenv(k: str, v: str) -> None:
     global cfvenv
     cfvenv = "%s=%s %s" % (k, v, cfvenv)
     os.environ[k] = v
     get_version_flags()
 
 
-def my_import(name):
+def my_import(name: str) -> ModuleType:
     mod = __import__(name)
     components = name.split('.')
     for comp in components[1:]:
@@ -222,7 +226,7 @@ def my_import(name):
     return mod
 
 
-def rfind(root, match):
+def rfind(root, match) -> Iterator:
     root = os.path.join(root, '')
     for path, dirs, files in os.walk(root):
         subpath = path.replace(root, '', 1)
@@ -231,7 +235,7 @@ def rfind(root, match):
                 yield os.path.join(subpath, file)
 
 
-def all_unittests_suite():
+def all_unittests_suite() -> TestSuite:
     modules_to_test = [os.path.splitext(f)[0].replace(os.sep, '.') for f in rfind(testpath, 'test_*.py')]
     assert modules_to_test
     alltests = unittest.TestSuite()

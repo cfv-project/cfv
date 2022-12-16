@@ -2,9 +2,10 @@ from builtins import object
 
 import codecs
 import sys
-from io import BytesIO, TextIOWrapper
+from io import BufferedWriter, BytesIO, TextIOWrapper
 
 from cfv import osutil
+from typing import Union
 
 
 _badbytesmarker = '\ufffe'
@@ -18,12 +19,12 @@ codecs.register_error('markbadbytes', _markbadbytes)
 
 
 class PeekFile(object):
-    def __init__(self, fileobj, filename=None, encoding='auto'):
+    def __init__(self, fileobj, filename=None, encoding: str='auto') -> None:
         self.fileobj = fileobj
         self._init_decodeobj(encoding)
         self.name = filename or fileobj.name
 
-    def _init_decodeobj(self, encoding):
+    def _init_decodeobj(self, encoding) -> None:
         self._encoding = None
         self._decode_start = 0
         self._decode_errs = 0
@@ -42,7 +43,7 @@ class PeekFile(object):
         self._encodeerrors = osutil.getencodeerrors(encoding, default='markbadbytes')
         self._reset_decodeobj()
 
-    def _reset_decodeobj(self):
+    def _reset_decodeobj(self) -> None:
         self.fileobj.seek(self._decode_start)
         if self._encoding is not None:
             self.decodeobj = codecs.getreader(self._encoding)(self.fileobj, errors=self._encodeerrors)
@@ -88,7 +89,7 @@ class PeekFile(object):
             self._decode_errs = 1
             return ''
 
-    def _done_peeking(self, raw):
+    def _done_peeking(self, raw) -> None:
         if raw:
             fileobj = self.fileobj
             fileobj.seek(0)
@@ -118,11 +119,11 @@ class PeekFile(object):
         return self.read(*args)
 
 
-def PeekFileNonseekable(fileobj, filename, encoding):
+def PeekFileNonseekable(fileobj, filename, encoding) -> PeekFile:
     return PeekFile(BytesIO(fileobj.read()), filename, encoding)
 
 
-def PeekFileGzip(filename, encoding):
+def PeekFileGzip(filename, encoding) -> PeekFile:
     import gzip
     if filename == '-':
         f = gzip.GzipFile(mode='rb', fileobj=sys.stdin.buffer)
@@ -132,10 +133,10 @@ def PeekFileGzip(filename, encoding):
 
 
 class NoCloseFile(object):
-    def __init__(self, fileobj):
+    def __init__(self, fileobj) -> None:
         self.fileobj = fileobj
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str):
         if attr == 'close':
             attr = 'flush'
         return getattr(self.fileobj, attr)
@@ -155,7 +156,7 @@ def open_read(filename, config):
         return PeekFile(open(filename, mode), filename, config.encoding)
 
 
-def open_write(filename, config, force_raw=False):
+def open_write(filename, config, force_raw: bool=False):
     if config.gzip >= 2 or (config.gzip >= 0 and filename[-3:].lower() == '.gz'):
         import gzip
         kwargs = {

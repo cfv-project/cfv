@@ -13,7 +13,7 @@ from cfv import osutil
 # TODO: stop common.py mucking with _path_key_cache member.  (Move chdir/cdup functions here, or even better don't chang directories at all.)
 # TODO: make nocase_* functions not depend on current dir
 class FileInfoCache(object):
-    def __init__(self):
+    def __init__(self) -> None:
         # data is a mapping of <path key> -> <path cache>
         # <path key> is either a (dev, inode) pair or a full pathname (from os.path.realpath)
         # <path cache> is map from filename(without path, relative to path key) -> <finfo>
@@ -29,19 +29,19 @@ class FileInfoCache(object):
         # this member is saved/cleared/restored by chdir and cdup functions in common.py
         self._path_key_cache = {}
 
-    def set_verified(self, fn):
+    def set_verified(self, fn) -> None:
         self.getfinfo(fn)['_verified'] = 1
 
     def is_verified(self, fn):
         return self.getfinfo(fn).get('_verified', 0)
 
-    def set_flag(self, fn, flag):
+    def set_flag(self, fn, flag) -> None:
         self.getfinfo(fn)[flag] = 1
 
-    def has_flag(self, fn, flag):
+    def has_flag(self, fn, flag) -> bool:
         return flag in self.getfinfo(fn)
 
-    def get_path_key(self, path):
+    def get_path_key(self, path) -> tuple:
         dk = self._path_key_cache.get(path)
         if dk is not None:
             return dk
@@ -53,14 +53,14 @@ class FileInfoCache(object):
         self._path_key_cache[path] = dk
         return dk
 
-    def getpathcache(self, path):
+    def getpathcache(self, path) -> dict:
         pathkey = self.get_path_key(path)
         pathcache = self.data.get(pathkey)
         if pathcache is None:
             self.data[pathkey] = pathcache = {}
         return pathcache
 
-    def getfinfo(self, fn):
+    def getfinfo(self, fn) -> dict:
         if fn == '':
             return self.stdin_finfo
         else:
@@ -71,7 +71,7 @@ class FileInfoCache(object):
                 pathdata[ftail] = finfo = {}
             return finfo
 
-    def rename(self, oldfn, newfn):
+    def rename(self, oldfn, newfn) -> None:
         ofinfo = self.getfinfo(oldfn)
         nfinfo = self.getfinfo(newfn)
         nfinfo.clear()
@@ -81,7 +81,7 @@ class FileInfoCache(object):
         # nfinfo.update(ofinfo)
         ofinfo.clear()
 
-    def nocase_dirfiles(self, dir, match):
+    def nocase_dirfiles(self, dir, match) -> list:
         """return list of filenames in dir whose lowercase value equals match
         """
         dirkey = self.get_path_key(dir)
@@ -103,7 +103,7 @@ class FileInfoCache(object):
     _FINDFILE = 1
     _FINDDIR = 0
 
-    def nocase_findfile(self, filename, find=_FINDFILE):
+    def nocase_findfile(self, filename, find: int=_FINDFILE):
         cur = osutil.curdiru
         parts = osutil.path_split(filename.lower())
         # print 'nocase_findfile:',filename,parts,len(parts)

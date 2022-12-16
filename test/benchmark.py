@@ -30,9 +30,11 @@ import timeit
 from functools import partial
 
 import cfvtest
+from typing import Sized, SupportsFloat, Union
+from typing_extensions import SupportsIndex
 
 
-def human_int(value):
+def human_int(value: Sized) -> int:
     """Convert values with size suffix to integers.
     >>> human_int('10')
     10
@@ -62,7 +64,7 @@ def human_int(value):
     return int(value) * multiplier
 
 
-def create_test_file(path, max_size, verbose=False):
+def create_test_file(path, max_size, verbose: bool=False) -> None:
     size = random.randint(1, max_size)
     if verbose:
         print('creating', path, 'size', size)
@@ -73,7 +75,7 @@ def create_test_file(path, max_size, verbose=False):
             size -= 1
 
 
-def create_test_dir(root, num_files, branch_factor, max_size, verbose=False):
+def create_test_dir(root, num_files: Union[SupportsFloat, SupportsIndex], branch_factor: Union[SupportsFloat, SupportsIndex], max_size, verbose: bool=False) -> None:
     levels = int(math.ceil(math.log(num_files, branch_factor)))
     formatlen = int(math.ceil(math.log(branch_factor, 16)))
     path_counter = [0] * levels
@@ -102,19 +104,19 @@ def create_test_dir(root, num_files, branch_factor, max_size, verbose=False):
             print(remaining, path_counter)
 
 
-def create(args):
+def create(args) -> None:
     start_path = os.getcwd()
     create_test_dir(start_path, args.files, args.branch_factor, args.max_size, verbose=args.verbose)
 
 
-def print_times(name, results, iterations, verbose=False):
+def print_times(name, results, iterations, verbose: bool=False) -> None:
     best = min(results)
     print('%s: best=%.4g msec' % (name, best * 1000 / iterations))
     if verbose:
         print('  raw results:', results)
 
 
-def run_cfv(args, verbose):
+def run_cfv(args, verbose) -> None:
     if verbose >= 2:
         print('running cfv', args)
     s, o = cfvtest.runcfv(args)
@@ -125,17 +127,17 @@ def run_cfv(args, verbose):
         raise RuntimeError('cfv returned %s' % s)
 
 
-def run_create_test(cftype, output_root, input_root, verbose):
+def run_create_test(cftype, output_root, input_root, verbose) -> None:
     output_fn = os.path.join(output_root, 'create_test.%s.%s' % (random.randint(0, sys.maxsize), cftype))
     run_cfv('-C -rr -t %s -p %s -f %s' % (cftype, input_root, output_fn), verbose)
 
 
-def run_test_test(cftype, cfname, input_root, f_repeat, verbose):
+def run_test_test(cftype, cfname, input_root, f_repeat, verbose) -> None:
     f_arg = ' -f ' + cfname
     run_cfv('-T -t %s -p %s %s' % (cftype, input_root, f_arg * f_repeat), verbose)
 
 
-def run(args):
+def run(args) -> None:
     cfvtest.setcfv(args.cfv, not args.run_external)
     output_root = tempfile.mkdtemp()
     input_root = os.getcwd()
@@ -156,7 +158,7 @@ def run(args):
         print_times('multitest', times, args.iterations, args.verbose)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description='Create test data and run cfv benchmarks.')
 
     parser.add_argument('-v', '--verbose', action='count')

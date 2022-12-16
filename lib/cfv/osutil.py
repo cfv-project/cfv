@@ -2,23 +2,24 @@ import locale
 import os
 import re
 import sys
+from typing import Pattern, Union
 
 
 if hasattr(locale, 'getpreferredencoding'):
-    preferredencoding = locale.getpreferredencoding() or 'ascii'
+    preferredencoding: str = locale.getpreferredencoding() or 'ascii'
 else:
-    preferredencoding = 'ascii'
+    preferredencoding: str = 'ascii'
 
 if hasattr(sys, 'getfilesystemencoding'):
-    fsencoding = sys.getfilesystemencoding()
+    fsencoding: str = sys.getfilesystemencoding()
 else:
-    fsencoding = preferredencoding
+    fsencoding: str = preferredencoding
 
 
 if hasattr(sys, 'getfilesystemencodeerrors'):
-    fsencodeerrors = sys.getfilesystemencodeerrors()
+    fsencodeerrors: str = sys.getfilesystemencodeerrors()
 else:
-    fsencodeerrors = 'surrogateescape'
+    fsencodeerrors: str = 'surrogateescape'
 
 
 def getencoding(encoding, preferred=None):
@@ -52,7 +53,7 @@ except (TypeError, ValueError):
 
 
 getcwdu = os.getcwd
-curdiru = os.curdir
+curdiru: str = os.curdir
 listdir = os.listdir
 
 
@@ -83,7 +84,7 @@ def path_split(filename):
     return parts
 
 
-def strippath(filename, num='a', _splitdrivere=re.compile(r'[a-z]:[/\\]', re.IGNORECASE)):
+def strippath(filename, num: str='a', _splitdrivere: Pattern[str]=re.compile(r'[a-z]:[/\\]', re.IGNORECASE)):
     """Strip off path components from the left side of the filename.
 
     >>> strippath(os.path.join('c:','foo','bar','baz'))
@@ -120,6 +121,6 @@ def strippath(filename, num='a', _splitdrivere=re.compile(r'[a-z]:[/\\]', re.IGN
     return os.path.join(*parts[num:])
 
 
-def fcmp(f1, f2):
+def fcmp(f1: Union[os.PathLike[bytes], os.PathLike[str], bytes, str], f2: Union[os.PathLike[bytes], os.PathLike[str], bytes, str]) -> bool:
     import filecmp
     return filecmp.cmp(f1, f2, shallow=0)

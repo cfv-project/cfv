@@ -7,11 +7,11 @@ _cf_fn_exts, _cf_fn_matches, _cf_fn_searches = [], [], []
 _cftypes_match_order = []
 
 
-def add_user_cf_fn_regex(match, typename):
+def add_user_cf_fn_regex(match, typename) -> None:
     _user_cf_fn_regexs.append((re.compile(match, re.I).search, get_handler(typename)))
 
 
-def auto_filename_match(*names):
+def auto_filename_match(*names) -> None:
     for searchfunc, cftype in _user_cf_fn_regexs + _cf_fn_matches + _cf_fn_exts + _cf_fn_searches:
         for name in names:
             if searchfunc(name):
@@ -19,14 +19,14 @@ def auto_filename_match(*names):
     return None
 
 
-def auto_chksumfile_match(file):
+def auto_chksumfile_match(file) -> None:
     for cftype in _cftypes_match_order:
         if cftype.auto_chksumfile_match(file):
             return cftype
     return None
 
 
-def register_cftype(cftype):
+def register_cftype(cftype) -> None:
     _cftypes[cftype.name] = cftype
 
     if hasattr(cftype, 'auto_filename_match'):
@@ -49,5 +49,5 @@ def get_handler(name):
     return _cftypes[name]
 
 
-def has_handler(name):
+def has_handler(name) -> bool:
     return name in _cftypes
