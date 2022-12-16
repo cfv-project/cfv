@@ -7,6 +7,9 @@ from setuptools import find_packages, setup
 
 RE_VERSION = r"^__version__\s*=\s*'([^']*)'$"
 
+install_requires: list[str] = [
+    "typing_extensions",
+]
 
 def _read(path) -> str:
     with open(path, 'rt', encoding='utf8') as f:
@@ -57,6 +60,7 @@ setup(
         'Original Project': 'http://cfv.sourceforge.net/',
     },
     python_requires='>=3.5',
+    install_requires=install_requires,
     packages=find_packages('lib'),
     package_dir={'': 'lib'},
     include_package_data=True,
