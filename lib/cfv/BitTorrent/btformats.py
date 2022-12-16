@@ -4,9 +4,10 @@
 from re import compile
 
 from builtins import range
+from typing import Pattern
 
 
-reg = compile(br'^[^/\\.~][^/\\]*$')
+reg: Pattern[bytes] = compile(br'^[^/\\.~][^/\\]*$')
 
 
 def check_info(info) -> None:

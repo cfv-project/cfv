@@ -30,9 +30,11 @@ import timeit
 from functools import partial
 
 import cfvtest
+from typing import Sized, SupportsFloat, Union
+from typing_extensions import SupportsIndex
 
 
-def human_int(value) -> int:
+def human_int(value: Sized) -> int:
     """Convert values with size suffix to integers.
     >>> human_int('10')
     10
@@ -62,7 +64,7 @@ def human_int(value) -> int:
     return int(value) * multiplier
 
 
-def create_test_file(path, max_size, verbose=False) -> None:
+def create_test_file(path, max_size, verbose: bool=False) -> None:
     size = random.randint(1, max_size)
     if verbose:
         print('creating', path, 'size', size)
@@ -73,7 +75,7 @@ def create_test_file(path, max_size, verbose=False) -> None:
             size -= 1
 
 
-def create_test_dir(root, num_files, branch_factor, max_size, verbose=False) -> None:
+def create_test_dir(root, num_files: Union[SupportsFloat, SupportsIndex], branch_factor: Union[SupportsFloat, SupportsIndex], max_size, verbose: bool=False) -> None:
     levels = int(math.ceil(math.log(num_files, branch_factor)))
     formatlen = int(math.ceil(math.log(branch_factor, 16)))
     path_counter = [0] * levels
@@ -107,7 +109,7 @@ def create(args) -> None:
     create_test_dir(start_path, args.files, args.branch_factor, args.max_size, verbose=args.verbose)
 
 
-def print_times(name, results, iterations, verbose=False) -> None:
+def print_times(name, results, iterations, verbose: bool=False) -> None:
     best = min(results)
     print('%s: best=%.4g msec' % (name, best * 1000 / iterations))
     if verbose:

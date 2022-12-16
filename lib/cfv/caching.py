@@ -103,7 +103,7 @@ class FileInfoCache(object):
     _FINDFILE = 1
     _FINDDIR = 0
 
-    def nocase_findfile(self, filename, find=_FINDFILE):
+    def nocase_findfile(self, filename, find: int=_FINDFILE):
         cur = osutil.curdiru
         parts = osutil.path_split(filename.lower())
         # print 'nocase_findfile:',filename,parts,len(parts)

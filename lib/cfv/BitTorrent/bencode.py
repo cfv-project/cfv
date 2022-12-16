@@ -2,9 +2,10 @@
 # see LICENSE.txt for license information
 
 from builtins import object
+from typing import Sized
 
 
-def decode_int(x, f) -> tuple:
+def decode_int(x, f: int) -> tuple:
     f += 1
     newf = x.index(b'e', f)
     try:
@@ -68,7 +69,7 @@ decode_func = {
 }
 
 
-def bdecode(x):
+def bdecode(x: Sized):
     try:
         r, pos = decode_func[x[0:1]](x, 0)
     except (IndexError, KeyError):
@@ -252,7 +253,7 @@ def encode_int(x, r) -> None:
     r.extend((b'i', b'%d' % x, b'e'))
 
 
-def encode_string(x, r) -> None:
+def encode_string(x: Sized, r) -> None:
     r.extend((b'%d' % len(x), b':', x))
 
 

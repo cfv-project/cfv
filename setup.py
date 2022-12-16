@@ -8,7 +8,7 @@ from setuptools import find_packages, setup
 RE_VERSION = r"^__version__\s*=\s*'([^']*)'$"
 
 
-def _read(path):
+def _read(path) -> str:
     with open(path, 'rt', encoding='utf8') as f:
         return f.read()
 

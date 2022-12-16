@@ -4,6 +4,7 @@ import binascii
 import unicodedata
 
 from cfv import osutil
+from typing import Union
 
 
 def safesort(seq) -> None:
@@ -60,7 +61,7 @@ def uwidth(u) -> int:
     return w
 
 
-def lchoplen(line, max) -> str:
+def lchoplen(line: Union[bytes, str], max) -> str:
     """Return line cut on left so it takes at most max character cells when printed.
 
     >>> lchoplen('hello world',6)
@@ -89,7 +90,7 @@ def lchoplen(line, max) -> str:
     return ''.join(chars)
 
 
-def rchoplen(line, max) -> str:
+def rchoplen(line: Union[bytes, str], max) -> str:
     """Return line cut on right so it takes at most max character cells when printed.
 
     >>> rchoplen('hello world',6)

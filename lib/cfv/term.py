@@ -25,4 +25,4 @@ def getscrwidth() -> int:
         return 80
 
 
-scrwidth = getscrwidth()
+scrwidth: int = getscrwidth()

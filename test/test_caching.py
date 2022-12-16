@@ -36,7 +36,7 @@ class AbsTestCase(TestCase):
     def mkpath(self, name):
         return os.path.join(self.tempdir, name)
 
-    def mkfile(self, name, contents):
+    def mkfile(self, name, contents: str):
         head, tail = os.path.split(name)
         fullhead = os.path.join(self.tempdir, head)
         if head and not os.path.exists(fullhead):
@@ -60,7 +60,7 @@ class RelTestCase(TestCase):
     def mkpath(self, name):
         return name
 
-    def mkfile(self, name, contents):
+    def mkfile(self, name, contents: str):
         head, tail = os.path.split(name)
         if head and not os.path.exists(head):
             os.makedirs(head)

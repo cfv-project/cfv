@@ -46,15 +46,19 @@ from functools import reduce
 from glob import glob
 
 import cfvtest
+from io import BufferedReader, TextIOWrapper
+from typing import List, Optional, Pattern, Tuple, Union
+optlist: List[Tuple[str, str]]
+args: List[str]
 
 
 if hasattr(locale, 'getpreferredencoding'):
-    preferredencoding = locale.getpreferredencoding() or 'ascii'
+    preferredencoding: str = locale.getpreferredencoding() or 'ascii'
 else:
-    preferredencoding = 'ascii'
+    preferredencoding: str = 'ascii'
 
 
-def is_encodable(s, enc=preferredencoding):
+def is_encodable(s, enc=preferredencoding) -> bool:
     try:
         s.encode(enc)
         return True
@@ -100,35 +104,35 @@ fmt_info = {
 }
 
 
-def fmt_hascrc(f):
+def fmt_hascrc(f: str):
     return fmt_info[f][0]
 
 
-def fmt_hassize(f):
+def fmt_hassize(f: str):
     return fmt_info[f][1]
 
 
-def fmt_cancreate(f):
+def fmt_cancreate(f: str):
     return fmt_info[f][2]
 
 
-def fmt_available(f):
+def fmt_available(f: str):
     return fmt_info[f][3]
 
 
-def fmt_istext(f):
+def fmt_istext(f: str):
     return fmt_info[f][4]
 
 
-def fmt_preferredencoding(f):
+def fmt_preferredencoding(f: str):
     return fmt_info[f][5]
 
 
-def fmt_iscoreutils(f):
+def fmt_iscoreutils(f: str):
     return fmt_info[f][6]
 
 
-def allfmts():
+def allfmts() -> List[str]:
     return list(fmt_info.keys())
 
 
@@ -145,7 +149,7 @@ def coreutilsfmts():
 
 
 class rcurry(object):
-    def __init__(self, func, *args, **kw):
+    def __init__(self, func, *args, **kw) -> None:
         self.curry_func = func
         self.curry_args = args
         self.curry_kw = kw
@@ -156,7 +160,7 @@ class rcurry(object):
         return self.curry_func(*(_args + self.curry_args), **kw)
 
 
-def pathfind(p, path=os.environ.get('PATH', os.defpath).split(os.pathsep)):
+def pathfind(p, path: List[str]=os.environ.get('PATH', os.defpath).split(os.pathsep)) -> Optional[int]:
     for d in path:
         if os.path.exists(os.path.join(d, p)):
             return 1
@@ -172,7 +176,7 @@ def pathjoin_and_mkdir(*components):
     return result
 
 
-def readfile(fn, textmode=False):
+def readfile(fn, textmode: bool=False):
     if textmode:
         mode = 't'
     else:
@@ -182,13 +186,13 @@ def readfile(fn, textmode=False):
     return d
 
 
-def writefile(fn, data):
+def writefile(fn, data) -> None:
     with open(fn, 'wb') as f:
         if data:
             f.write(data)
 
 
-def writefile_and_reopen(fn, data):
+def writefile_and_reopen(fn, data) -> BufferedReader:
     """Write data to file, close, and then reopen readonly, and return the fd.
 
     This is for the benefit of windows, where you need to close and reopen the
@@ -204,19 +208,19 @@ class stats(object):
     failed = 0
 
 
-def logr(text):
+def logr(text) -> None:
     logfile.write(text)
 
 
-def log(text):
+def log(text) -> None:
     logr(text + '\n')
 
 
-def test_log_start(cmd, kw):
+def test_log_start(cmd, kw) -> None:
     log('*** testing ' + cmd + (kw and ' ' + str(kw) or ''))
 
 
-def test_log_finish(cmd, s, r, output, kw):
+def test_log_finish(cmd, s, r: int, output, kw) -> None:
     if r:
         stats.failed += 1
         print('\n>>> failed test:', cmd, (kw and ' ' + str(kw) or ''))
@@ -242,7 +246,7 @@ def test_log_finish(cmd, s, r, output, kw):
     log('')
 
 
-def test_log_results(cmd, s, o, r, kw):
+def test_log_results(cmd, s, o, r, kw) -> None:
     """
     cmd=command being tested (info only)
     s=return status
@@ -254,7 +258,7 @@ def test_log_results(cmd, s, o, r, kw):
     test_log_finish(cmd, s, r, o, kw)
 
 
-def test_external(cmd, test):
+def test_external(cmd: Union[bytes, str], test) -> None:
     # TODO: replace this with subprocess
     from subprocess import getstatusoutput
     s, o = getstatusoutput(cmd)
@@ -262,7 +266,7 @@ def test_external(cmd, test):
     test_log_results(cmd, s, o, r, None)
 
 
-def test_generic(cmd, test, **kw):
+def test_generic(cmd, test, **kw) -> None:
     # s, o = cfvtest.runcfv(cmd)
     s, o = cfvtest.runcfv(*(cmd,), **kw)
     r = test(s, o)
@@ -273,7 +277,7 @@ class cst_err(Exception):
     pass
 
 
-def cfv_stdin_test(cmd, file):
+def cfv_stdin_test(cmd, file) -> None:
     s1 = s2 = None
     o1 = o2 = ''
     r = 0
@@ -295,7 +299,7 @@ def cfv_stdin_test(cmd, file):
     test_log_results('stdin/out of ' + cmd + ' with file ' + file, (s1, s2), o1 + '\n' + o2, r, None)
 
 
-def cfv_stdin_progress_test(t, file):
+def cfv_stdin_progress_test(t, file) -> None:
     s1 = s2 = None
     o1 = o2 = c1 = c2 = ''
     r = 0
@@ -333,13 +337,13 @@ def cfv_stdin_progress_test(t, file):
         shutil.rmtree(dir)
 
 
-def rx_test(pat, str):
+def rx_test(pat, str) -> int:
     if re.search(pat, str):
         return 0
     return 1
 
 
-def status_test(s, o, expected=0):
+def status_test(s, o, expected: int=0) -> int:
     if s == expected:
         return 0
     return 1
@@ -355,28 +359,28 @@ rx_badsize = r', (\d+) badsize'
 rx_cferror = r', (\d+) chksum file errors'
 rx_misnamed = r', (\d+) misnamed'
 rx_End = r'(, \d+ differing cases)?(, \d+ quoted filenames)?.  [\d.]+ seconds, [\d.]+K(/s)?$'
-rxo_TestingFrom = re.compile(r'^testing from .* \((.+?)\b.*\)[\n\r]*$', re.M)
+rxo_TestingFrom: Pattern[str] = re.compile(r'^testing from .* \((.+?)\b.*\)[\n\r]*$', re.M)
 
 
-def optionalize(s):
+def optionalize(s) -> str:
     return '(?:%s)?' % s
 
 
-rx_StatusLine = rx_Begin + ''.join(map(optionalize, [rx_badcrc, rx_badsize, rx_notfound, rx_ferror, rx_unv, rx_cferror, rx_misnamed])) + rx_End
+rx_StatusLine: str = rx_Begin + ''.join(map(optionalize, [rx_badcrc, rx_badsize, rx_notfound, rx_ferror, rx_unv, rx_cferror, rx_misnamed])) + rx_End
 
 
 class OneOf(object):
-    def __init__(self, *possibilities):
+    def __init__(self, *possibilities) -> None:
         self.possible = possibilities
 
-    def __eq__(self, a):
+    def __eq__(self, a: object):
         return a in self.possible
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'OneOf' + repr(self.possible)
 
 
-def intize(s):
+def intize(s) -> int:
     return s and int(s) or 0
 
 
@@ -398,8 +402,8 @@ def tail(s):
     return ''
 
 
-re_sfv_comment = re.compile('^; Generated by .* on .*$', re.M | re.I)
-re_crc_comment = re.compile('^Generated at: .*$', re.M | re.I)
+re_sfv_comment: Pattern[str] = re.compile('^; Generated by .* on .*$', re.M | re.I)
+re_crc_comment: Pattern[str] = re.compile('^Generated at: .*$', re.M | re.I)
 
 
 def remove_varying_comments(t, text):
@@ -410,28 +414,28 @@ def remove_varying_comments(t, text):
     return text
 
 
-def cfv_test(s, o, op=operator.gt, opval=0):
+def cfv_test(s, o, op=operator.gt, opval: int=0) -> int:
     x = re.search(rx_Begin + rx_End, tail(o))
     if s == 0 and x and x.group(1) == x.group(2) and op(int(x.group(1)), opval):
         return 0
     return 1
 
 
-def cfv_substatus_test(s, o, unv=0, notfound=0, badcrc=0, badsize=0, cferror=0, ferror=0):
+def cfv_substatus_test(s, o, unv: int=0, notfound: int=0, badcrc: int=0, badsize: int=0, cferror: int=0, ferror: int=0) -> Union[int, str]:
     expected_status = (badcrc and 2) | (badsize and 4) | (notfound and 8) | (ferror and 16) | (unv and 32) | (cferror and 64)
     if s & expected_status == expected_status and not s & 1:
         return 0
     return 'bad status expected %s got %s' % (expected_status, s)
 
 
-def cfv_status_test(s, o, unv=0, notfound=0, badcrc=0, badsize=0, cferror=0, ferror=0):
+def cfv_status_test(s, o, unv: int=0, notfound: int=0, badcrc: int=0, badsize: int=0, cferror: int=0, ferror: int=0) -> Union[int, str]:
     expected_status = (badcrc and 2) | (badsize and 4) | (notfound and 8) | (ferror and 16) | (unv and 32) | (cferror and 64)
     if s == expected_status:
         return 0
     return 'bad status expected %s got %s' % (expected_status, s)
 
 
-def cfv_all_test(s, o, files=-2, ok=0, unv=0, notfound=0, badcrc=0, badsize=0, cferror=0, ferror=0, misnamed=0):
+def cfv_all_test(s, o, files: int=-2, ok: int=0, unv: int=0, notfound: int=0, badcrc: int=0, badsize: int=0, cferror: int=0, ferror: int=0, misnamed: int=0):
     x = re.search(rx_StatusLine, tail(o))
     if x:
         if files == -2:
@@ -447,7 +451,7 @@ def cfv_all_test(s, o, files=-2, ok=0, unv=0, notfound=0, badcrc=0, badsize=0, c
     return 'status line not found in output'
 
 
-def cfv_unv_test(s, o, unv=1):
+def cfv_unv_test(s, o, unv: int=1) -> int:
     x = re.search(rx_Begin + rx_unv + rx_End, tail(o))
     if s != 0 and x and x.group(1) == x.group(2) and int(x.group(1)) > 0:
         if unv and int(x.group(3)) != unv:
@@ -456,14 +460,14 @@ def cfv_unv_test(s, o, unv=1):
     return 1
 
 
-def cfv_unvonly_test(s, o, unv=1):
+def cfv_unvonly_test(s, o, unv: int=1) -> int:
     x = re.search(rx_Begin + rx_unv + rx_End, tail(o))
     if s != 0 and x and int(x.group(3)) == unv:
         return 0
     return 1
 
 
-def cfv_notfound_test(s, o, unv=1):
+def cfv_notfound_test(s, o, unv: int=1) -> int:
     x = re.search(rx_Begin + rx_notfound + rx_End, tail(o))
     if s != 0 and x and int(x.group(2)) == 0 and int(x.group(1)) > 0:
         if int(x.group(3)) != unv:
@@ -472,7 +476,7 @@ def cfv_notfound_test(s, o, unv=1):
     return 1
 
 
-def cfv_cferror_test(s, o, bad=1):
+def cfv_cferror_test(s, o, bad: int=1) -> int:
     x = re.search(rx_Begin + rx_cferror + rx_End, tail(o))
     if s != 0 and x and int(x.group(3)) > 0:
         if bad > 0 and int(x.group(3)) != bad:
@@ -481,7 +485,7 @@ def cfv_cferror_test(s, o, bad=1):
     return 1
 
 
-def cfv_bad_test(s, o, bad=-1):
+def cfv_bad_test(s, o, bad: int=-1) -> int:
     x = re.search(rx_Begin + rx_bad + rx_End, tail(o))
     if s != 0 and x and int(x.group(1)) > 0 and int(x.group(3)) > 0:
         if bad > 0 and int(x.group(3)) != bad:
@@ -490,7 +494,7 @@ def cfv_bad_test(s, o, bad=-1):
     return 1
 
 
-def cfv_typerestrict_test(s, o, t):
+def cfv_typerestrict_test(s, o, t) -> int:
     matches = rxo_TestingFrom.findall(o)
     if not matches:
         return 1
@@ -500,7 +504,7 @@ def cfv_typerestrict_test(s, o, t):
     return 0
 
 
-def cfv_listdata_test(s, o):
+def cfv_listdata_test(s, o) -> int:
     if s == 0 and re.search('^data1\0data2\0data3\0data4\0$', o, re.I):
         return 0
     return 1
@@ -510,25 +514,25 @@ def joincurpath(f):
     return os.path.join(os.getcwd(), f)
 
 
-def cfv_listdata_abs_test(s, o):
+def cfv_listdata_abs_test(s, o) -> int:
     if s == 0 and re.search('^' + re.escape('\0'.join(map(joincurpath, ['data1', 'data2', 'data3', 'data4']))) + '\0$', o, re.I):
         return 0
     return 1
 
 
-def cfv_listdata_unv_test(s, o):
+def cfv_listdata_unv_test(s, o) -> int:
     if s == 32 and re.search('^testfix.csv\0unchecked.dat\0$', o, re.I):
         return 0
     return 1
 
 
-def cfv_listdata_bad_test(s, o):
+def cfv_listdata_bad_test(s, o) -> int:
     if s & 6 and not s & ~6 and re.search('^(d2.)?test4.foo\0test.ext.end\0test2.foo\0test3\0$', o, re.I):
         return 0
     return 1
 
 
-def cfv_version_test(s, o):
+def cfv_version_test(s, o) -> int:
     x = re.search(r'cfv v([\d.]+(?:\.dev\d+)?) -', o)
     with open(os.path.join(cfvtest.testpath, os.pardir, 'Changelog'), 'rt') as f:
         x3 = re.search(r' v([\d.]+(?:\.dev\d+)?):', f.readline())
@@ -548,7 +552,7 @@ def cfv_version_test(s, o):
     return 1
 
 
-def cfv_cftypehelp_test(s, o, expected):
+def cfv_cftypehelp_test(s, o, expected) -> Union[int, str]:
     if s != expected:
         return 1
     for tname in allfmts() + ['auto']:
@@ -557,7 +561,7 @@ def cfv_cftypehelp_test(s, o, expected):
     return 0
 
 
-def cfv_nooutput_test(s, o, expected=0):
+def cfv_nooutput_test(s, o, expected: int=0) -> Union[int, str]:
     if s != expected:
         return 1
     if o:
@@ -565,7 +569,7 @@ def cfv_nooutput_test(s, o, expected=0):
     return 0
 
 
-def T_test(f, extra=None):
+def T_test(f, extra=None) -> None:
     cmd = cfvcmd
     if extra:
         cmd += ' ' + extra
@@ -616,7 +620,7 @@ def T_test(f, extra=None):
     test_generic(cmd + ' -T --progress=no -f test' + f, noprogress_test)
 
 
-def gzC_test(f, extra=None, verify=None, t=None, d=None):
+def gzC_test(f, extra=None, verify=None, t=None, d=None) -> None:
     cmd = cfvcmd
     if not t:
         t = f
@@ -656,7 +660,7 @@ def gzC_test(f, extra=None, verify=None, t=None, d=None):
         shutil.rmtree(tmpd)
 
 
-def C_test(f, extra=None, verify=None, t=None, d='data?'):
+def C_test(f, extra=None, verify=None, t=None, d: Union[os.PathLike[bytes], os.PathLike[str], bytes, str]='data?') -> None:
     gzC_test(f, extra=extra, t=t, d=d)
     cmd = cfvcmd
     if not t:
@@ -706,7 +710,7 @@ def C_test(f, extra=None, verify=None, t=None, d='data?'):
     C_test_encoding('utf-16')
 
 
-def create_funkynames(t, d, chr, deep):
+def create_funkynames(t, d, chr, deep) -> int:
     num = 0
     for i in range(1, 256):
         n = chr(i)
@@ -748,7 +752,7 @@ def create_funkynames(t, d, chr, deep):
     return num
 
 
-def C_funkynames_test(t):
+def C_funkynames_test(t) -> None:
     def fschr(i):
         return os.fsdecode(b'%c' % i)
 
@@ -857,7 +861,7 @@ def C_funkynames_test(t):
             shutil.rmtree(d3)
 
 
-def ren_test(f, extra=None, verify=None, t=None):
+def ren_test(f, extra=None, verify=None, t=None) -> None:
     join = os.path.join
     dir = tempfile.mkdtemp()
     try:
@@ -922,7 +926,7 @@ def ren_test(f, extra=None, verify=None, t=None):
         shutil.rmtree(dir)
 
 
-def search_test(t, test_nocrc=0, extra=None):
+def search_test(t, test_nocrc: int=0, extra=None) -> None:
     cfn = os.path.join(os.getcwd(), 'test.' + t)
     hassize = fmt_hassize(t)
     if test_nocrc:
@@ -1105,7 +1109,7 @@ def search_test(t, test_nocrc=0, extra=None):
             shutil.rmtree(d)
 
 
-def quoted_search_test():
+def quoted_search_test() -> None:
     d = tempfile.mkdtemp()
     try:
         join = os.path.join
@@ -1131,7 +1135,7 @@ def quoted_search_test():
         shutil.rmtree(d)
 
 
-def symlink_test():
+def symlink_test() -> None:
     dir = tempfile.mkdtemp()
     dir1 = 'd1'
     dir2 = 'd2'
@@ -1176,7 +1180,7 @@ def symlink_test():
         shutil.rmtree(dir)
 
 
-def deep_unverified_test():
+def deep_unverified_test() -> None:
     dir = tempfile.mkdtemp()
     try:
         join = os.path.join
@@ -1251,7 +1255,7 @@ def deep_unverified_test():
         shutil.rmtree(dir)
 
 
-def test_encoding_detection():
+def test_encoding_detection() -> None:
     datad = tempfile.mkdtemp()
     d = tempfile.mkdtemp()
     try:
@@ -1295,7 +1299,7 @@ def test_encoding_detection():
         shutil.rmtree(datad)
 
 
-def test_encoding2():
+def test_encoding2() -> None:
     """Non-trivial (actual non-ascii characters) encoding test.
     These tests will probably always fail unless you use a unicode locale and python 2.3+.
     """
@@ -1391,7 +1395,7 @@ def test_encoding2():
     shutil.rmtree(d)
 
 
-def largefile2GB_test():
+def largefile2GB_test() -> None:
     # hope you have sparse file support ;)
     fn = os.path.join('bigfile2', 'bigfile')
     f = open(fn, 'wb')
@@ -1407,7 +1411,7 @@ def largefile2GB_test():
         os.unlink(fn)
 
 
-def largefile4GB_test():
+def largefile4GB_test() -> None:
     # hope you have sparse file support ;)
     fn = os.path.join('bigfile', 'bigfile')
     f = open(fn, 'wb')
@@ -1425,7 +1429,7 @@ def largefile4GB_test():
         os.unlink(fn)
 
 
-def manyfiles_test(t):
+def manyfiles_test(t) -> None:
     try:
         max_open = os.sysconf('SC_OPEN_MAX')
     except (AttributeError, ValueError, OSError):
@@ -1448,7 +1452,7 @@ def manyfiles_test(t):
         shutil.rmtree(d)
 
 
-def specialfile_test(cfpath):
+def specialfile_test(cfpath: Union[os.PathLike[bytes], os.PathLike[str], bytes, str]) -> None:
     try:
         import threading
     except ImportError:
@@ -1489,7 +1493,7 @@ def specialfile_test(cfpath):
         shutil.rmtree(d)
 
 
-def unrecognized_cf_test():
+def unrecognized_cf_test() -> None:
     def cfv_unrectype(s, o):
         r = cfv_all_test(s, o, cferror=1)
         if r:
@@ -1516,7 +1520,7 @@ def unrecognized_cf_test():
     test_generic(cfvcmd + ' -T --encoding=utf-16 -f data1', cfv_unrecenc)
 
 
-def private_torrent_test():
+def private_torrent_test() -> None:
     cmd = cfvcmd
     tmpd = tempfile.mkdtemp()
     try:
@@ -1534,7 +1538,7 @@ def private_torrent_test():
         shutil.rmtree(tmpd)
 
 
-def all_unittest_tests():
+def all_unittest_tests() -> int:
     if not run_internal:
         return 0
     test_log_start('all_unittests_suite', None)
@@ -1557,7 +1561,7 @@ run_unittests_only = 0
 run_exit_early = 0
 
 
-def show_help_and_exit(err=None):
+def show_help_and_exit(err=None) -> None:
     if err:
         print('error:', err)
         print()
@@ -1602,17 +1606,17 @@ for o, a in optlist:
 cfvtest.setcfv(fn=args and args[0] or None, internal=run_internal)
 
 if run_unittests_only:
-    logfile = sys.stdout
+    logfile: TextIOWrapper = sys.stdout
     all_unittest_tests()
     sys.exit()
 
 # set everything to default in case user has different in config file
 cfvcmd = '-ZNVRMUI --unquote=no --fixpaths="" --strippaths=0 --showpaths=auto-relative --progress=no --announceurl=url --noprivate_torrent'
 
-logfile = open(os.path.join(tempfile.gettempdir(), 'cfv_%s_test-%s.log' % (cfvtest.ver_cfv, time.strftime('%Y%m%dT%H%M%S'))), 'wt')
+logfile: TextIOWrapper = open(os.path.join(tempfile.gettempdir(), 'cfv_%s_test-%s.log' % (cfvtest.ver_cfv, time.strftime('%Y%m%dT%H%M%S'))), 'wt')
 
 
-def all_tests():
+def all_tests() -> int:
     stats.ok = stats.failed = 0
 
     symlink_test()
@@ -1853,7 +1857,7 @@ def all_tests():
     return stats.failed
 
 
-def copytree(src, dst, ignore=None):
+def copytree(src, dst, ignore=None) -> None:
     if ignore is None:
         ignore = []
     for name in os.listdir(src):
@@ -1873,7 +1877,7 @@ def copytree(src, dst, ignore=None):
 
 
 # copy the testdata into a temp dir in order to avoid .svn dirs breaking some tests
-tmpdatapath = tempfile.mkdtemp()
+tmpdatapath: str = tempfile.mkdtemp()
 try:
     copytree(cfvtest.datapath, tmpdatapath, ignore=['.svn'])
     os.chdir(tmpdatapath)  # do this after the setcfv, since the user may have specified a relative path

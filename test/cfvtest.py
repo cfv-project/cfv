@@ -38,6 +38,8 @@ from unittest import main
 
 from typing import Iterator
 from unittest.suite import TestSuite
+from types import ModuleType
+
 cfvenv = ''
 
 cfvfn = None
@@ -77,7 +79,7 @@ def expand_cmdline(cmd) -> list:
     return argv
 
 
-def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None, need_reload=0) -> tuple:
+def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None, need_reload: int=0) -> tuple:
     import subprocess
 
     def open_output(fn):
@@ -113,7 +115,7 @@ def runcfv_exe(cmd, stdin=None, stdout=None, stderr=None, need_reload=0) -> tupl
 
 
 # TODO: make the runcfv_* functions (optionally?) take args as a list instead of a string
-def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload=0) -> tuple:
+def runcfv_py(cmd, stdin=None, stdout=None, stderr=None, need_reload: int=0) -> tuple:
     from io import BytesIO, TextIOWrapper
     obuf = BytesIO()
     obuftext = TextIOWrapper(obuf)
@@ -209,14 +211,14 @@ def setcfv(fn=None, internal=None) -> None:
     get_version_flags()
 
 
-def setenv(k, v) -> None:
+def setenv(k: str, v: str) -> None:
     global cfvenv
     cfvenv = "%s=%s %s" % (k, v, cfvenv)
     os.environ[k] = v
     get_version_flags()
 
 
-def my_import(name):
+def my_import(name: str) -> ModuleType:
     mod = __import__(name)
     components = name.split('.')
     for comp in components[1:]:

@@ -5,6 +5,7 @@ import os
 import struct
 import sys
 from zlib import crc32
+from typing import Union
 
 
 try:
@@ -12,7 +13,7 @@ try:
         raise ImportError
     import mmap
 
-    def dommap(fileno, len):  # generic mmap.  ACCESS_* args work on both nix and win.
+    def dommap(fileno, len) -> Union[bytes, mmap.mmap]:  # generic mmap.  ACCESS_* args work on both nix and win.
         if len == 0:
             return b''  # mmap doesn't like length=0
         return mmap.mmap(fileno, len, access=mmap.ACCESS_READ)
@@ -68,7 +69,7 @@ def _getfilechecksum(filename, hasher, callback) -> tuple:
         return m.digest(), s
 
 
-def getfilechecksumgeneric(algo) -> tuple:
+def getfilechecksumgeneric(algo: str) -> tuple:
     if hasattr(hashlib, algo):
         hasher = getattr(hashlib, algo)
     else:
@@ -86,7 +87,7 @@ class CRC32(object):
     def update(self, s) -> None:
         self.value = crc32(s, self.value)
 
-    def digest(self):
+    def digest(self) -> bytes:
         return struct.pack('>I', self.value & 0xFFFFFFFF)
 
 
