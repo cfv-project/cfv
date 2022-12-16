@@ -9,7 +9,7 @@ from builtins import range
 reg = compile(br'^[^/\\.~][^/\\]*$')
 
 
-def check_info(info):
+def check_info(info) -> None:
     if type(info) != dict:
         raise ValueError('bad metainfo - not a dictionary')
     pieces = info.get(b'pieces')
@@ -53,7 +53,7 @@ def check_info(info):
                     raise ValueError('bad metainfo - duplicate path')
 
 
-def check_message(message):
+def check_message(message) -> None:
     if type(message) != dict:
         raise ValueError
     check_info(message.get(b'info'))
@@ -62,7 +62,7 @@ def check_message(message):
         raise ValueError('bad torrent file - announce is invalid')
 
 
-def check_peers(message):
+def check_peers(message) -> None:
     if type(message) != dict:
         raise ValueError
     if b'failure reason' in message:

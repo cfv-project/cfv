@@ -29,7 +29,7 @@ md5 = hashlib.md5
 sha1 = hashlib.sha1
 
 
-def _getfilechecksum(filename, hasher, callback):
+def _getfilechecksum(filename, hasher, callback) -> tuple:
     if filename == '':
         f = sys.stdin.buffer
     else:
@@ -68,7 +68,7 @@ def _getfilechecksum(filename, hasher, callback):
         return m.digest(), s
 
 
-def getfilechecksumgeneric(algo):
+def getfilechecksumgeneric(algo) -> tuple:
     if hasattr(hashlib, algo):
         hasher = getattr(hashlib, algo)
     else:
@@ -80,15 +80,15 @@ def getfilechecksumgeneric(algo):
 class CRC32(object):
     digest_size = 4
 
-    def __init__(self, s=b''):
+    def __init__(self, s=b'') -> None:
         self.value = crc32(s)
 
-    def update(self, s):
+    def update(self, s) -> None:
         self.value = crc32(s, self.value)
 
     def digest(self):
         return struct.pack('>I', self.value & 0xFFFFFFFF)
 
 
-def getfilecrc(filename, callback):
+def getfilecrc(filename, callback) -> tuple:
     return _getfilechecksum(filename, CRC32, callback)

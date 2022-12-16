@@ -27,10 +27,10 @@ from cfvtest import TestCase
 
 
 class AbsTestCase(TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.tempdir = tempfile.mkdtemp()
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         shutil.rmtree(self.tempdir)
 
     def mkpath(self, name):
@@ -48,12 +48,12 @@ class AbsTestCase(TestCase):
 
 
 class RelTestCase(TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.olddir = os.getcwd()
         self.tempdir = tempfile.mkdtemp()
         os.chdir(self.tempdir)
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         os.chdir(self.olddir)
         shutil.rmtree(self.tempdir)
 
@@ -70,7 +70,7 @@ class RelTestCase(TestCase):
 
 
 class AbsPathKeyTest(AbsTestCase):
-    def test_get_path_key(self):
+    def test_get_path_key(self) -> None:
         cache = FileInfoCache()
 
         with self.assertRaises(OSError):
@@ -95,7 +95,7 @@ class AbsPathKeyTest(AbsTestCase):
         else:
             self.assertNotEqual(keya, keyc)
 
-    def test_rename(self):
+    def test_rename(self) -> None:
         cache = FileInfoCache()
         a = self.mkfile('a', 'a')
         b = self.mkfile('b', 'b')
@@ -130,7 +130,7 @@ class AbsPathKeyTest(AbsTestCase):
 
 
 class RelPathKeyTest(RelTestCase):
-    def test_nocase_findfile(self):
+    def test_nocase_findfile(self) -> None:
         cache = FileInfoCache()
         a1 = self.mkfile('aAaA/AaA1', '1')
         self.mkfile('aAaA/Aaa2', '2')
@@ -149,7 +149,7 @@ class RelPathKeyTest(RelTestCase):
             cache.nocase_findfile(self.mkpath('aaAA/aaa2'))
         self.assertEqual(errno.EEXIST, cm.exception.errno)
 
-    def test_nocase_findfile_parent(self):
+    def test_nocase_findfile_parent(self) -> None:
         cache = FileInfoCache()
         self.mkfile('aaaA/aaA1', '1')
         self.mkfile('aAaA/aaa2', '2')

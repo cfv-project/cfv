@@ -3,7 +3,7 @@ import struct
 import sys
 
 
-def getscrwidth():
+def getscrwidth() -> int:
     w = -1
     try:
         from fcntl import ioctl
