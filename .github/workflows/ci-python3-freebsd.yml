@@ -51,6 +51,12 @@ jobs:
 
           pw useradd runner -u 501 -g staff -d /Users/runner
 
+          # Install Poetry
+          export POETRY_HOME=/opt/poetry
+          python3 -m venv $POETRY_HOME
+          $POETRY_HOME/bin/pip install poetry==1.1.15
+          $POETRY_HOME/bin/poetry --version
+
           # Install test dependencies
           pip install pyroma
           pip install check-manifest
