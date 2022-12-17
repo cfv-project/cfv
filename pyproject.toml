@@ -1,0 +1,40 @@
+[tool.poetry]
+name = "cfv"
+version = "3.0.1.dev0"
+description = "Command-line File Verify - versatile file checksum creator and verifier"
+license = "GPL"
+keywords = ["cfv", "checksum", "verify", "sfv", "csv", "crc", "bsdmd5", "md5sum", "sha1sum", "sha224sum", "sha256sum", "sha384sum", "sha512sum", "torrent", "par", "par2"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Topic :: System :: Archiving",
+    "Topic :: Utilities",
+    "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    ]
+homepage = "https://github.com/cfv-project/cfv"
+repository = "https://github.com/cfv-project/cfv"
+authors = ["David Gnedt <cfv-project@davizone.at>"]
+readme = "README.md"
+packages = [{include = "cfv", from = "lib"}]
+
+[tool.poetry.scripts]
+cfv = "cfv.common:main"
+
+[tool.poetry.dependencies]
+python = ">=3.5"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/cfv-project/cfv/issues"
+"Original Project" = "http://cfv.sourceforge.net/"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
