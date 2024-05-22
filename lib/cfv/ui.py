@@ -138,7 +138,7 @@ class View(object):
         self.ev_f_verifyerror(filename, msg + ' (renamed to %s)' % strutil.showfn(newfilename), foundok)
 
     def ev_f_found_renameetcerror(self, filename, filesize, filecrc, found_fn, action, e):
-        eaction = 'but error %r occured %s' % (enverrstr(e), action)
+        eaction = 'but error %r occurred %s' % (enverrstr(e), action)
         self.ev_f_found(filename, filesize, filecrc, found_fn, eaction)
 
     def ev_f_found_renameetc(self, filename, filesize, filecrc, found_fn, action):

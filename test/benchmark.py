@@ -175,7 +175,7 @@ def main():
 
     run_parser = subparsers.add_parser('run', help='run benchmarks against current dir')
     run_parser.add_argument('--cfv', help='path to the cfv executable')
-    run_parser.add_argument('--run-external', action='store_true', help='launch seperate cfv process for each test')
+    run_parser.add_argument('--run-external', action='store_true', help='launch separate cfv process for each test')
     run_parser.add_argument('--iterations', default=10, type=int, help='number of iteration per run')
     run_parser.add_argument('--multitest', default=3, type=int, help='number of checksum files in multitest run')
     run_parser.add_argument('--repeats', default=3, type=int, help='number of repeats')
@@ -183,7 +183,7 @@ def main():
     run_parser.set_defaults(func=run)
     # TODO: add args to allow specifying additional flags for running cfv
     # TODO: run cfv with defaults (not using .cfvrc)
-    # TODO: allow running the different benchmarks (create/test/multitest) independantly, and allow testing against a specified checksum file
+    # TODO: allow running the different benchmarks (create/test/multitest) independently, and allow testing against a specified checksum file
 
     args = parser.parse_args()
     args.func(args)

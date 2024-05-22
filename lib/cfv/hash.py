@@ -62,7 +62,7 @@ def _getfilechecksum(filename, hasher, callback):
                 mmapsize = min(s, _FALLBACK_MMAP)
                 m = hasher(dommap(f.fileno(), mmapsize))
                 f.seek(mmapsize)
-                # unfortunatly, python's mmap module doesn't support the
+                # unfortunately, python's mmap module doesn't support the
                 # offset parameter, so we just have to do the rest of the
                 # file the old fashioned way.
                 return finish(m, mmapsize)

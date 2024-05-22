@@ -880,7 +880,10 @@ class PAR(ChksumType, MD5_MixIn):
             control_md5 = hash.md5()
             control_md5.update(d[0x20:])
             stats.bytesread += len(d)
-        if version not in (0x00000900, 0x00010000):  # ver 0.9 and 1.0 are the same, as far as we care.  Future versions (if any) may very likey have incompatible changes, so don't accept them either.
+
+        # ver 0.9 and 1.0 are the same, as far as we care.
+        # Future versions (if any) may very likely have incompatible changes, so don't accept them either.
+        if version not in (0x00000900, 0x00010000):
             raise EnvironmentError(errno.EINVAL, "can't handle PAR version %s" % ver2str(version))
 
         view.ev_test_cf_begin('par v%s' % ver2str(version), file.name, 'created by %s v%s' % (prog2str(client >> 24), ver2str(client & 0xFFFFFF)))
@@ -912,7 +915,7 @@ class PAR(ChksumType, MD5_MixIn):
                 stats.bytesread += len(d)
                 control_md5.update(d)
 
-    # we don't support PAR in create mode, but add these methods so that we can get error messages that are probaby more user friendly.
+    # we don't support PAR in create mode, but add these methods so that we can get error messages that are probably more user friendly.
     auto_filename_match = 'par$'
 
     @staticmethod
@@ -1009,7 +1012,7 @@ class PAR2(ChksumType, MD5_MixIn):
             if file_id not in seen_file_ids:
                 raise EnvironmentError(errno.EINVAL, 'corrupt or unsupported par2 file - expected file description packet not found')
 
-    # we don't support PAR2 in create mode, but add these methods so that we can get error messages that are probaby more user friendly.
+    # we don't support PAR2 in create mode, but add these methods so that we can get error messages that are probably more user friendly.
     auto_filename_match = 'par2$'
 
     @staticmethod
@@ -1961,7 +1964,7 @@ def autotest(typename):
 def printusage(err=0):
     phelp = err and view.perror or view.pinfo
     phelp('Usage: cfv [opts] [-p dir] [-T|-C] [-t type] [-f file] [files...]')
-    phelp('  -r       recursive mode 1 (make seperate chksum files for each dir)')
+    phelp('  -r       recursive mode 1 (make separate chksum files for each dir)')
     phelp('  -rr      recursive mode 2 (make a single file with deep listing in it)')
     phelp('  -R       not recursive (default)')
     if _hassymlinks:
@@ -1993,7 +1996,7 @@ def printusage(err=0):
     phelp('  -Z       don\'t create gzipped files automatically. (default)')
     phelp('  -ZZ      never use gzip, even if file ends in .gz')
     phelp(' --list=<l> raw list files of type <l> (%s)' % ', '.join(ui.LISTARGS))
-    phelp(' --list0=<l> same as list, but seperate files with nulls (useful for xargs -0)')
+    phelp(' --list0=<l> same as list, but separate files with nulls (useful for xargs -0)')
     phelp(' --encoding=<e>  encoding of checksum files (raw, auto(default), or...)')
     phelp(' --unquote=VAL  handle checksum files with quoted filenames (yes or no(default))')
     phelp(' --fixpaths=<s>  replace any chars in <s> with %s' % os.sep)

@@ -37,7 +37,7 @@ cfv (1.18.2-1) unstable; urgency=low
   * Fix for py 2.5 "struct integer overflow warning" (Closes: #479037, #479037)
   * torrent clients are now suggested rather than recommended (Closes: #337796)
   * Color patch temporarily removed due to incompatiblitiy
-    with new upsteam version
+    with new upstream version
 
  -- Stefan Alfredsson <alfs@debian.org>  Tue, 24 Jun 2008 22:41:40 +0000
 
