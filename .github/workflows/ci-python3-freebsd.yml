@@ -34,7 +34,7 @@ jobs:
       with:
         release: ${{ matrix.freebsd-release }}
         usesh: true
-        prepare: pkg install -y python3 py39-pip coreutils cksfv git-tiny rust
+        prepare: pkg install -y python3 devel/py-pip coreutils cksfv git-tiny rust
         run: |
           set -ex
 
