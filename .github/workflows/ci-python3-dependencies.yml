@@ -33,7 +33,7 @@ jobs:
             const latestPythonMinorVersion = pythonVersions[0].split('.').slice(0, 2).join('.')
 
             // Check if new Python minor version exists
-            if (latestPythonMinorVersion === '3.13') {
+            if (latestPythonMinorVersion === '3.14') {
               return
             }
 
