@@ -90,6 +90,14 @@ To update from source (again, make sure your source tree is up-to-date):
 portupgrade cfv
 ```
 
+#### NixOS
+
+To use the latest version included in [nixpkgs](https://search.nixos.org/packages?channel=unstable&show=cfv) (maintained by @jjtt):
+
+```sh
+nix-shell -p cfv
+```
+
 ## Usage
 
 Please read the man page `man cfv` or the usage `cfv -h` and have fun ☺️
