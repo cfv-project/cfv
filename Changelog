@@ -1,8 +1,9 @@
-2024-xx-xx - v3.1.1.dev0:
+2025-xx-xx - v3.1.1.dev0:
 	* WARNING: This is a development snapshot, not a stable release.
 	* Drop support for Python 3.6.
 	* Python 3.7 is now the minimum supported version.
 	* Add support for Python 3.14.
+	* Add support for Python 3.15.
 
 2024-05-20 - v3.1.0:
 	* Drop support for Python 3.5.
