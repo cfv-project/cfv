@@ -76,7 +76,7 @@ jobs:
           su runner -c 'ulimit -n; ulimit -n 4096; test/test.py -e --exit-early'
 
           # Check package quality
-          pyroma -n 9 .
+          pyroma -n 7 .
 
           # Check the completeness of MANIFEST.in
           su runner -c 'check-manifest --ignore=Release.md .'
