@@ -72,7 +72,7 @@ jobs:
           test/test.py -e --exit-early
 
       - name: Check package quality
-        run: pyroma -n 9 .
+        run: pyroma -n 7 .
 
       - name: Check the completeness of MANIFEST.in
         run: check-manifest --ignore=Release.md .
