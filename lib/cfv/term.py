@@ -1,27 +1,20 @@
 import os
-import struct
 import sys
 
 
 def getscrwidth():
-    w = -1
-    try:
-        from fcntl import ioctl
+    tty = sys.stdin.isatty() and sys.stdin or sys.stdout.isatty() and sys.stdout or sys.stderr.isatty() and sys.stderr or None
+    if tty:
         try:
-            from termios import TIOCGWINSZ
-        except ImportError:
-            from TERMIOS import TIOCGWINSZ
-        tty = sys.stdin.isatty() and sys.stdin or sys.stdout.isatty() and sys.stdout or sys.stderr.isatty() and sys.stderr or None
-        if tty:
-            h, w, _, _ = struct.unpack('hhhh', ioctl(tty.fileno(), TIOCGWINSZ, '\0' * struct.calcsize('hhhh')))
-    except ImportError:
-        pass
-    if w > 0:
-        return w
-    c = os.environ.get('COLUMNS', 80)
+            termsize = os.get_terminal_size(tty.fileno())
+            if termsize.columns > 0:
+                return termsize.columns
+        except (AttributeError, ValueError, OSError):
+            pass
+
     try:
-        return int(c)
-    except ValueError:
+        return int(os.environ['COLUMNS'])
+    except (KeyError, ValueError):
         return 80
 
 
