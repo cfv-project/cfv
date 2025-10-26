@@ -13,7 +13,7 @@ def getscrwidth():
             from TERMIOS import TIOCGWINSZ
         tty = sys.stdin.isatty() and sys.stdin or sys.stdout.isatty() and sys.stdout or sys.stderr.isatty() and sys.stderr or None
         if tty:
-            h, w = struct.unpack('h h', ioctl(tty.fileno(), TIOCGWINSZ, '\0' * struct.calcsize('h h')))
+            h, w, _, _ = struct.unpack('hhhh', ioctl(tty.fileno(), TIOCGWINSZ, '\0' * struct.calcsize('hhhh')))
     except ImportError:
         pass
     if w > 0:
