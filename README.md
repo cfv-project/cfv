@@ -6,7 +6,7 @@ sha256, sha384, sha512, torrent and crc files.
 Test-only support is available for par, par2.
 
 cfv was originally written by Matthew Mueller ([original project home](http://cfv.sourceforge.net/)).
-This is a [friendly fork of cfv](https://github.com/cfv-project/cfv) maintained by David Lisa Gnedt.
+This is a [friendly fork of cfv](https://github.com/cfv-project/cfv) maintained by Lisa Gnedt.
 
 [![Build Status Linux](https://github.com/cfv-project/cfv/actions/workflows/ci-python3.yml/badge.svg?branch=python3)](https://github.com/cfv-project/cfv/actions/workflows/ci-python3.yml?query=branch%3Apython3)
 [![Build Status FreeBSD](https://github.com/cfv-project/cfv/actions/workflows/ci-python3-freebsd.yml/badge.svg?branch=python3)](https://github.com/cfv-project/cfv/actions/workflows/ci-python3-freebsd.yml?query=branch%3Apython3)

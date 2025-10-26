@@ -32,7 +32,7 @@ setup(
     long_description=_read('README.md'),
     long_description_content_type='text/markdown',
     url='https://github.com/cfv-project/cfv',
-    author='David Lisa Gnedt (Current Maintainer)',
+    author='Lisa Gnedt (Current Maintainer)',
     author_email='%s@%s' % ('cfv-project', 'davizone.at'),
     license='GPL',
     classifiers=[
