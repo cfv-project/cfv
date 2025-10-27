@@ -61,6 +61,7 @@ jobs:
           pip install twine
           pip install wheel
           pip install flake8
+          pip install build
           pip list
 
           # Check syntax by compiling code
@@ -85,5 +86,5 @@ jobs:
           flake8 --exclude=build,venv --ignore= --max-line-length=200 --max-complexity=75 --show-source --statistics .
 
           # Check distribution
-          python setup.py sdist bdist_wheel
+          python -m build
           twine check dist/*

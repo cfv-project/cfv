@@ -51,6 +51,7 @@ jobs:
           pip install twine
           pip install wheel
           pip install flake8
+          pip install build
           pip list
 
       - name: Check syntax by compiling code
@@ -82,5 +83,5 @@ jobs:
 
       - name: Check distribution
         run: |
-          python setup.py sdist bdist_wheel
+          python -m build
           twine check dist/*

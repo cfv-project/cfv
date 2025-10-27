@@ -46,7 +46,7 @@ Download a snapshot from the [Github releases page](https://github.com/cfv-proje
 or checkout the development version via Git.
 
 ```sh
-python setup.py install
+pip install .
 # optional: run tests to verify correct operation
 cd test; ./test.py
 ```
