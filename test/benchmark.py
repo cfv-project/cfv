@@ -159,14 +159,14 @@ def run(args):
 def main():
     parser = argparse.ArgumentParser(description='Create test data and run cfv benchmarks.')
 
-    parser.add_argument('-v', '--verbose', action='count')
+    parser.add_argument('-v', '--verbose', default=False, action='count')
 
     subparsers = parser.add_subparsers()
 
     create_parser = subparsers.add_parser('create', help='create test data hierarchy')
-    create_parser.add_argument('--files', type=human_int, help='total number of files to create')
-    create_parser.add_argument('--branch-factor', type=human_int, help='(max) number of files or directories at each level')
-    create_parser.add_argument('--max-size', type=human_int, help='max file size')
+    create_parser.add_argument('--files', default=10, type=human_int, help='total number of files to create')
+    create_parser.add_argument('--branch-factor', default=2, type=human_int, help='(max) number of files or directories at each level')
+    create_parser.add_argument('--max-size', default=1024, type=human_int, help='max file size')
     # TODO: implement hardlink (and symlink) testing
     # create_parser.add_argument('--num-links', type=human_int, help='number of hardlinks per file')
     # TODO: add option to specify filename length
