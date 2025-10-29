@@ -76,7 +76,7 @@ jobs:
         run: pyroma -n 10 .
 
       - name: Check the completeness of MANIFEST.in
-        run: check-manifest --ignore=Release.md .
+        run: check-manifest .
 
       - name: Run flake
         run: flake8 --exclude=build,venv --ignore= --max-line-length=200 --max-complexity=75 --show-source --statistics .
