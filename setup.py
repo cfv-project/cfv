@@ -1,8 +1,6 @@
-#! /usr/bin/env python
-
 import re
 
-from setuptools import find_packages, setup
+from setuptools import setup
 
 
 RE_VERSION = r"^__version__\s*=\s*'([^']*)'$"
@@ -26,45 +24,7 @@ def _get_version(path):
 version = _get_version('lib/cfv/common.py')
 
 setup(
-    name='cfv',
     version=version,
-    description='Command-line File Verify - versatile file checksum creator and verifier',
-    long_description=_read('README.md'),
-    long_description_content_type='text/markdown',
-    url='https://github.com/cfv-project/cfv',
     author='Lisa Gnedt (Current Maintainer)',
     author_email='%s@%s' % ('cfv-project', 'davizone.at'),
-    license='GPL-2.0-or-later',
-    classifiers=[
-        'Development Status :: 5 - Production/Stable',
-        'Environment :: Console',
-        'Topic :: System :: Archiving',
-        'Topic :: Utilities',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: 3.10',
-        'Programming Language :: Python :: 3.11',
-        'Programming Language :: Python :: 3.12',
-        'Programming Language :: Python :: 3.13',
-        'Programming Language :: Python :: 3.14',
-        'Programming Language :: Python :: 3.15',
-    ],
-    keywords='cfv checksum verify sfv csv crc bsdmd5 md5sum sha1sum sha224sum sha256sum sha384sum sha512sum torrent par par2',
-    project_urls={
-        'Bug Tracker': 'https://github.com/cfv-project/cfv/issues',
-        'Source Code': 'https://github.com/cfv-project/cfv',
-        'Original Project': 'http://cfv.sourceforge.net/',
-    },
-    python_requires='>=3.7',
-    packages=find_packages('lib'),
-    package_dir={'': 'lib'},
-    include_package_data=True,
-    data_files=[('share/man/man1', ['cfv.1'])],
-    entry_points={
-        'console_scripts': [
-            'cfv=cfv.common:main',
-        ],
-    },
 )
