@@ -12,7 +12,6 @@ package-dir = {"" = "lib"}
 name = "cfv"
 description = "Command-line File Verify - versatile file checksum creator and verifier"
 readme = "README.md"
-license = "GPL-2.0-or-later AND MIT"
 license-files = ["COPYING", "lib/cfv/BitTorrent/LICENSE.txt"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -32,7 +31,7 @@ classifiers = [
 ]
 keywords = ["cfv", "checksum", "verify", "sfv", "csv", "crc", "bsdmd5", "md5sum", "sha1sum", "sha224sum", "sha256sum", "sha384sum", "sha512sum", "torrent", "par", "par2"]
 requires-python = ">=3.7"
-dynamic = ["version", "authors"]
+dynamic = ["version", "authors", "license"]
 
 [project.urls]
 Homepage = "https://github.com/cfv-project/cfv"
