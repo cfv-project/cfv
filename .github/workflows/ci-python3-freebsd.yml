@@ -77,10 +77,10 @@ jobs:
           su runner -c 'ulimit -n; ulimit -n 4096; test/test.py -e --exit-early'
 
           # Check package quality
-          pyroma -n 7 .
+          su runner -c 'pyroma -n 10 .'
 
           # Check the completeness of MANIFEST.in
-          su runner -c 'check-manifest --ignore=Release.md .'
+          su runner -c 'check-manifest .'
 
           # Run flake
           flake8 --exclude=build,venv --ignore= --max-line-length=200 --max-complexity=75 --show-source --statistics .

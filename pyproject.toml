@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "lib"}
+
+[tool.setuptools.data-files]
+"share/man/man1" = ["cfv.1"]
+
+[project]
+name = "cfv"
+description = "Command-line File Verify - versatile file checksum creator and verifier"
+readme = "README.md"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Topic :: System :: Archiving",
+    "Topic :: Utilities",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+]
+keywords = ["cfv", "checksum", "verify", "sfv", "csv", "crc", "bsdmd5", "md5sum", "sha1sum", "sha224sum", "sha256sum", "sha384sum", "sha512sum", "torrent", "par", "par2"]
+requires-python = ">=3.7"
+dynamic = ["version", "authors", "license"]
+
+[project.urls]
+Homepage = "https://github.com/cfv-project/cfv"
+Changelog = "https://github.com/cfv-project/cfv/blob/python3/Changelog"
+"Bug Tracker" = "https://github.com/cfv-project/cfv/issues"
+"Source Code" = "https://github.com/cfv-project/cfv"
+"Original Project" = "http://cfv.sourceforge.net/"
+
+[project.scripts]
+cfv = "cfv.common:main"
