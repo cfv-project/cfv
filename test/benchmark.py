@@ -70,10 +70,6 @@ def create_test_file(path, max_size, verbose=False, chunk_size=65536):
     size = random.randint(1, max_size)
     if verbose:
         print('creating', path, 'size', size)
-    
-    size = random.randint(1, max_size)
-    if verbose:
-        print("creating", path, "size", size, "chunk_size", chunk_size)
 
     written = 0
     try:
