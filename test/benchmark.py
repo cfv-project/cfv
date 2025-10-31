@@ -64,7 +64,7 @@ def human_int(value):
 
 def create_test_file(path, max_size, verbose=False, chunk_size=65536):
     if max_size < 1:
-        raise ValueError("max_size must be >= 1")
+        raise ValueError('max_size must be >= 1')
     if chunk_size < 1:
         raise ValueError("chunk_size must be >= 1")
     size = random.randint(1, max_size)
