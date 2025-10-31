@@ -12,7 +12,6 @@ package-dir = {"" = "lib"}
 name = "cfv"
 description = "Command-line File Verify - versatile file checksum creator and verifier"
 readme = "README.md"
-license-files = ["COPYING", "lib/cfv/BitTorrent/LICENSE.txt"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",

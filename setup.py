@@ -31,4 +31,5 @@ setup(
     # backward compatibility issues with older setuptools versions.
     # See: https://github.com/pypa/setuptools/issues/4903
     license_expression='GPL-2.0-or-later AND MIT',
+    license_files=('COPYING', 'lib/cfv/BitTorrent/LICENSE.txt'),
 )
