@@ -82,7 +82,6 @@ def create_test_file(path, max_size, verbose=False, chunk_size=65536):
                 written += n
         return written
     except OSError as e:
-        # Disk full, permission issues, etc. Propagate with context.
         raise OSError(f"Failed to write {path} after {written} bytes: {e}") from e
 
 
