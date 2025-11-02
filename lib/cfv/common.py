@@ -26,7 +26,7 @@ from builtins import object
 from builtins import range
 from builtins import str
 
-__version__ = '3.1.1.dev0'
+__version__ = '3.2.0.dev0'
 __homepage__ = 'https://github.com/cfv-project/cfv'
 
 import contextlib

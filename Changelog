@@ -1,9 +1,13 @@
-2025-xx-xx - v3.1.1.dev0:
+2025-11-02 - v3.2.0.dev0:
 	* WARNING: This is a development snapshot, not a stable release.
 	* Drop support for Python 3.6.
 	* Python 3.7 is now the minimum supported version.
 	* Add support for Python 3.14.
 	* Add support for Python 3.15.
+	* Fix SystemError when requesting terminal size.
+	* Migrate to pyproject.toml.
+	* Fix typos (Thanks to Kian-Meng Ang).
+	* Improvements to benchmark.py (Thanks to @mirusu400).
 
 2024-05-20 - v3.1.0:
 	* Drop support for Python 3.5.
