@@ -62,15 +62,27 @@ def human_int(value):
     return int(value) * multiplier
 
 
-def create_test_file(path, max_size, verbose=False):
+def create_test_file(path, max_size, verbose=False, chunk_size=65536):
+    if max_size < 1:
+        raise ValueError('max_size must be >= 1')
+    if chunk_size < 1:
+        raise ValueError('chunk_size must be >= 1')
     size = random.randint(1, max_size)
     if verbose:
         print('creating', path, 'size', size)
-    with open(path, 'wb') as f:
-        # TODO: make this more efficient.
-        while size:
-            f.write(b'%c' % random.randint(0, 255))
-            size -= 1
+
+    written = 0
+    try:
+        with open(path, 'wb') as f:
+            remaining = size
+            while remaining > 0:
+                n = min(remaining, chunk_size)
+                f.write(os.urandom(n))
+                remaining -= n
+                written += n
+        return written
+    except OSError as e:
+        raise OSError(f'Failed to write {path} after {written} bytes: {e}') from e
 
 
 def create_test_dir(root, num_files, branch_factor, max_size, verbose=False):
