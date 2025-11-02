@@ -1,5 +1,4 @@
-2025-11-02 - v3.2.0.dev0:
-	* WARNING: This is a development snapshot, not a stable release.
+2025-11-02 - v3.2.0:
 	* Drop support for Python 3.6.
 	* Python 3.7 is now the minimum supported version.
 	* Add support for Python 3.14.
