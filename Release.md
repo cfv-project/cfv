@@ -19,12 +19,8 @@ git push
 git tag v<version>
 git push --tags
 
-# Build
-docker run --pull=always --rm -it -v $(pwd):/app -w /app -u $(id -u):$(id -g) -e HOME=/tmp python:latest sh -c "pip install build && python -m build"
-twine check dist/*
-
-# Upload
-twine upload dist/*
+# Build & Upload
+docker run --pull=always --rm -it -v $(pwd):/app -w /app -u $(id -u):$(id -g) -e HOME=/tmp python:latest sh -c "pip install build && python -m build && pip install twine && ~/.local/bin/twine check dist/* && ~/.local/bin/twine upload dist/*"
 
 # Bump version
 vim lib/cfv/common.py
