@@ -73,7 +73,7 @@ def create_test_file(path, max_size, verbose=False, chunk_size=65536):
 
     written = 0
     try:
-        with open(path, "wb") as f:
+        with open(path, 'wb') as f:
             remaining = size
             while remaining > 0:
                 n = min(remaining, chunk_size)
@@ -82,7 +82,7 @@ def create_test_file(path, max_size, verbose=False, chunk_size=65536):
                 written += n
         return written
     except OSError as e:
-        raise OSError(f"Failed to write {path} after {written} bytes: {e}") from e
+        raise OSError(f'Failed to write {path} after {written} bytes: {e}') from e
 
 
 def create_test_dir(root, num_files, branch_factor, max_size, verbose=False):
