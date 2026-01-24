@@ -1,12 +1,15 @@
 #!/usr/bin/make -f
 
-include /usr/share/python/python.mk
-
-override_dh_auto_install:
-	make install-wrapper-only prefix=/usr mandir=/usr/share/man DESTDIR=debian/cfv
-	mv debian/cfv/*.py debian/cfv/usr/share/pyshared/cfv.py
+export PYBUILD_SYSTEM=pyproject
 
 %:
-	dh $@ --with python2
+	dh $@ --buildsystem=pybuild
 
-# End of file
+override_dh_installdocs:
+	dh_installdocs
+	if [ -e debian/cfv/usr/share/doc/cfv/Changelog ]; then \
+		mv debian/cfv/usr/share/doc/cfv/Changelog debian/cfv/usr/share/doc/cfv/changelog; \
+	fi
+
+override_dh_auto_test:
+	:

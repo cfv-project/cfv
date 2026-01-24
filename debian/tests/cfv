@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+cfv --help >/dev/null
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+
+cd "$tmpdir"
+printf 'hello world\n' > sample.txt
+cfv -C -t sha1 -f sample.sha1 sample.txt >/dev/null
+cfv sample.sha1 >/dev/null

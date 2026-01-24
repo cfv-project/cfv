@@ -1,18 +1,26 @@
 Source: cfv
 Section: utils
 Priority: optional
-Maintainer: Stefan Alfredsson <alfs@debian.org>
-Build-Depends: python-all (>=2.6.7), debhelper (>= 9)
-Standards-Version: 3.9.3
-Homepage: http://cfv.sourceforge.net/
+Maintainer: Artur Ladka <arturladka@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+ dh-sequence-python3,
+ pybuild-plugin-pyproject,
+ python3-all,
+ python3-build,
+ python3-setuptools,
+ python3-wheel
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Testsuite: autopkgtest-pkg-python
+Homepage: https://github.com/cfv-project/cfv
+Vcs-Browser: https://github.com/cfv-project/cfv/tree/python3
+Vcs-Git: https://github.com/cfv-project/cfv.git -b python3
 
 Package: cfv
 Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}
-Suggests: python-pil, bittorrent | bittornado
-Description: versatile file checksum creator and verifier
- cfv is a utility to test and create a wide range of checksum
- verification files. It currently supports testing and creating
- sfv, sfvmd5, csv, csv2, csv4, md5, bsdmd5, torrent and crc files.
- Test-only support is available for par, par2.
-
+Depends: ${python3:Depends}, ${misc:Depends}
+Suggests: python3-pil
+Description: file checksum creator and verifier
+ cfv is a command-line utility to create and verify a wide range of checksum
+ file formats, including sfv, csv, crc, md5, and sha*.
+ It also supports torrent, par, and par2 verification.
