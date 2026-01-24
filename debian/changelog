@@ -4,4 +4,4 @@ cfv (3.2.0+git20251102.8533a22-1~ubuntu25.10.1~ppa1) questing; urgency=medium
   * Use pyproject build with dh-sequence-python3 and pybuild.
   * Add autopkgtest smoke and functional checks.
 
- -- Artur Ladka <arturladka@gmail.com>  Sat, 24 Jan 2026 10:46:02 +0000
+ -- Artur Ladka (sarsolot) <arturladka@gmail.com>  Sat, 24 Jan 2026 10:46:02 +0000
