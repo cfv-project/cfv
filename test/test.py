@@ -47,6 +47,13 @@ from glob import glob
 
 import cfvtest
 
+try:
+    import blake3 as _blake3_module
+    blake3_available = 1
+except ImportError:
+    _blake3_module = None
+    blake3_available = 0
+
 
 if hasattr(locale, 'getpreferredencoding'):
     preferredencoding = locale.getpreferredencoding() or 'ascii'
@@ -563,6 +570,107 @@ def cfv_nooutput_test(s, o, expected=0):
     if o:
         return 'output: %s' % (repr(o),)
     return 0
+
+
+def blake3_missing_dep_test():
+    stubdir = tempfile.mkdtemp()
+    saved_sys_path = list(sys.path)
+    saved_pythonpath = os.environ.get('PYTHONPATH')
+    removed_modules = {}
+    try:
+        with open(os.path.join(stubdir, 'blake3.py'), 'wt') as f:
+            f.write('raise ImportError("blake3 disabled for test")\n')
+        for name in list(sys.modules):
+            if name == 'blake3' or name.startswith('blake3.'):
+                removed_modules[name] = sys.modules.pop(name)
+        sys.path.insert(0, stubdir)
+        if not run_internal:
+            if saved_pythonpath:
+                os.environ['PYTHONPATH'] = stubdir + os.pathsep + saved_pythonpath
+            else:
+                os.environ['PYTHONPATH'] = stubdir
+
+        def missing_test(s, o):
+            if s == 0:
+                return 1
+            if "blake3 requires the 'blake3' module." not in o:
+                return 'missing error message'
+            return 0
+
+        test_generic(cfvcmd + ' -C -t blake3-256 -f - data1', missing_test)
+    finally:
+        sys.path[:] = saved_sys_path
+        if saved_pythonpath is None:
+            os.environ.pop('PYTHONPATH', None)
+        else:
+            os.environ['PYTHONPATH'] = saved_pythonpath
+        sys.modules.update(removed_modules)
+        shutil.rmtree(stubdir)
+
+
+def bk3_roundtrip_test():
+    tmpd = tempfile.mkdtemp()
+    try:
+        input_name = 'input.txt'
+        input_path = os.path.join(tmpd, input_name)
+        with open(input_path, 'wt') as f:
+            f.write('hello\n')
+        cfpath = os.path.join(tmpd, 'out.bk3')
+
+        def create_test(s, o):
+            if s != 0:
+                return 1
+            lines = [line for line in readfile(cfpath, textmode=True).splitlines()
+                     if line and not line.lstrip().startswith(';')]
+            if len(lines) != 1:
+                return 'expected 1 data line, got %d' % len(lines)
+            pattern = r'^[0-9a-f]{64} \*%s$' % re.escape(input_name)
+            if not re.match(pattern, lines[0]):
+                return 'bad bk3 line: %r' % lines[0]
+            return 0
+
+        test_generic('%s -C -t blake3-256 -p %s -f out.bk3 %s' % (cfvcmd, tmpd, input_name), create_test)
+        test_generic('%s -T -p %s -f out.bk3' % (cfvcmd, tmpd), cfv_test)
+    finally:
+        shutil.rmtree(tmpd)
+
+
+def bk3_xof_length_test():
+    tmpd = tempfile.mkdtemp()
+    try:
+        input_name = 'input.txt'
+        input_path = os.path.join(tmpd, input_name)
+        with open(input_path, 'wt') as f:
+            f.write('hello\n')
+        cfpath = os.path.join(tmpd, 'out512.bk3')
+
+        def create_test(s, o):
+            if s != 0:
+                return 1
+            lines = [line for line in readfile(cfpath, textmode=True).splitlines()
+                     if line and not line.lstrip().startswith(';')]
+            if len(lines) != 1:
+                return 'expected 1 data line, got %d' % len(lines)
+            pattern = r'^([0-9a-f]{128}) \*%s$' % re.escape(input_name)
+            if not re.match(pattern, lines[0]):
+                return 'bad bk3-512 line: %r' % lines[0]
+            return 0
+
+        test_generic('%s -C -t blake3-512 -p %s -f out512.bk3 %s' % (cfvcmd, tmpd, input_name), create_test)
+        test_generic('%s -T -p %s -f out512.bk3' % (cfvcmd, tmpd), cfv_test)
+    finally:
+        shutil.rmtree(tmpd)
+
+
+def bk3_fixture_test():
+    fixtures = (
+        'test.blake3-256.bk3',
+        'test.blake3-512.bk3',
+        'test.blake3-1024.bk3',
+        'test.blake3-2048.bk3',
+    )
+    for fixture in fixtures:
+        test_generic('%s -T -f %s' % (cfvcmd, fixture), cfv_test)
 
 
 def T_test(f, extra=None):
@@ -1615,6 +1723,13 @@ def all_tests():
 
     symlink_test()
     deep_unverified_test()
+    blake3_missing_dep_test()
+    if blake3_available:
+        bk3_roundtrip_test()
+        bk3_xof_length_test()
+        bk3_fixture_test()
+    else:
+        print('skipping bk3 tests, blake3 not installed.')
 
     for fmt in coreutilsfmts():
         ren_test(fmt)
