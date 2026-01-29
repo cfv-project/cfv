@@ -1,7 +1,7 @@
-cfv (3.2.1~dev0+git20251102.8533a22-1~ubuntu25.10.1~ppa1) questing; urgency=medium
+cfv (3.2.1~dev0+git20251102.8533a22-1~ppa2) questing; urgency=medium
 
   * Initial packaging for the Python 3 upstream snapshot.
   * Use pyproject build with dh-sequence-python3 and pybuild.
   * Add autopkgtest smoke and functional checks.
 
- -- Artur Ladka (sarsolot) <arturladka@gmail.com>  Thu, 29 Jan 2026 09:35:39 +0000
+ -- Artur Ladka (sarsolot) <arturladka@gmail.com>  Thu, 29 Jan 2026 09:48:43 +0000

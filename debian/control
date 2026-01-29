@@ -9,7 +9,7 @@ Build-Depends: debhelper-compat (= 13),
  python3-build,
  python3-setuptools,
  python3-wheel
-Standards-Version: 4.7.0
+Standards-Version: 4.7.2
 Rules-Requires-Root: no
 Testsuite: autopkgtest-pkg-python
 Homepage: https://github.com/cfv-project/cfv
