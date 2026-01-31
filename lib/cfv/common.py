@@ -915,7 +915,7 @@ class BK3_Base(TextChksumType, BLAKE3_MixIn):
     def make_addfile(self, filename):
         digest = getfilehash(filename, self.hash_name, self._getfileblake3)[0]
         hexdigest = strutil.hexlify(digest)
-        return (hexdigest, -1), '%s *%s' % (hexdigest, filename) + os.linesep
+        return (hexdigest, -1), '%s  %s' % (hexdigest, filename) + os.linesep
 
     def make_chksumfile_create(self, filename):
         file = TextChksumType.make_chksumfile_create(self, filename)
@@ -955,20 +955,12 @@ BLAKE3_1024 = bk3_sum('blake3-1024', 1024)
 BLAKE3_2048 = bk3_sum('blake3-2048', 2048)
 
 BLAKE3_ALIAS = bk3_sum('blake3', 256, hash_name='blake3-256', auto_detect=False)
-BK3_256 = bk3_sum('bk3-256', 256, hash_name='blake3-256', auto_detect=False)
-BK3_512 = bk3_sum('bk3-512', 512, hash_name='blake3-512', auto_detect=False)
-BK3_1024 = bk3_sum('bk3-1024', 1024, hash_name='blake3-1024', auto_detect=False)
-BK3_2048 = bk3_sum('bk3-2048', 2048, hash_name='blake3-2048', auto_detect=False)
 
 cftypes.register_cftype(BLAKE3_256)
 cftypes.register_cftype(BLAKE3_512)
 cftypes.register_cftype(BLAKE3_1024)
 cftypes.register_cftype(BLAKE3_2048)
 cftypes.register_cftype(BLAKE3_ALIAS)
-cftypes.register_cftype(BK3_256)
-cftypes.register_cftype(BK3_512)
-cftypes.register_cftype(BK3_1024)
-cftypes.register_cftype(BK3_2048)
 
 
 # ---------- bsdmd5 ----------

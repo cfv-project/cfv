@@ -624,7 +624,7 @@ def bk3_roundtrip_test():
                      if line and not line.lstrip().startswith(';')]
             if len(lines) != 1:
                 return 'expected 1 data line, got %d' % len(lines)
-            pattern = r'^[0-9a-f]{64} \*%s$' % re.escape(input_name)
+            pattern = r'^[0-9a-f]{64}  %s$' % re.escape(input_name)
             if not re.match(pattern, lines[0]):
                 return 'bad bk3 line: %r' % lines[0]
             return 0
@@ -651,9 +651,9 @@ def bk3_xof_length_test():
                      if line and not line.lstrip().startswith(';')]
             if len(lines) != 1:
                 return 'expected 1 data line, got %d' % len(lines)
-            pattern = r'^([0-9a-f]{128}) \*%s$' % re.escape(input_name)
+            pattern = r'^([0-9a-f]{128})  %s$' % re.escape(input_name)
             if not re.match(pattern, lines[0]):
-                return 'bad bk3-512 line: %r' % lines[0]
+                return 'bad blake3-512 line: %r' % lines[0]
             return 0
 
         test_generic('%s -C -t blake3-512 -p %s -f out512.bk3 %s' % (cfvcmd, tmpd, input_name), create_test)
@@ -671,6 +671,62 @@ def bk3_fixture_test():
     )
     for fixture in fixtures:
         test_generic('%s -T -f %s' % (cfvcmd, fixture), cfv_test)
+
+
+def b3sum_compat_test():
+    """Test interoperability with b3sum tool (requires b3sum to be installed)."""
+    if not pathfind('b3sum'):
+        print('skipping b3sum compatibility tests, b3sum not installed.')
+        return
+
+    import shutil
+
+    # Test all BLAKE3 variants: (cfv_type, b3sum_length_bytes)
+    variants = [
+        ('blake3-256', 32),
+        ('blake3-512', 64),
+        ('blake3-1024', 128),
+        ('blake3-2048', 256),
+    ]
+
+    for cfv_type, b3sum_len in variants:
+        tmpd = tempfile.mkdtemp()
+        try:
+            # Copy testdata files to temp directory
+            test_files = ['data1', 'data2', 'data3', 'data4']
+            for fname in test_files:
+                shutil.copy(fname, os.path.join(tmpd, fname))
+
+            # Test 1: b3sum -> cfv
+            # Generate checksums with b3sum and verify with cfv
+            cmd = 'cd %s && b3sum -l %d %s > b3sum_out.bk3' % (tmpd, b3sum_len, ' '.join(test_files))
+            test_external(cmd, lambda s, _: 0 if s == 0 else 'b3sum create failed')
+            test_generic('%s -T -p %s -f b3sum_out.bk3' % (cfvcmd, tmpd), cfv_test)
+
+            # Test 2: cfv -> b3sum (only for blake3-256, b3sum -c doesn't support extended lengths)
+            if b3sum_len == 32:
+                test_generic('%s -C -t %s -p %s -f cfv_out.bk3 %s' % (
+                    cfvcmd, cfv_type, tmpd, ' '.join(test_files)), cfv_test)
+
+                # Strip cfv's comment lines before passing to b3sum -c
+                cfv_file = os.path.join(tmpd, 'cfv_out.bk3')
+                clean_path = os.path.join(tmpd, 'cfv_clean.bk3')
+                with open(cfv_file, 'rt') as src, open(clean_path, 'wt') as dst:
+                    for line in src:
+                        if not line.strip() or line.lstrip().startswith(';'):
+                            continue
+                        dst.write(line)
+
+                cmd = 'cd %s && b3sum -c cfv_clean.bk3' % tmpd
+
+                def b3sum_verify(s, o):
+                    if s != 0:
+                        return 'b3sum verify failed for %s: %s' % (cfv_type, o)
+                    return 0
+                test_external(cmd, b3sum_verify)
+
+        finally:
+            shutil.rmtree(tmpd)
 
 
 def T_test(f, extra=None):
@@ -1728,6 +1784,7 @@ def all_tests():
         bk3_roundtrip_test()
         bk3_xof_length_test()
         bk3_fixture_test()
+        b3sum_compat_test()
     else:
         print('skipping bk3 tests, blake3 not installed.')
 

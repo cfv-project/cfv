@@ -1,9 +1,9 @@
 # cfv – Command-line File Verify
 
 cfv is a utility to test and create a wide range of checksum verification files.
-It currently supports testing and creating sfv, sfvmd5, blake3-256, blake3-512,
-blake3-1024, blake3-2048 (.bk3), csv, csv2, csv4, md5, bsdmd5, sha1, sha224,
-sha256, sha384, sha512, torrent and crc files.
+It currently supports testing and creating sfv, sfvmd5, blake3, blake3-256,
+blake3-512, blake3-1024, blake3-2048 (.bk3), csv, csv2, csv4, md5, bsdmd5,
+sha1, sha224, sha256, sha384, sha512, torrent and crc files.
 Test-only support is available for par, par2.
 
 cfv was originally written by Matthew Mueller ([original project home](http://cfv.sourceforge.net/)).

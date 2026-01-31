@@ -120,7 +120,7 @@ Specify the name of the checksum file to test or create.
 If file is \-, stdin (for \-T) or stdout (for \-C) will be used.
 .IP "\-t type"
 Specify the type of the file.
-Can be sfv, sfvmd5, blake3, blake3-256, blake3-512, blake3-1024, blake3-2048, bk3-256, bk3-512, bk3-1024, bk3-2048, csv, csv2, csv4, sha1, sha224, sha256, sha384, sha512, md5, bsdmd5, par, par2, torrent, crc, auto, or help.
+Can be sfv, sfvmd5, blake3, blake3-256, blake3-512, blake3-1024, blake3-2048, csv, csv2, csv4, sha1, sha224, sha256, sha384, sha512, md5, bsdmd5, par, par2, torrent, crc, auto, or help.
 If the type is help, or an unknown type is given, a list of the types and their descriptions will be printed.
 The default is auto, which will detect the file type for you.
 When creating, if type is auto an sfv will be made, unless a different default has been set in the config file.
@@ -160,9 +160,6 @@ is a BLAKE3-1024 checksum file (.bk3).
 .br
 .B blake3-2048
 is a BLAKE3-2048 checksum file (.bk3).
-.br
-.B bk3-256, bk3-512, bk3-1024, bk3-2048
-are short aliases for the corresponding blake3-* types.
 .br
 .B csv
 is a Comma Separated Value file, with the fields being name,size,crc32,
