@@ -590,14 +590,25 @@ def blake3_missing_dep_test():
             else:
                 os.environ['PYTHONPATH'] = stubdir
 
-        def missing_test(s, o):
+        def missing_create_test(s, o):
             if s == 0:
                 return 1
             if "blake3 requires the 'blake3' module." not in o:
                 return 'missing error message'
             return 0
 
-        test_generic(cfvcmd + ' -C -t blake3-256 -f - data1', missing_test)
+        def missing_verify_test(s, o):
+            # Verification should complete with cferror (exit code 64), not abort
+            if s != 64:
+                return 'expected exit code 64 (cferror), got %d' % s
+            if "blake3 requires the 'blake3' module." not in o:
+                return 'missing error message'
+            if 'chksum file errors' not in o:
+                return 'expected chksum file errors in output'
+            return 0
+
+        test_generic(cfvcmd + ' -C -t blake3-256 -f - data1', missing_create_test)
+        test_generic(cfvcmd + ' -T -f test.blake3-256.bk3', missing_verify_test)
     finally:
         sys.path[:] = saved_sys_path
         if saved_pythonpath is None:
@@ -1779,6 +1790,7 @@ def all_tests():
 
     symlink_test()
     deep_unverified_test()
+
     blake3_missing_dep_test()
     if blake3_available:
         bk3_roundtrip_test()
@@ -1799,6 +1811,8 @@ def all_tests():
     ren_test('csv4')
     ren_test('crc')
     ren_test('torrent')
+    if blake3_available:
+        ren_test('blake3-256')
 
     for t in allavailablefmts():
         if t != 'torrent':
@@ -1826,6 +1840,8 @@ def all_tests():
     T_test('.sfvmd5')
     T_test('.csv2')
     T_test('.csv4')
+    if blake3_available:
+        T_test('.blake3-256.bk3', '-t blake3-256')
     T_test('.crc')
     T_test('nosize.crc')
     T_test('nodims.crc')
@@ -1927,6 +1943,8 @@ def all_tests():
     C_test('csv2', '-t csv2')
     C_test('csv4', '-t csv4')
     C_test('crc')
+    # Note: C_test for blake3 skipped - type name (blake3-256) differs from extension (.bk3)
+    # Custom tests (bk3_roundtrip_test, b3sum_compat_test) already cover create/verify roundtrip
     private_torrent_test()
     # test_generic('../cfv -V -T -f test.md5', cfv_test)
     # test_generic('../cfv -V -tcsv -T -f test.md5', cfv_test)

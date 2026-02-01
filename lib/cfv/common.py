@@ -1878,6 +1878,10 @@ def test(filename, typename, restrict_typename='auto'):
             cf.test_chksumfile(file, filename)
     except UnexpectedHandlerException:
         return
+    except MissingDependencyError as e:
+        stats.cferror += 1
+        view.perror('%s: %s' % (filename, e))
+        return
     except EnvironmentError as a:
         stats.cferror += 1
         view.ev_cf_enverror(filename, a)
