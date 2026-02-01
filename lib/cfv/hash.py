@@ -5,6 +5,7 @@ import os
 import struct
 import sys
 from zlib import crc32
+from cfv.exceptions import MissingDependencyError
 
 
 try:
@@ -96,3 +97,43 @@ class CRC32(object):
 
 def getfilecrc(filename, callback):
     return _getfilechecksum(filename, CRC32, callback)
+
+
+_blake3_module = None
+
+
+def _get_blake3():
+    global _blake3_module
+    if _blake3_module is None:
+        try:
+            import blake3
+        except ImportError:
+            raise MissingDependencyError(
+                "blake3 requires the 'blake3' module. "
+                "Install python3-blake3 or pip install blake3."
+            )
+        _blake3_module = blake3
+    return _blake3_module
+
+
+def getfileblake3(filename, callback, digest_size):
+    if filename == '':
+        f = sys.stdin.buffer
+    else:
+        f = open(filename, 'rb')
+    try:
+        blake3 = _get_blake3()
+        h = blake3.blake3()
+        size = 0
+        while 1:
+            x = f.read(65536)
+            if not x:
+                break
+            size += len(x)
+            h.update(x)
+            if callback:
+                callback(size)
+        return h.digest(digest_size), size
+    finally:
+        if filename != '':
+            f.close()

@@ -48,14 +48,19 @@ from cfv import osutil
 from cfv import strutil
 from cfv import ui
 from cfv.BitTorrent import bencode, btformats
+from cfv.exceptions import (
+    CFError,
+    CFVException,
+    CFVNameError,
+    CFVSyntaxError,
+    CFVValueError,
+    FilenameError,
+    MissingDependencyError,
+)
 
 
 def cfencode(s, preferred=None):
     return s.encode(config.getencoding(preferred), errors=config.getencodeerrors(default='strict'))
-
-
-class FilenameError(ValueError):
-    pass
 
 
 def cfdecode(s, preferred=None):
@@ -93,34 +98,6 @@ def cdup():
     reldir.pop()
     curdir, cache._path_key_cache = prevdir.pop()
     os.chdir(curdir)
-
-
-class CFVException(Exception):
-    pass
-
-
-class MissingDependencyError(RuntimeError):
-    pass
-
-
-class CFVValueError(CFVException):
-    # invalid argument in user input
-    pass
-
-
-class CFVNameError(CFVException):
-    # invalid command in user input
-    pass
-
-
-class CFVSyntaxError(CFVException):
-    # error in user input
-    pass
-
-
-class CFError(ValueError):
-    # error in checksum file
-    pass
 
 
 class FileNameFilter(object):
@@ -162,46 +139,6 @@ def getfilehash(filename, hashname, hashfunc):
 
 def getfilecrc(filename):
     return getfilehash(filename, 'crc', hash.getfilecrc)
-
-
-_blake3_module = None
-
-
-def _get_blake3():
-    global _blake3_module
-    if _blake3_module is None:
-        try:
-            import blake3
-        except ImportError:
-            raise MissingDependencyError(
-                "blake3 requires the 'blake3' module. "
-                "Install python3-blake3 or pip install blake3."
-            )
-        _blake3_module = blake3
-    return _blake3_module
-
-
-def _getfileblake3(filename, callback, digest_size):
-    if filename == '':
-        f = sys.stdin.buffer
-    else:
-        f = open(filename, 'rb')
-    try:
-        blake3 = _get_blake3()
-        h = blake3.blake3()
-        size = 0
-        while 1:
-            x = f.read(65536)
-            if not x:
-                break
-            size += len(x)
-            h.update(x)
-            if callback:
-                callback(size)
-        return h.digest(digest_size), size
-    finally:
-        if filename != '':
-            f.close()
 
 
 def rename(oldfn, newfn):
@@ -856,7 +793,7 @@ class BLAKE3_MixIn(object):
     hash_label = 'BLAKE3-256'
 
     def _getfileblake3(self, filename, callback):
-        return _getfileblake3(filename, callback, self.digest_size)
+        return hash.getfileblake3(filename, callback, self.digest_size)
 
     def do_test_file(self, filename, filecrc):
         c = getfilehash(filename, self.hash_name, self._getfileblake3)[0]
