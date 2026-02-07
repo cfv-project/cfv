@@ -56,11 +56,8 @@ jobs:
           pw useradd runner -u 1001 -g docker
 
           # Install test dependencies
-          pip install pyroma
-          pip install check-manifest
-          pip install twine
-          pip install flake8
-          pip install build
+          # Fallback hack required for pip < 25.1 (since newer pip is not available for Python < 3.9)
+          pip install --group ci || grep -A 999 '^\[dependency-groups\]$' pyproject.toml | sed -n 's/^    "\(.*\)",$/\1/p' | xargs pip install --
           pip list
 
           # Check syntax by compiling code

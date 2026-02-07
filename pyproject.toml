@@ -41,3 +41,15 @@ Changelog = "https://github.com/cfv-project/cfv/blob/python3/Changelog"
 
 [project.scripts]
 cfv = "cfv.common:main"
+
+[dependency-groups]
+build = [
+    "build",
+]
+ci = [
+    {include-group = "build"},
+    "pyroma",
+    "check-manifest",
+    "flake8",
+    "twine",
+]
