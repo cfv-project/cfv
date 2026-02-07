@@ -99,6 +99,28 @@ jobs:
           ulimit -n 4096
           test/test.py -e --exit-early
 
+      - name: Install optional dependencies
+        run: |
+          # pillow dependencies
+          sudo apt install libjpeg8-dev zlib1g-dev libtiff5-dev libwebp-dev libopenjp2-7-dev libavif-dev
+          pip install .[full]
+          pip list
+
+      - name: Run unit tests (with optional dependencies)
+        run: python -W error -bb test/test.py --unit --exit-early
+
+      - name: Run integration tests (internal, with optional dependencies)
+        run: |
+          ulimit -n
+          ulimit -n 4096
+          python -W error -bb test/test.py -i --exit-early
+
+      - name: Run integration tests (external process, with optional dependencies)
+        run: |
+          ulimit -n
+          ulimit -n 4096
+          test/test.py -e --exit-early
+
       - name: Install build dependencies
         run: |
           # Fallback hack required for pip < 25.1 (since newer pip is not available for Python < 3.9)

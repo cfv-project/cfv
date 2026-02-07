@@ -67,6 +67,21 @@ jobs:
           # Run integration tests (external process)
           su runner -c 'ulimit -n; ulimit -n 4096; test/test.py -e --exit-early'
 
+          # Install optional dependencies
+          # pillow dependencies
+          pkg install -y jpeg-turbo tiff webp openjpeg libavif
+          pip install .[full]
+          pip list
+
+          # Run unit tests (with optional dependencies)
+          su runner -c 'python -W error -bb test/test.py --unit --exit-early'
+
+          # Run integration tests (internal, with optional dependencies)
+          su runner -c 'ulimit -n; ulimit -n 4096; python -W error -bb test/test.py -i --exit-early'
+
+          # Run integration tests (external process, with optional dependencies)
+          su runner -c 'ulimit -n; ulimit -n 4096; test/test.py -e --exit-early'
+
           # Install build dependencies
           # Fallback hack required for pip < 25.1 (since newer pip is not available for Python < 3.9)
           pip install --group build || pip install build
