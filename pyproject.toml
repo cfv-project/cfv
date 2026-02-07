@@ -32,6 +32,12 @@ keywords = ["cfv", "checksum", "verify", "sfv", "csv", "crc", "bsdmd5", "md5sum"
 requires-python = ">=3.7"
 dynamic = ["version", "authors", "license"]
 
+[project.optional-dependencies]
+image-dimensions = ["pillow"]
+full = [
+    "cfv[image-dimensions]"
+]
+
 [project.urls]
 Homepage = "https://github.com/cfv-project/cfv"
 Changelog = "https://github.com/cfv-project/cfv/blob/python3/Changelog"
