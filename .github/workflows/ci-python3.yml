@@ -15,7 +15,41 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
+  lint:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-24.04
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.15'
+          allow-prereleases: true
+          check-latest: true
+
+      - name: Install lint dependencies
+        run: |
+          pip install --group ci
+          pip list
+
+      - name: Run flake
+        run: flake8 --exclude=build,venv --ignore= --max-line-length=200 --max-complexity=75 --show-source --statistics .
+
+      - name: Check package quality
+        run: pyroma -n 10 .
+
+      - name: Check the completeness of MANIFEST.in
+        run: check-manifest .
+
+      - name: Check distribution
+        run: |
+          python -m build
+          twine check dist/*
+
   test:
     # The type of runner that the job will run on
     runs-on: ${{ matrix.os }}
@@ -46,9 +80,6 @@ jobs:
       - name: Install test dependencies
         run: |
           sudo apt install coreutils cksfv
-          # Fallback hack required for pip < 25.1 (since newer pip is not available for Python < 3.9)
-          pip install --group ci || grep -A 999 '^\[dependency-groups\]$' pyproject.toml | sed -n 's/^    "\(.*\)",$/\1/p' | xargs pip install
-          pip list
 
       - name: Check syntax by compiling code
         run: python -W error -bb -m compileall -f .
@@ -68,17 +99,12 @@ jobs:
           ulimit -n 4096
           test/test.py -e --exit-early
 
-      - name: Check package quality
-        continue-on-error: ${{ contains(fromJson('["3.7", "3.8"]'), matrix.python-version) }}
-        run: pyroma -n 10 .
+      - name: Install build dependencies
+        run: |
+          # Fallback hack required for pip < 25.1 (since newer pip is not available for Python < 3.9)
+          pip install --group build || pip install build
+          pip list
 
-      - name: Check the completeness of MANIFEST.in
-        run: check-manifest .
-
-      - name: Run flake
-        run: flake8 --exclude=build,venv --ignore= --max-line-length=200 --max-complexity=75 --show-source --statistics .
-
-      - name: Check distribution
+      - name: Build
         run: |
           python -m build
-          twine check dist/*
