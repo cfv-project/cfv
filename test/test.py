@@ -690,8 +690,6 @@ def b3sum_compat_test():
         print('skipping b3sum compatibility tests, b3sum not installed.')
         return
 
-    import shutil
-
     # Test all BLAKE3 variants: (cfv_type, b3sum_length_bytes)
     variants = [
         ('blake3-256', 32),
@@ -719,16 +717,7 @@ def b3sum_compat_test():
                 test_generic('%s -C -t %s -p %s -f cfv_out.bk3 %s' % (
                     cfvcmd, cfv_type, tmpd, ' '.join(test_files)), cfv_test)
 
-                # Strip cfv's comment lines before passing to b3sum -c
-                cfv_file = os.path.join(tmpd, 'cfv_out.bk3')
-                clean_path = os.path.join(tmpd, 'cfv_clean.bk3')
-                with open(cfv_file, 'rt') as src, open(clean_path, 'wt') as dst:
-                    for line in src:
-                        if not line.strip() or line.lstrip().startswith(';'):
-                            continue
-                        dst.write(line)
-
-                cmd = 'cd %s && b3sum -c cfv_clean.bk3' % tmpd
+                cmd = 'cd %s && b3sum -c cfv_out.bk3' % tmpd
 
                 def b3sum_verify(s, o):
                     if s != 0:
@@ -1855,6 +1844,8 @@ def all_tests():
     T_test('crlf.sfv')
     T_test('noheadercrlf.sfv')
     T_test('crlf.crc')
+    if blake3_available:
+        T_test('crlf.blake3-256.bk3', '-t blake3-256')
     for fmt in coreutilsfmts():
         T_test('crcrlf.' + fmt)
     T_test('crcrlf.bsdmd5')
@@ -1864,6 +1855,8 @@ def all_tests():
     T_test('crcrlf.sfv')
     T_test('noheadercrcrlf.sfv')
     T_test('crcrlf.crc')
+    if blake3_available:
+        T_test('crcrlf.blake3-256.bk3', '-t blake3-256')
     for strip in (0, 1):
         T_test('.torrent', extra='--strip=%s' % strip)
         T_test('smallpiece.torrent', extra='--strip=%s' % strip)
