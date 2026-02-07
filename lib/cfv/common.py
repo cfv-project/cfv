@@ -49,7 +49,6 @@ from cfv import strutil
 from cfv import ui
 from cfv.BitTorrent import bencode, btformats
 from cfv.exceptions import (
-    CFError,
     CFVException,
     CFVNameError,
     CFVSyntaxError,

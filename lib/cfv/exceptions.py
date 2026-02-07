@@ -26,8 +26,3 @@ class CFVNameError(CFVException):
 class CFVSyntaxError(CFVException):
     # error in user input
     pass
-
-
-class CFError(ValueError):
-    # error in checksum file
-    pass
