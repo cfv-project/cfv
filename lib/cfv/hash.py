@@ -32,7 +32,8 @@ sha1 = hashlib.sha1
 
 def _getfilechecksum(filename, hasher, callback, finalize=None):
     if finalize is None:
-        finalize = lambda h: h.digest()
+        def finalize(h):
+            return h.digest()
     if filename == '':
         f = sys.stdin.buffer
     else:
