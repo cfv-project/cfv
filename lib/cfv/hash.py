@@ -30,7 +30,9 @@ md5 = hashlib.md5
 sha1 = hashlib.sha1
 
 
-def _getfilechecksum(filename, hasher, callback):
+def _getfilechecksum(filename, hasher, callback, finalize=None):
+    if finalize is None:
+        finalize = lambda h: h.digest()
     if filename == '':
         f = sys.stdin.buffer
     else:
@@ -40,7 +42,7 @@ def _getfilechecksum(filename, hasher, callback):
         while 1:
             x = f.read(65536)
             if not x:
-                return m.digest(), s
+                return finalize(m), s
             s += len(x)
             m.update(x)
             if callback:
@@ -67,7 +69,7 @@ def _getfilechecksum(filename, hasher, callback):
                 # offset parameter, so we just have to do the rest of the
                 # file the old fashioned way.
                 return finish(m, mmapsize)
-            return m.digest(), s
+            return finalize(m), s
     finally:
         if filename != '':
             f.close()
@@ -117,23 +119,9 @@ def _get_blake3():
 
 
 def getfileblake3(filename, callback, digest_size):
-    if filename == '':
-        f = sys.stdin.buffer
-    else:
-        f = open(filename, 'rb')
-    try:
-        blake3 = _get_blake3()
-        h = blake3.blake3()
-        size = 0
-        while 1:
-            x = f.read(65536)
-            if not x:
-                break
-            size += len(x)
-            h.update(x)
-            if callback:
-                callback(size)
-        return h.digest(digest_size), size
-    finally:
-        if filename != '':
-            f.close()
+    return _getfilechecksum(
+        filename,
+        _get_blake3().blake3,
+        callback,
+        finalize=lambda h: h.digest(digest_size),
+    )
