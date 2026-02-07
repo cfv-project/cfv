@@ -49,7 +49,6 @@ jobs:
           pip install pyroma
           pip install check-manifest
           pip install twine
-          pip install wheel
           pip install flake8
           pip install build
           pip list
