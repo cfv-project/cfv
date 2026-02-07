@@ -13,14 +13,14 @@ Standards-Version: 4.7.2
 Rules-Requires-Root: no
 Testsuite: autopkgtest-pkg-python
 Homepage: https://github.com/cfv-project/cfv
-Vcs-Browser: https://github.com/cfv-project/cfv/tree/python3
-Vcs-Git: https://github.com/cfv-project/cfv.git -b python3
+Vcs-Browser: https://github.com/cfv-project/cfv
+Vcs-Git: https://github.com/cfv-project/cfv.git
 
 Package: cfv
 Architecture: all
 Depends: ${python3:Depends}, ${misc:Depends}
-Suggests: python3-pil
+Suggests: python3-blake3, python3-pil, python3-xxhash
 Description: file checksum creator and verifier
  cfv is a command-line utility to create and verify a wide range of checksum
- file formats, including sfv, csv, crc, md5, and sha*.
+ file formats, including sfv, csv, crc, md5, sha*, blake2, blake3, and xxhash.
  It also supports torrent, par, and par2 verification.
