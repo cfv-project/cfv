@@ -1,15 +1,7 @@
 """Exception classes for cfv."""
 
 
-class FilenameError(ValueError):
-    pass
-
-
 class CFVException(Exception):
-    pass
-
-
-class MissingDependencyError(RuntimeError):
     pass
 
 
@@ -25,4 +17,12 @@ class CFVNameError(CFVException):
 
 class CFVSyntaxError(CFVException):
     # error in user input
+    pass
+
+
+class FilenameError(ValueError):
+    pass
+
+
+class MissingDependencyError(RuntimeError):
     pass
