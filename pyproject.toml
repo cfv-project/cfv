@@ -36,8 +36,8 @@ dynamic = ["version", "authors", "license"]
 blake3 = ["blake3"]
 image-dimensions = ["pillow"]
 full = [
-    "cfv[blake3]"
-    "cfv[image-dimensions]"
+    "cfv[blake3]",
+    "cfv[image-dimensions]",
 ]
 
 [project.urls]
