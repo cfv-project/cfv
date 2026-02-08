@@ -33,8 +33,10 @@ requires-python = ">=3.7"
 dynamic = ["version", "authors", "license"]
 
 [project.optional-dependencies]
+blake3 = ["blake3"]
 image-dimensions = ["pillow"]
 full = [
+    "cfv[blake3]"
     "cfv[image-dimensions]"
 ]
 
