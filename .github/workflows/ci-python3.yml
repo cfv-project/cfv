@@ -79,7 +79,7 @@ jobs:
 
       - name: Install test dependencies
         run: |
-          sudo apt install coreutils cksfv
+          sudo apt install coreutils cksfv b3sum
 
       - name: Check syntax by compiling code
         run: python -W error -bb -m compileall -f .
