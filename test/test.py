@@ -104,6 +104,8 @@ fmt_info = {
         (1, 1, 0, 1, 0, preferredencoding, 0),
     'torrent':
         (1, 1, 1, 1, 0, 'utf-8', 0),
+    'b3':
+        (1, 0, 1, blake3_available, 1, preferredencoding, 0),
 }
 
 
@@ -590,15 +592,8 @@ def blake3_missing_dep_test():
             else:
                 os.environ['PYTHONPATH'] = stubdir
 
-        def missing_create_test(s, o):
-            if s == 0:
-                return 1
-            if "blake3 requires the 'blake3' module." not in o:
-                return 'missing error message'
-            return 0
-
-        def missing_verify_test(s, o):
-            # Verification should complete with cferror (exit code 64), not abort
+        def missing_dep_test(s, o):
+            # Should complete with cferror (exit code 64), not abort
             if s != 64:
                 return 'expected exit code 64 (cferror), got %d' % s
             if "blake3 requires the 'blake3' module." not in o:
@@ -607,8 +602,8 @@ def blake3_missing_dep_test():
                 return 'expected chksum file errors in output'
             return 0
 
-        test_generic(cfvcmd + ' -C -t blake3-256 -f - data1', missing_create_test)
-        test_generic(cfvcmd + ' -T -f test.blake3-256.bk3', missing_verify_test)
+        test_generic(cfvcmd + ' -C -t b3 -f - data1', missing_dep_test)
+        test_generic(cfvcmd + ' -T -f test.b3', missing_dep_test)
     finally:
         sys.path[:] = saved_sys_path
         if saved_pythonpath is None:
@@ -619,14 +614,14 @@ def blake3_missing_dep_test():
         shutil.rmtree(stubdir)
 
 
-def bk3_roundtrip_test():
+def b3_roundtrip_test():
     tmpd = tempfile.mkdtemp()
     try:
         input_name = 'input.txt'
         input_path = os.path.join(tmpd, input_name)
         with open(input_path, 'wt') as f:
             f.write('hello\n')
-        cfpath = os.path.join(tmpd, 'out.bk3')
+        cfpath = os.path.join(tmpd, 'out.b3')
 
         def create_test(s, o):
             if s != 0:
@@ -637,23 +632,70 @@ def bk3_roundtrip_test():
                 return 'expected 1 data line, got %d' % len(lines)
             pattern = r'^[0-9a-f]{64}  %s$' % re.escape(input_name)
             if not re.match(pattern, lines[0]):
-                return 'bad bk3 line: %r' % lines[0]
+                return 'bad b3 line: %r' % lines[0]
             return 0
 
-        test_generic('%s -C -t blake3-256 -p %s -f out.bk3 %s' % (cfvcmd, tmpd, input_name), create_test)
-        test_generic('%s -T -p %s -f out.bk3' % (cfvcmd, tmpd), cfv_test)
+        test_generic('%s -C -t b3 -p %s -f out.b3 %s' % (cfvcmd, tmpd, input_name), create_test)
+        test_generic('%s -T -p %s -f out.b3' % (cfvcmd, tmpd), cfv_test)
     finally:
         shutil.rmtree(tmpd)
 
 
-def bk3_xof_length_test():
+def b3_fixture_test():
+    """Test that .b3 and legacy .bk3 files with various hash lengths are all verified correctly."""
+    fixtures = (
+        'test.b3',
+        'test.bk3',
+        'B3SUMS',
+        'test.blake3-512.b3',
+        'test.blake3-1024.b3',
+        'test.blake3-2048.b3',
+    )
+    for fixture in fixtures:
+        test_generic('%s -T -f %s' % (cfvcmd, fixture), cfv_test)
+
+
+def b3_b3sums_create_test():
+    """Test that -C -f B3SUMS auto-detects as b3 type."""
     tmpd = tempfile.mkdtemp()
     try:
         input_name = 'input.txt'
         input_path = os.path.join(tmpd, input_name)
         with open(input_path, 'wt') as f:
             f.write('hello\n')
-        cfpath = os.path.join(tmpd, 'out512.bk3')
+        test_generic('%s -C -p %s -f B3SUMS %s' % (cfvcmd, tmpd, input_name), cfv_test)
+        test_generic('%s -T -p %s -f B3SUMS' % (cfvcmd, tmpd), cfv_test)
+    finally:
+        shutil.rmtree(tmpd)
+
+
+def b3_malformed_hex_test():
+    """Test that odd-length hex in .b3 file is rejected gracefully, not a traceback."""
+    tmpd = tempfile.mkdtemp()
+    try:
+        bad_b3 = os.path.join(tmpd, 'bad.b3')
+        with open(bad_b3, 'wt') as f:
+            f.write('abc  data1\n')
+
+        def malformed_test(s, o):
+            if s != 64:
+                return 'expected exit code 64 (cferror), got %d' % s
+            return 0
+
+        test_generic('%s -T -f %s' % (cfvcmd, bad_b3), malformed_test)
+    finally:
+        shutil.rmtree(tmpd)
+
+
+def b3_length_test():
+    """Test --length option for variable digest size."""
+    tmpd = tempfile.mkdtemp()
+    try:
+        input_name = 'input.txt'
+        input_path = os.path.join(tmpd, input_name)
+        with open(input_path, 'wt') as f:
+            f.write('hello\n')
+        cfpath = os.path.join(tmpd, 'out.b3')
 
         def create_test(s, o):
             if s != 0:
@@ -662,26 +704,16 @@ def bk3_xof_length_test():
                      if line and not line.lstrip().startswith(';')]
             if len(lines) != 1:
                 return 'expected 1 data line, got %d' % len(lines)
-            pattern = r'^([0-9a-f]{128})  %s$' % re.escape(input_name)
+            # 64 bytes = 128 hex chars
+            pattern = r'^[0-9a-f]{128}  %s$' % re.escape(input_name)
             if not re.match(pattern, lines[0]):
-                return 'bad blake3-512 line: %r' % lines[0]
+                return 'bad b3 --length=64 line: %r' % lines[0]
             return 0
 
-        test_generic('%s -C -t blake3-512 -p %s -f out512.bk3 %s' % (cfvcmd, tmpd, input_name), create_test)
-        test_generic('%s -T -p %s -f out512.bk3' % (cfvcmd, tmpd), cfv_test)
+        test_generic('%s -C -t b3 --length=64 -p %s -f out.b3 %s' % (cfvcmd, tmpd, input_name), create_test)
+        test_generic('%s -T -p %s -f out.b3' % (cfvcmd, tmpd), cfv_test)
     finally:
         shutil.rmtree(tmpd)
-
-
-def bk3_fixture_test():
-    fixtures = (
-        'test.blake3-256.bk3',
-        'test.blake3-512.bk3',
-        'test.blake3-1024.bk3',
-        'test.blake3-2048.bk3',
-    )
-    for fixture in fixtures:
-        test_generic('%s -T -f %s' % (cfvcmd, fixture), cfv_test)
 
 
 def b3sum_compat_test():
@@ -690,43 +722,31 @@ def b3sum_compat_test():
         print('skipping b3sum compatibility tests, b3sum not installed.')
         return
 
-    # Test all BLAKE3 variants: (cfv_type, b3sum_length_bytes)
-    variants = [
-        ('blake3-256', 32),
-        ('blake3-512', 64),
-        ('blake3-1024', 128),
-        ('blake3-2048', 256),
-    ]
+    tmpd = tempfile.mkdtemp()
+    try:
+        test_files = ['data1', 'data2', 'data3', 'data4']
+        for fname in test_files:
+            shutil.copy(fname, os.path.join(tmpd, fname))
 
-    for cfv_type, b3sum_len in variants:
-        tmpd = tempfile.mkdtemp()
-        try:
-            # Copy testdata files to temp directory
-            test_files = ['data1', 'data2', 'data3', 'data4']
-            for fname in test_files:
-                shutil.copy(fname, os.path.join(tmpd, fname))
+        # Test 1: b3sum -> cfv
+        cmd = 'cd %s && b3sum %s > b3sum_out.b3' % (tmpd, ' '.join(test_files))
+        test_external(cmd, lambda s, _: 0 if s == 0 else 'b3sum create failed')
+        test_generic('%s -T -p %s -f b3sum_out.b3' % (cfvcmd, tmpd), cfv_test)
 
-            # Test 1: b3sum -> cfv
-            # Generate checksums with b3sum and verify with cfv
-            cmd = 'cd %s && b3sum -l %d %s > b3sum_out.bk3' % (tmpd, b3sum_len, ' '.join(test_files))
-            test_external(cmd, lambda s, _: 0 if s == 0 else 'b3sum create failed')
-            test_generic('%s -T -p %s -f b3sum_out.bk3' % (cfvcmd, tmpd), cfv_test)
+        # Test 2: cfv -> b3sum
+        test_generic('%s -C -t b3 -p %s -f cfv_out.b3 %s' % (
+            cfvcmd, tmpd, ' '.join(test_files)), cfv_test)
 
-            # Test 2: cfv -> b3sum (only for blake3-256, b3sum -c doesn't support extended lengths)
-            if b3sum_len == 32:
-                test_generic('%s -C -t %s -p %s -f cfv_out.bk3 %s' % (
-                    cfvcmd, cfv_type, tmpd, ' '.join(test_files)), cfv_test)
+        cmd = 'cd %s && b3sum -c cfv_out.b3' % tmpd
 
-                cmd = 'cd %s && b3sum -c cfv_out.bk3' % tmpd
+        def b3sum_verify(s, o):
+            if s != 0:
+                return 'b3sum verify failed: %s' % o
+            return 0
+        test_external(cmd, b3sum_verify)
 
-                def b3sum_verify(s, o):
-                    if s != 0:
-                        return 'b3sum verify failed for %s: %s' % (cfv_type, o)
-                    return 0
-                test_external(cmd, b3sum_verify)
-
-        finally:
-            shutil.rmtree(tmpd)
+    finally:
+        shutil.rmtree(tmpd)
 
 
 def T_test(f, extra=None):
@@ -1782,12 +1802,14 @@ def all_tests():
 
     blake3_missing_dep_test()
     if blake3_available:
-        bk3_roundtrip_test()
-        bk3_xof_length_test()
-        bk3_fixture_test()
+        b3_roundtrip_test()
+        b3_length_test()
+        b3_fixture_test()
+        b3_b3sums_create_test()
+        b3_malformed_hex_test()
         b3sum_compat_test()
     else:
-        print('skipping bk3 tests, blake3 not installed.')
+        print('skipping b3 tests, blake3 not installed.')
 
     for fmt in coreutilsfmts():
         ren_test(fmt)
@@ -1801,7 +1823,7 @@ def all_tests():
     ren_test('crc')
     ren_test('torrent')
     if blake3_available:
-        ren_test('blake3-256')
+        ren_test('b3')
 
     for t in allavailablefmts():
         if t != 'torrent':
@@ -1830,7 +1852,7 @@ def all_tests():
     T_test('.csv2')
     T_test('.csv4')
     if blake3_available:
-        T_test('.blake3-256.bk3', '-t blake3-256')
+        T_test('.b3')
     T_test('.crc')
     T_test('nosize.crc')
     T_test('nodims.crc')
@@ -1845,7 +1867,7 @@ def all_tests():
     T_test('noheadercrlf.sfv')
     T_test('crlf.crc')
     if blake3_available:
-        T_test('crlf.blake3-256.bk3', '-t blake3-256')
+        T_test('crlf.b3')
     for fmt in coreutilsfmts():
         T_test('crcrlf.' + fmt)
     T_test('crcrlf.bsdmd5')
@@ -1856,7 +1878,7 @@ def all_tests():
     T_test('noheadercrcrlf.sfv')
     T_test('crcrlf.crc')
     if blake3_available:
-        T_test('crcrlf.blake3-256.bk3', '-t blake3-256')
+        T_test('crcrlf.b3')
     for strip in (0, 1):
         T_test('.torrent', extra='--strip=%s' % strip)
         T_test('smallpiece.torrent', extra='--strip=%s' % strip)
@@ -1936,8 +1958,8 @@ def all_tests():
     C_test('csv2', '-t csv2')
     C_test('csv4', '-t csv4')
     C_test('crc')
-    # Note: C_test for blake3 skipped - type name (blake3-256) differs from extension (.bk3)
-    # Custom tests (bk3_roundtrip_test, b3sum_compat_test) already cover create/verify roundtrip
+    if blake3_available:
+        C_test('b3', '-t b3')
     private_torrent_test()
     # test_generic('../cfv -V -T -f test.md5', cfv_test)
     # test_generic('../cfv -V -tcsv -T -f test.md5', cfv_test)

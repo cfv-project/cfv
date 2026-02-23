@@ -237,6 +237,7 @@ class Config(object):
     announceurl = None
     piece_size_pow2 = 18
     private_torrent = False
+    hash_length = None
     encoding = 'auto'
 
     def getencoding(self, preferred=None):
@@ -784,42 +785,53 @@ except (ImportError, ValueError):
     pass
 
 
-# ---------- bk3 (BLAKE3) ----------
+# ---------- b3 (BLAKE3) ----------
 
 class BLAKE3_MixIn(object):
     digest_size = 32
-    hash_name = 'blake3-256'
-    hash_label = 'BLAKE3-256'
+    hash_name = 'blake3'
 
     def _getfileblake3(self, filename, callback):
-        return hash.getfileblake3(filename, callback, self.digest_size)
+        digest_size = config.hash_length or self.digest_size
+        return hash.getfileblake3(filename, callback, digest_size)
 
     def do_test_file(self, filename, filecrc):
-        c = getfilehash(filename, self.hash_name, self._getfileblake3)[0]
+        # Derive digest size from the checksum in the file (supports variable lengths)
+        digest_size = len(filecrc)
+
+        def hasher(filename, callback):
+            return hash.getfileblake3(filename, callback, digest_size)
+        c = getfilehash(filename, '%s-%d' % (self.hash_name, digest_size), hasher)[0]
         if c != filecrc:
             return c
 
 
 class BK3_Base(TextChksumType, BLAKE3_MixIn):
+    name = 'b3'
     description = 'BLAKE3 checksum file'
+    descinfo = 'BLAKE3,name'
     auto_chksumfile_order = 2
+    auto_filename_match = '(b3|b3sums?)$'
+
+    # Match any even-length hex string (supports variable digest lengths when checking)
+    _b3rem = re.compile(r'((?:[0-9a-fA-F]{2})+) [ *]([^\r\n]+)[\r\n]*$')
 
     def do_test_chksumfile_print_testingline(self, file):
         comment = parse_commentline(file.peekline(512).lstrip(), ';')
         TextChksumType.do_test_chksumfile_print_testingline(self, file, comment)
 
     @staticmethod
-    def _is_bk3_filename(filename):
+    def _is_b3_filename(filename):
         if not filename:
             return False
         lname = filename.lower()
         if lname.endswith('.gz'):
             lname = lname[:-3]
-        return lname.endswith('.bk3')
+        return lname.endswith('.b3') or lname.endswith('.bk3') or 'b3sum' in os.path.basename(lname)
 
     @classmethod
     def auto_chksumfile_match(cls, file):
-        if not cls._is_bk3_filename(file.name):
+        if not cls._is_b3_filename(file.name):
             return False
         line = file.peekline(4096)
         while line:
@@ -830,7 +842,7 @@ class BK3_Base(TextChksumType, BLAKE3_MixIn):
             if stripped.startswith(';'):
                 line = file.peeknextline(4096)
                 continue
-            return cls._bk3rem.match(stripped) is not None
+            return cls._b3rem.match(stripped) is not None
         return False
 
     def do_test_chksumline(self, line):
@@ -839,59 +851,24 @@ class BK3_Base(TextChksumType, BLAKE3_MixIn):
             return
         if stripped.startswith(';'):
             return
-        x = self._bk3rem.match(stripped)
+        x = self._b3rem.match(stripped)
         if not x:
             return -1
         self.test_file(x.group(2), strutil.unhexlify(x.group(1)))
 
     @staticmethod
     def make_std_filename(filename):
-        return filename + '.bk3'
+        return filename + '.b3'
 
     def make_addfile(self, filename):
-        digest = getfilehash(filename, self.hash_name, self._getfileblake3)[0]
+        digest_size = config.hash_length or self.digest_size
+        cache_key = '%s-%d' % (self.hash_name, digest_size)
+        digest = getfilehash(filename, cache_key, self._getfileblake3)[0]
         hexdigest = strutil.hexlify(digest)
         return (hexdigest, -1), '%s  %s' % (hexdigest, filename) + os.linesep
 
 
-def bk3_sum(name, bits, hash_name=None, auto_filename=False, auto_detect=True):
-    digest_size = bits // 8
-    hexlen = digest_size * 2
-    hash_label = 'BLAKE3-%d' % bits
-    if hash_name is None:
-        hash_name = 'blake3-%d' % bits
-
-    class BK3(BK3_Base):
-        pass
-
-    BK3.name = name
-    BK3.description = '%s checksum file' % hash_label
-    BK3.descinfo = '%s,name' % hash_label
-    BK3.digest_size = digest_size
-    BK3.hash_name = hash_name
-    BK3.hash_label = hash_label
-    BK3._bk3rem = re.compile(r'([0-9a-fA-F]{%d}) [ *]([^\r\n]+)[\r\n]*$' % hexlen)
-
-    if auto_filename:
-        BK3.auto_filename_match = 'bk3$'
-    if not auto_detect:
-        BK3.auto_chksumfile_match = staticmethod(lambda _file: False)
-
-    return BK3
-
-
-BLAKE3_256 = bk3_sum('blake3-256', 256, auto_filename=True)
-BLAKE3_512 = bk3_sum('blake3-512', 512)
-BLAKE3_1024 = bk3_sum('blake3-1024', 1024)
-BLAKE3_2048 = bk3_sum('blake3-2048', 2048)
-
-BLAKE3_ALIAS = bk3_sum('blake3', 256, hash_name='blake3-256', auto_detect=False)
-
-cftypes.register_cftype(BLAKE3_256)
-cftypes.register_cftype(BLAKE3_512)
-cftypes.register_cftype(BLAKE3_1024)
-cftypes.register_cftype(BLAKE3_2048)
-cftypes.register_cftype(BLAKE3_ALIAS)
+cftypes.register_cftype(BK3_Base)
 
 
 # ---------- bsdmd5 ----------
@@ -1811,7 +1788,7 @@ def test(filename, typename, restrict_typename='auto'):
         return
     except MissingDependencyError as e:
         stats.cferror += 1
-        view.perror('%s: %s' % (filename, e))
+        view.ev_cf_enverror(filename, e)
         return
     except EnvironmentError as a:
         stats.cferror += 1
@@ -1902,6 +1879,11 @@ def make(cftype, ifilename, testfiles):
                 continue
         try:
             (filecrc, filesize), dat = cf.make_addfile(f)
+        except MissingDependencyError as e:
+            stats.cferror += 1
+            view.ev_cf_enverror(filename, e)
+            file = IOError
+            continue
         except EnvironmentError as a:
             if a.errno == errno.ENOENT:
                 stats.notfound += 1
@@ -2034,7 +2016,7 @@ def show_unverified_files(filelist):
 # md5sum/sha1sum files have no standard extension, so just search for
 # files with md5/sha1 in the name anywhere, and let the test func see
 # if it really is one.
-atrem = re.compile(r'md5|sha1|sha224|sha256|sha384|sha512|\.(bk3|csv|sfv|par|p[0-9][0-9]|par2|torrent|crc)(\.gz)?$', re.IGNORECASE)
+atrem = re.compile(r'md5|sha1|sha224|sha256|sha384|sha512|b3sum|\.(b3|bk3|csv|sfv|par|p[0-9][0-9]|par2|torrent|crc)(\.gz)?$', re.IGNORECASE)
 
 
 def autotest(typename):
@@ -2100,11 +2082,13 @@ def printusage(err=0):
     phelp(' --progress=VAL  show progress meter (yes, no, or auto(default))')
     phelp(' --help/-h show help')
     phelp(' --version show cfv and module versions')
+    phelp('hash options (b3):')
+    phelp(' --length=BYTES       digest length in bytes (default: 32 for b3)')
     phelp('torrent creation options:')
     phelp(' --announceurl=URL    tracker announce url')
     phelp(' --piece_size_pow2=N  power of two to set the piece size to (default 18)')
     phelp(' --private_torrent    set private flag in torrent')
-    phelp('Optional modules: blake3 (BLAKE3/.bk3), Pillow (CRC dimensions)')
+    phelp('Optional modules: blake3 (BLAKE3/.b3), Pillow (CRC dimensions)')
     sys.exit(err)
 
 
@@ -2134,6 +2118,15 @@ view = ui.View(config)
 filenamefilter = FileNameFilter()
 
 
+def _parse_hash_length(a):
+    try:
+        config.hash_length = int(a)
+    except ValueError:
+        raise CFVValueError('--length must be an integer')
+    if config.hash_length <= 0:
+        raise CFVValueError('--length must be positive')
+
+
 def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
@@ -2146,6 +2139,7 @@ def main(argv=None):
                                       ['list=', 'list0=', 'fixpaths=', 'strippaths=', 'showpaths=', 'renameformat=', 'progress=', 'unquote=', 'help', 'version',
                                        'encoding=',
                                        'announceurl=', 'piece_size_pow2=', 'private_torrent', 'noprivate_torrent',  # torrent options
+                                       'length=',  # hash digest length
                                        ])
     except getopt.error as a:
         view.perror('cfv: %s' % a)
@@ -2270,6 +2264,8 @@ def main(argv=None):
                 config.private_torrent = True
             elif o == '--noprivate_torrent':
                 config.private_torrent = False
+            elif o == '--length':
+                _parse_hash_length(a)
             elif o == '-h' or o == '-?' or o == '--help':
                 printhelp()
             elif o == '--version':
@@ -2288,44 +2284,40 @@ def main(argv=None):
 
     view.setup_output()
 
-    try:
-        if not manual:
+    if not manual:
+        if mode == 0:
+            filenamefilter.set_testfiles(args)
+            autotest(typename)
+        else:
+            if typename == 'auto':
+                typename = config.default_type_name
+            make(cftypes.get_handler(typename), None, args)
+    else:
+        for a in manual:
             if mode == 0:
                 filenamefilter.set_testfiles(args)
-                autotest(typename)
+                test(a, typename)
             else:
-                if typename == 'auto':
-                    typename = config.default_type_name
-                make(cftypes.get_handler(typename), None, args)
-        else:
-            for a in manual:
-                if mode == 0:
-                    filenamefilter.set_testfiles(args)
-                    test(a, typename)
+                if typename != 'auto':
+                    make(cftypes.get_handler(typename), a, args)
                 else:
-                    if typename != 'auto':
-                        make(cftypes.get_handler(typename), a, args)
-                    else:
-                        testa = ''
-                        if config.gzip >= 0 and a[-3:] == '.gz':
-                            testa = a[:-3]
-                        cftype = cftypes.auto_filename_match(a, testa)
-                        if not cftype:
-                            raise CFVValueError('specify a filetype with -t, or use standard extension')
-                        make(cftype, a, args)
+                    testa = ''
+                    if config.gzip >= 0 and a[-3:] == '.gz':
+                        testa = a[:-3]
+                    cftype = cftypes.auto_filename_match(a, testa)
+                    if not cftype:
+                        raise CFVValueError('specify a filetype with -t, or use standard extension')
+                    make(cftype, a, args)
 
-        if mode == 0:
-            show_unverified_files(args)
+    if mode == 0:
+        show_unverified_files(args)
 
-        # only print total stats if more than one checksum file has been checked. (or if none have)
-        # We must also print stats here if there are unverified files or checksum file errors, since those conditions occur outside of the cf_stats section.
-        if stats.subcount != 1 or stats.unverified or stats.cferror:
-            view.pinfo(str(stats))
+    # only print total stats if more than one checksum file has been checked. (or if none have)
+    # We must also print stats here if there are unverified files or checksum file errors, since those conditions occur outside of the cf_stats section.
+    if stats.subcount != 1 or stats.unverified or stats.cferror:
+        view.pinfo(str(stats))
 
-        sys.exit((stats.badcrc and 2) | (stats.badsize and 4) | (stats.notfound and 8) | (stats.ferror and 16) | (stats.unverified and 32) | (stats.cferror and 64))
-    except MissingDependencyError as e:
-        view.perror(str(e))
-        sys.exit(1)
+    sys.exit((stats.badcrc and 2) | (stats.badsize and 4) | (stats.notfound and 8) | (stats.ferror and 16) | (stats.unverified and 32) | (stats.cferror and 64))
 
 
 if __name__ == '__main__':

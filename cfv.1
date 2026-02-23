@@ -1,8 +1,8 @@
 .TH cfv 1 "05 Feb 2005"
 .SH NAME
-cfv \- Verify file consistency with .sfv, .bk3, .csv, .crc, .md5, md5sum, sha1sum, sha224sum, sha256sum, sha384sum, sha512sum, .torrent, par, or par2 files
+cfv \- Verify file consistency with .sfv, .b3, .csv, .crc, .md5, md5sum, sha1sum, sha224sum, sha256sum, sha384sum, sha512sum, .torrent, par, or par2 files
 .SH SYNOPSIS
-.B cfv [\-p dir] [\-v|\-V|\-VV|\-q|\-Q] [\-\-progress VAL] [\-r|\-rr|\-R] [\-l|\-L] [\-n|\-N] [\-\-renameformat <s>] [\-s|\-S] [\-zz|\-z|\-Z|\-ZZ] [\-T|\-C] [\-m|\-M] [\-i|\-I] [\-u|\-uu|\-U] [\-\-encoding <e>] [\-\-unquote <b>] [\-\-fixpaths <s>] [\-\-strippaths <p>] [\-\-showpaths <i>] [\-\-list/\-\-list0 <l>] [\-\-announceurl <u>] [\-\-piece_size_pow2 <n>] [\-\-private_torrent] [\-t type] [\-f file] [files...]
+.B cfv [\-p dir] [\-v|\-V|\-VV|\-q|\-Q] [\-\-progress VAL] [\-r|\-rr|\-R] [\-l|\-L] [\-n|\-N] [\-\-renameformat <s>] [\-s|\-S] [\-zz|\-z|\-Z|\-ZZ] [\-T|\-C] [\-m|\-M] [\-i|\-I] [\-u|\-uu|\-U] [\-\-encoding <e>] [\-\-unquote <b>] [\-\-fixpaths <s>] [\-\-strippaths <p>] [\-\-showpaths <i>] [\-\-list/\-\-list0 <l>] [\-\-announceurl <u>] [\-\-piece_size_pow2 <n>] [\-\-private_torrent] [\-\-length <n>] [\-t type] [\-f file] [files...]
 .SH DESCRIPTION
 .B cfv
 verifies that the files you have are the same as those that the were used to create
@@ -120,7 +120,7 @@ Specify the name of the checksum file to test or create.
 If file is \-, stdin (for \-T) or stdout (for \-C) will be used.
 .IP "\-t type"
 Specify the type of the file.
-Can be sfv, sfvmd5, blake3, blake3-256, blake3-512, blake3-1024, blake3-2048, csv, csv2, csv4, sha1, sha224, sha256, sha384, sha512, md5, bsdmd5, par, par2, torrent, crc, auto, or help.
+Can be sfv, sfvmd5, b3, csv, csv2, csv4, sha1, sha224, sha256, sha384, sha512, md5, bsdmd5, par, par2, torrent, crc, auto, or help.
 If the type is help, or an unknown type is given, a list of the types and their descriptions will be printed.
 The default is auto, which will detect the file type for you.
 When creating, if type is auto an sfv will be made, unless a different default has been set in the config file.
@@ -135,6 +135,9 @@ Power of two to set piece size to for .torrent file creation.
 The default is 18, which gives a piece size of 2^18=256KB.
 .IP "\-\-private_torrent"
 Set private flag in torrent during .torrent file creation.
+.IP "\-\-length BYTES"
+Set digest length in bytes for hash types that support variable output (b3).
+The default for b3 is 32 (256 bits).
 .IP "\-h/\-\-help"
 Print help info.
 .IP "\-\-version"
@@ -146,20 +149,8 @@ is a Simple File Verify format file
 .B sfvmd5
 is a Simple File Verify format file, using MD5 checksums rather than crc32.
 .br
-.B blake3
-is a BLAKE3 checksum file (.bk3). It defaults to BLAKE3-256 output and requires the Python blake3 module.
-.br
-.B blake3-256
-is a BLAKE3-256 checksum file (.bk3).
-.br
-.B blake3-512
-is a BLAKE3-512 checksum file (.bk3).
-.br
-.B blake3-1024
-is a BLAKE3-1024 checksum file (.bk3).
-.br
-.B blake3-2048
-is a BLAKE3-2048 checksum file (.bk3).
+.B b3
+is a BLAKE3 checksum file (.b3). Requires the Python blake3 module.
 .br
 .B csv
 is a Comma Separated Value file, with the fields being name,size,crc32,
