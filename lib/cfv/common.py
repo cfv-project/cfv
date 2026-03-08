@@ -2215,7 +2215,8 @@ def main(argv=None):
                         testa = a[:-3]
                     cftype = cftypes.auto_filename_match(a, testa)
                     if not cftype:
-                        raise CFVValueError('specify a filetype with -t, or use standard extension')
+                        view.perror('cfv: specify a filetype with -t, or use standard extension')
+                        sys.exit(1)
                     make(cftype, a, args)
 
     if mode == 0:
