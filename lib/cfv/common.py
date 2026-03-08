@@ -800,7 +800,7 @@ class BLAKE3_MixIn(object):
             return c
 
 
-class BK3_Base(TextChksumType, BLAKE3_MixIn):
+class BLAKE3(TextChksumType, BLAKE3_MixIn):
     name = 'b3'
     description = 'BLAKE3 checksum file'
     descinfo = 'BLAKE3,name'
@@ -830,10 +830,7 @@ class BK3_Base(TextChksumType, BLAKE3_MixIn):
         line = file.peekline(4096)
         while line:
             stripped = line.lstrip()
-            if not stripped:
-                line = file.peeknextline(4096)
-                continue
-            if stripped.startswith(';'):
+            if not stripped or stripped.startswith(';'):
                 line = file.peeknextline(4096)
                 continue
             return cls._b3rem.match(stripped) is not None
@@ -841,9 +838,7 @@ class BK3_Base(TextChksumType, BLAKE3_MixIn):
 
     def do_test_chksumline(self, line):
         stripped = line.lstrip()
-        if not stripped:
-            return
-        if stripped.startswith(';'):
+        if not stripped or stripped.startswith(';'):
             return
         x = self._b3rem.match(stripped)
         if not x:
@@ -862,7 +857,7 @@ class BK3_Base(TextChksumType, BLAKE3_MixIn):
         return (hexdigest, -1), '%s  %s' % (hexdigest, filename) + os.linesep
 
 
-cftypes.register_cftype(BK3_Base)
+cftypes.register_cftype(BLAKE3)
 
 
 # ---------- bsdmd5 ----------
