@@ -802,7 +802,7 @@ class BLAKE3_MixIn(object):
 
 class BLAKE3(TextChksumType, BLAKE3_MixIn):
     name = 'b3'
-    description = 'BLAKE3 checksum file'
+    description = 'BLAKE3 b3sum'
     descinfo = 'BLAKE3,name'
     auto_chksumfile_order = 1
     auto_filename_match = r'b3sum|\.(b3|bk3)$'
@@ -2071,9 +2071,9 @@ def printusage(err=0):
     phelp(' --progress=VAL  show progress meter (yes, no, or auto(default))')
     phelp(' --help/-h show help')
     phelp(' --version show cfv and module versions')
-    phelp('hash options (b3):')
+    phelp('creation options (b3):')
     phelp(' --length=BYTES       digest length in bytes (default: 32 for b3)')
-    phelp('torrent creation options:')
+    phelp('creation options (torrent):')
     phelp(' --announceurl=URL    tracker announce url')
     phelp(' --piece_size_pow2=N  power of two to set the piece size to (default 18)')
     phelp(' --private_torrent    set private flag in torrent')
