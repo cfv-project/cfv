@@ -804,7 +804,7 @@ class BLAKE3(TextChksumType, BLAKE3_MixIn):
     name = 'b3'
     description = 'BLAKE3 checksum file'
     descinfo = 'BLAKE3,name'
-    auto_chksumfile_order = 2
+    auto_chksumfile_order = 1
     auto_filename_match = r'b3sum|\.(b3|bk3)$'
 
     # Match any even-length hex string (supports variable digest lengths when checking)
