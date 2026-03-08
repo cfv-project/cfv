@@ -2077,7 +2077,7 @@ def printusage(err=0):
     phelp(' --announceurl=URL    tracker announce url')
     phelp(' --piece_size_pow2=N  power of two to set the piece size to (default 18)')
     phelp(' --private_torrent    set private flag in torrent')
-    phelp('Optional modules: blake3 (BLAKE3/.b3), Pillow (CRC dimensions)')
+    phelp('Optional modules: blake3 (b3 format), Pillow (crc format image dimensions)')
     sys.exit(err)
 
 

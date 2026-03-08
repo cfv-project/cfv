@@ -1,6 +1,6 @@
 .TH cfv 1 "05 Feb 2005"
 .SH NAME
-cfv \- Verify file consistency with .sfv, .b3, .csv, .crc, .md5, md5sum, sha1sum, sha224sum, sha256sum, sha384sum, sha512sum, .torrent, par, or par2 files
+cfv \- Verify file consistency with .sfv, .csv, .crc, .md5, md5sum, sha1sum, sha224sum, sha256sum, sha384sum, sha512sum, b3sum, .torrent, .par, or .par2 files
 .SH SYNOPSIS
 .B cfv [\-p dir] [\-v|\-V|\-VV|\-q|\-Q] [\-\-progress VAL] [\-r|\-rr|\-R] [\-l|\-L] [\-n|\-N] [\-\-renameformat <s>] [\-s|\-S] [\-zz|\-z|\-Z|\-ZZ] [\-T|\-C] [\-m|\-M] [\-i|\-I] [\-u|\-uu|\-U] [\-\-encoding <e>] [\-\-unquote <b>] [\-\-fixpaths <s>] [\-\-strippaths <p>] [\-\-showpaths <i>] [\-\-list/\-\-list0 <l>] [\-\-announceurl <u>] [\-\-piece_size_pow2 <n>] [\-\-private_torrent] [\-\-length <n>] [\-t type] [\-f file] [files...]
 .SH DESCRIPTION
@@ -120,7 +120,8 @@ Specify the name of the checksum file to test or create.
 If file is \-, stdin (for \-T) or stdout (for \-C) will be used.
 .IP "\-t type"
 Specify the type of the file.
-Can be sfv, sfvmd5, b3, csv, csv2, csv4, sha1, sha224, sha256, sha384, sha512, md5, bsdmd5, par, par2, torrent, crc, auto, or help.
+Can be sfv, sfvmd5, csv, csv2, csv4, crc, md5, bsdmd5, sha1, sha224, sha256, sha384, sha512, b3, torrent, par, par2, auto, or help.
+For details see supported checksum formats section.
 If the type is help, or an unknown type is given, a list of the types and their descriptions will be printed.
 The default is auto, which will detect the file type for you.
 When creating, if type is auto an sfv will be made, unless a different default has been set in the config file.
@@ -128,6 +129,9 @@ When creating, if type is auto an sfv will be made, unless a different default h
 Prints a raw listing of files in the given set (ok, bad, unverified, notfound).  Usually used with \-q, but not strictly needed since specifying \-\-list will redirect all other messages to stderr.
 .IP "\-\-list0 listset"
 Like \-\-list but files are separated by a null char.  Useful in combination with xargs \-0.
+.IP "\-\-length BYTES"
+Set digest length in bytes for hash types that support variable output (b3).
+The default for b3 is 32 (256 bits).
 .IP "\-\-announceurl URL"
 Tracker announce URL for .torrent file creation.
 .IP "\-\-piece_size_pow2 N"
@@ -135,22 +139,18 @@ Power of two to set piece size to for .torrent file creation.
 The default is 18, which gives a piece size of 2^18=256KB.
 .IP "\-\-private_torrent"
 Set private flag in torrent during .torrent file creation.
-.IP "\-\-length BYTES"
-Set digest length in bytes for hash types that support variable output (b3).
-The default for b3 is 32 (256 bits).
 .IP "\-h/\-\-help"
 Print help info.
 .IP "\-\-version"
 Print version of cfv and modules it uses.
+.SH SUPPORTED CHECKSUM FILE FORMATS
+The following types are supported:
 .P
 .B sfv
 is a Simple File Verify format file
 .br
 .B sfvmd5
 is a Simple File Verify format file, using MD5 checksums rather than crc32.
-.br
-.B b3
-is a BLAKE3 checksum file (.b3). Requires the Python blake3 module.
 .br
 .B csv
 is a Comma Separated Value file, with the fields being name,size,crc32,
@@ -160,6 +160,15 @@ is a Comma Separated Value file, with the fields being name,size,
 .br
 .B csv4
 is a Comma Separated Value file, with the fields being name,size,crc32,path
+.br
+.B crc
+is a JPEG Sheriff format crc file
+.br
+.B md5
+is a GNU md5sum format file
+.br
+.B bsdmd5
+is a BSD md5 format file
 .br
 .B sha1
 is a GNU sha1sum format file
@@ -176,23 +185,17 @@ is a GNU sha384sum format file
 .B sha512
 is a GNU sha512sum format file
 .br
-.B md5
-is a GNU md5sum format file
+.B b3
+is a BLAKE3 b3sum format file (B3SUMS, .b3, .bk3). Requires the Python blake3 module.
 .br
-.B bsdmd5
-is a BSD md5 format file
+.B torrent
+is a BitTorrent metainfo file
 .br
 .B par
 is parchive v1 format file (test-only)
 .br
 .B par2
 is parchive v2 format file (test-only)
-.br
-.B torrent
-is a BitTorrent metainfo file
-.br
-.B crc
-is a JPEG Sheriff format crc file
 .SH EXIT STATUS
 The exit status of cfv can be examined to determine what kind of errors, if any, occurred.
 .P
