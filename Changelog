@@ -1,5 +1,6 @@
 2025-xx-xx - v3.2.1.dev0:
 	* WARNING: This is a development snapshot, not a stable release.
+	* Support for BLAKE3 b3sum format (Thanks to Artur Ladka).
 
 2025-11-02 - v3.2.0:
 	* Drop support for Python 3.6.
