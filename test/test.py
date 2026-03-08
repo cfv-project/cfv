@@ -1851,12 +1851,12 @@ def all_tests():
     T_test('.sfvmd5')
     T_test('.csv2')
     T_test('.csv4')
-    if blake3_available:
-        T_test('.b3')
     T_test('.crc')
     T_test('nosize.crc')
     T_test('nodims.crc')
     T_test('nosizenodimsnodesc.crc')
+    if blake3_available:
+        T_test('.b3')
     for fmt in coreutilsfmts():
         T_test('crlf.' + fmt)
     T_test('crlf.bsdmd5')
@@ -1959,7 +1959,13 @@ def all_tests():
     C_test('csv4', '-t csv4')
     C_test('crc')
     if blake3_available:
-        C_test('b3', '-t b3')
+        if pathfind('b3sum'):  # don't report pointless errors on systems that don't have b3sum
+            def b3sum_verify(f):
+                test_external('b3sum -c ' + f, status_test)
+        else:
+            print('skipping b3 verify using external tool b3sum, as it is not installed.')
+            b3sum_verify = None
+        C_test('b3', '-t b3', verify=b3sum_verify)
     private_torrent_test()
     # test_generic('../cfv -V -T -f test.md5', cfv_test)
     # test_generic('../cfv -V -tcsv -T -f test.md5', cfv_test)
@@ -2005,6 +2011,7 @@ def all_tests():
     test_generic(cfvcmd + ' -m -v -T -t csv', lambda s, o: cfv_typerestrict_test(s, o, 'csv'))
     test_generic(cfvcmd + ' -m -v -T -t par', lambda s, o: cfv_typerestrict_test(s, o, 'par'))
     test_generic(cfvcmd + ' -m -v -T -t par2', lambda s, o: cfv_typerestrict_test(s, o, 'par2'))
+    test_generic(cfvcmd + ' -m -v -T -t b3', lambda s, o: cfv_typerestrict_test(s, o, 'b3'))
 
     test_generic(cfvcmd + ' -u -t md5 -f test.md5 data* unchecked.dat test.md5', cfv_unv_test)
     test_generic(cfvcmd + ' -u -f test.md5 data* unchecked.dat', cfv_unv_test)
