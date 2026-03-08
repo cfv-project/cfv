@@ -805,7 +805,7 @@ class BK3_Base(TextChksumType, BLAKE3_MixIn):
     description = 'BLAKE3 checksum file'
     descinfo = 'BLAKE3,name'
     auto_chksumfile_order = 2
-    auto_filename_match = '(b3|b3sums?)$'
+    auto_filename_match = r'b3sum|\.(b3|bk3)$'
 
     # Match any even-length hex string (supports variable digest lengths when checking)
     _b3rem = re.compile(r'((?:[0-9a-fA-F]{2})+) [ *]([^\r\n]+)[\r\n]*$')
