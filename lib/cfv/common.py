@@ -121,13 +121,13 @@ class FileNameFilter(object):
         return fn in self.testfiles
 
 
-def getfilehash(filename, hashname, hashfunc):
+def getfilehash(filename, hashname, hashfunc, *hashargs):
     finfo = cache.getfinfo(filename)
     if hashname not in finfo:
         if view.progress:
             view.progress.init(filename)
         try:
-            hash, size = hashfunc(filename, view.progress and view.progress.update or None)
+            hash, size = hashfunc(filename, view.progress and view.progress.update or None, *hashargs)
         finally:
             if view.progress:
                 view.progress.cleanup()
@@ -791,17 +791,11 @@ class BLAKE3_MixIn(object):
     digest_size = 32
     hash_name = 'blake3'
 
-    def _getfileblake3(self, filename, callback):
-        digest_size = config.hash_length or self.digest_size
-        return hash.getfileblake3(filename, callback, digest_size)
-
     def do_test_file(self, filename, filecrc):
         # Derive digest size from the checksum in the file (supports variable lengths)
         digest_size = len(filecrc)
 
-        def hasher(filename, callback):
-            return hash.getfileblake3(filename, callback, digest_size)
-        c = getfilehash(filename, '%s-%d' % (self.hash_name, digest_size), hasher)[0]
+        c = getfilehash(filename, '%s-%d' % (self.hash_name, digest_size), hash.getfileblake3, digest_size)[0]
         if c != filecrc:
             return c
 
@@ -863,7 +857,7 @@ class BK3_Base(TextChksumType, BLAKE3_MixIn):
     def make_addfile(self, filename):
         digest_size = config.hash_length or self.digest_size
         cache_key = '%s-%d' % (self.hash_name, digest_size)
-        digest = getfilehash(filename, cache_key, self._getfileblake3)[0]
+        digest = getfilehash(filename, cache_key, hash.getfileblake3, digest_size)[0]
         hexdigest = strutil.hexlify(digest)
         return (hexdigest, -1), '%s  %s' % (hexdigest, filename) + os.linesep
 
