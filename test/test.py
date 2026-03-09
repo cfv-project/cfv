@@ -364,7 +364,7 @@ rx_badsize = r', (\d+) badsize'
 rx_cferror = r', (\d+) chksum file errors'
 rx_misnamed = r', (\d+) misnamed'
 rx_End = r'(, \d+ differing cases)?(, \d+ quoted filenames)?.  [\d.]+ seconds, [\d.]+K(/s)?$'
-rxo_TestingFrom = re.compile(r'^testing from .* \((.+?)\b.*\)[\n\r]*$', re.M)
+rxo_TestingFrom = re.compile(r'^testing from .*? \((.+?)\b.*\)[\n\r]*$', re.M)
 
 
 def optionalize(s):
