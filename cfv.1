@@ -129,9 +129,9 @@ When creating, if type is auto an sfv will be made, unless a different default h
 Prints a raw listing of files in the given set (ok, bad, unverified, notfound).  Usually used with \-q, but not strictly needed since specifying \-\-list will redirect all other messages to stderr.
 .IP "\-\-list0 listset"
 Like \-\-list but files are separated by a null char.  Useful in combination with xargs \-0.
-.IP "\-\-length BYTES"
-Set digest length in bytes for hash types that support variable output (b3).
-The default for b3 is 32 (256 bits).
+.IP "\-\-length BITS"
+Set digest length in bits for hash types that support variable output (b3).
+The default for b3 is 256 bits. Must be a multiple of 8.
 .IP "\-\-announceurl URL"
 Tracker announce URL for .torrent file creation.
 .IP "\-\-piece_size_pow2 N"

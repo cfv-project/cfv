@@ -574,6 +574,27 @@ def cfv_nooutput_test(s, o, expected=0):
     return 0
 
 
+def hash_length_non_byte_aligned_test():
+    """Test that --length not divisible by 8 produces a clean error."""
+    tmpd = tempfile.mkdtemp()
+    try:
+        input_name = 'input.txt'
+        input_path = os.path.join(tmpd, input_name)
+        with open(input_path, 'wt') as f:
+            f.write('hello\n')
+
+        def check_error(s, o):
+            if s == 0:
+                return 'expected error, got success'
+            if '--length' in o and 'multiple of 8' in o:
+                return 0
+            return 'unexpected error: %r' % o
+
+        test_generic('%s -C -t auto --length=100 -p %s -f out.txt %s' % (cfvcmd, tmpd, input_name), check_error)
+    finally:
+        shutil.rmtree(tmpd)
+
+
 def blake3_missing_dep_test():
     stubdir = tempfile.mkdtemp()
     saved_sys_path = list(sys.path)
@@ -688,7 +709,7 @@ def b3_malformed_hex_test():
 
 
 def b3_length_test():
-    """Test --length option for variable digest size."""
+    """Test --length option for variable digest size (in bits)."""
     tmpd = tempfile.mkdtemp()
     try:
         input_name = 'input.txt'
@@ -704,13 +725,13 @@ def b3_length_test():
                      if line and not line.lstrip().startswith(';')]
             if len(lines) != 1:
                 return 'expected 1 data line, got %d' % len(lines)
-            # 64 bytes = 128 hex chars
+            # 512 bits = 64 bytes = 128 hex chars
             pattern = r'^[0-9a-f]{128}  %s$' % re.escape(input_name)
             if not re.match(pattern, lines[0]):
-                return 'bad b3 --length=64 line: %r' % lines[0]
+                return 'bad b3 --length=512 line: %r' % lines[0]
             return 0
 
-        test_generic('%s -C -t b3 --length=64 -p %s -f out.b3 %s' % (cfvcmd, tmpd, input_name), create_test)
+        test_generic('%s -C -t b3 --length=512 -p %s -f out.b3 %s' % (cfvcmd, tmpd, input_name), create_test)
         test_generic('%s -T -p %s -f out.b3' % (cfvcmd, tmpd), cfv_test)
     finally:
         shutil.rmtree(tmpd)
@@ -1799,6 +1820,7 @@ def all_tests():
 
     symlink_test()
     deep_unverified_test()
+    hash_length_non_byte_aligned_test()
 
     blake3_missing_dep_test()
     if blake3_available:

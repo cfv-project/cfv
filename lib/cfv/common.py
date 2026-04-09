@@ -850,7 +850,7 @@ class BLAKE3(TextChksumType, BLAKE3_MixIn):
         return filename + '.b3'
 
     def make_addfile(self, filename):
-        digest_size = config.hash_length or self.digest_size
+        digest_size = config.hash_length // 8 if config.hash_length else self.digest_size
         cache_key = '%s-%d' % (self.hash_name, digest_size)
         digest = getfilehash(filename, cache_key, hash.getfileblake3, digest_size)[0]
         hexdigest = strutil.hexlify(digest)
@@ -2072,7 +2072,7 @@ def printusage(err=0):
     phelp(' --help/-h show help')
     phelp(' --version show cfv and module versions')
     phelp('creation options (b3):')
-    phelp(' --length=BYTES       digest length in bytes (default: 32 for b3)')
+    phelp(' --length=BITS        digest length in bits (default: 256 for b3)')
     phelp('creation options (torrent):')
     phelp(' --announceurl=URL    tracker announce url')
     phelp(' --piece_size_pow2=N  power of two to set the piece size to (default 18)')
@@ -2109,11 +2109,14 @@ filenamefilter = FileNameFilter()
 
 def _parse_hash_length(a):
     try:
-        config.hash_length = int(a)
+        length_bits = int(a)
     except ValueError:
         raise CFVValueError('--length must be an integer')
-    if config.hash_length <= 0:
+    if length_bits <= 0:
         raise CFVValueError('--length must be positive')
+    if length_bits % 8 != 0:
+        raise CFVValueError('--length must be a multiple of 8')
+    config.hash_length = length_bits
 
 
 def main(argv=None):
