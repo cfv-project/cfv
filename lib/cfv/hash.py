@@ -5,6 +5,7 @@ import os
 import struct
 import sys
 from zlib import crc32
+from cfv.exceptions import MissingDependencyError
 
 
 try:
@@ -29,7 +30,10 @@ md5 = hashlib.md5
 sha1 = hashlib.sha1
 
 
-def _getfilechecksum(filename, hasher, callback):
+def _getfilechecksum(filename, hasher, callback, finalize=None):
+    if finalize is None:
+        def finalize(h):
+            return h.digest()
     if filename == '':
         f = sys.stdin.buffer
     else:
@@ -39,7 +43,7 @@ def _getfilechecksum(filename, hasher, callback):
         while 1:
             x = f.read(65536)
             if not x:
-                return m.digest(), s
+                return finalize(m), s
             s += len(x)
             m.update(x)
             if callback:
@@ -66,7 +70,7 @@ def _getfilechecksum(filename, hasher, callback):
                 # offset parameter, so we just have to do the rest of the
                 # file the old fashioned way.
                 return finish(m, mmapsize)
-            return m.digest(), s
+            return finalize(m), s
     finally:
         if filename != '':
             f.close()
@@ -96,3 +100,29 @@ class CRC32(object):
 
 def getfilecrc(filename, callback):
     return _getfilechecksum(filename, CRC32, callback)
+
+
+_blake3_module = None
+
+
+def _get_blake3():
+    global _blake3_module
+    if _blake3_module is None:
+        try:
+            import blake3
+        except ImportError:
+            raise MissingDependencyError(
+                "blake3 requires the 'blake3' module. "
+                "Install python3-blake3 or pip install blake3."
+            )
+        _blake3_module = blake3
+    return _blake3_module
+
+
+def getfileblake3(filename, callback, digest_size):
+    return _getfilechecksum(
+        filename,
+        _get_blake3().blake3,
+        callback,
+        finalize=lambda h: h.digest(digest_size),
+    )

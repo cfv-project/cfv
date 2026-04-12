@@ -47,6 +47,13 @@ from glob import glob
 
 import cfvtest
 
+try:
+    import blake3 as _blake3_module
+    blake3_available = 1
+except ImportError:
+    _blake3_module = None
+    blake3_available = 0
+
 
 if hasattr(locale, 'getpreferredencoding'):
     preferredencoding = locale.getpreferredencoding() or 'ascii'
@@ -97,6 +104,8 @@ fmt_info = {
         (1, 1, 0, 1, 0, preferredencoding, 0),
     'torrent':
         (1, 1, 1, 1, 0, 'utf-8', 0),
+    'b3':
+        (1, 0, 1, blake3_available, 1, preferredencoding, 0),
 }
 
 
@@ -355,7 +364,7 @@ rx_badsize = r', (\d+) badsize'
 rx_cferror = r', (\d+) chksum file errors'
 rx_misnamed = r', (\d+) misnamed'
 rx_End = r'(, \d+ differing cases)?(, \d+ quoted filenames)?.  [\d.]+ seconds, [\d.]+K(/s)?$'
-rxo_TestingFrom = re.compile(r'^testing from .* \((.+?)\b.*\)[\n\r]*$', re.M)
+rxo_TestingFrom = re.compile(r'^testing from .*? \((.+?)\b.*\)[\n\r]*$', re.M)
 
 
 def optionalize(s):
@@ -563,6 +572,202 @@ def cfv_nooutput_test(s, o, expected=0):
     if o:
         return 'output: %s' % (repr(o),)
     return 0
+
+
+def hash_length_non_byte_aligned_test():
+    """Test that --length not divisible by 8 produces a clean error."""
+    tmpd = tempfile.mkdtemp()
+    try:
+        input_name = 'input.txt'
+        input_path = os.path.join(tmpd, input_name)
+        with open(input_path, 'wt') as f:
+            f.write('hello\n')
+
+        def check_error(s, o):
+            if s == 0:
+                return 'expected error, got success'
+            if '--length' in o and 'multiple of 8' in o:
+                return 0
+            return 'unexpected error: %r' % o
+
+        test_generic('%s -C -t auto --length=100 -p %s -f out.txt %s' % (cfvcmd, tmpd, input_name), check_error)
+    finally:
+        shutil.rmtree(tmpd)
+
+
+def blake3_missing_dep_test():
+    stubdir = tempfile.mkdtemp()
+    saved_sys_path = list(sys.path)
+    saved_pythonpath = os.environ.get('PYTHONPATH')
+    removed_modules = {}
+    try:
+        with open(os.path.join(stubdir, 'blake3.py'), 'wt') as f:
+            f.write('raise ImportError("blake3 disabled for test")\n')
+        for name in list(sys.modules):
+            if name == 'blake3' or name.startswith('blake3.'):
+                removed_modules[name] = sys.modules.pop(name)
+        sys.path.insert(0, stubdir)
+        if not run_internal:
+            if saved_pythonpath:
+                os.environ['PYTHONPATH'] = stubdir + os.pathsep + saved_pythonpath
+            else:
+                os.environ['PYTHONPATH'] = stubdir
+
+        def missing_dep_test(s, o):
+            # Should complete with cferror (exit code 64), not abort
+            if s != 64:
+                return 'expected exit code 64 (cferror), got %d' % s
+            if "blake3 requires the 'blake3' module." not in o:
+                return 'missing error message'
+            if 'chksum file errors' not in o:
+                return 'expected chksum file errors in output'
+            return 0
+
+        test_generic(cfvcmd + ' -C -t b3 -f - data1', missing_dep_test)
+        test_generic(cfvcmd + ' -T -f test.b3', missing_dep_test)
+    finally:
+        sys.path[:] = saved_sys_path
+        if saved_pythonpath is None:
+            os.environ.pop('PYTHONPATH', None)
+        else:
+            os.environ['PYTHONPATH'] = saved_pythonpath
+        sys.modules.update(removed_modules)
+        shutil.rmtree(stubdir)
+
+
+def b3_roundtrip_test():
+    tmpd = tempfile.mkdtemp()
+    try:
+        input_name = 'input.txt'
+        input_path = os.path.join(tmpd, input_name)
+        with open(input_path, 'wt') as f:
+            f.write('hello\n')
+        cfpath = os.path.join(tmpd, 'out.b3')
+
+        def create_test(s, o):
+            if s != 0:
+                return 1
+            lines = [line for line in readfile(cfpath, textmode=True).splitlines()
+                     if line and not line.lstrip().startswith(';')]
+            if len(lines) != 1:
+                return 'expected 1 data line, got %d' % len(lines)
+            pattern = r'^[0-9a-f]{64}  %s$' % re.escape(input_name)
+            if not re.match(pattern, lines[0]):
+                return 'bad b3 line: %r' % lines[0]
+            return 0
+
+        test_generic('%s -C -t b3 -p %s -f out.b3 %s' % (cfvcmd, tmpd, input_name), create_test)
+        test_generic('%s -T -p %s -f out.b3' % (cfvcmd, tmpd), cfv_test)
+    finally:
+        shutil.rmtree(tmpd)
+
+
+def b3_fixture_test():
+    """Test that .b3 and legacy .bk3 files with various hash lengths are all verified correctly."""
+    fixtures = (
+        'test.b3',
+        'test.bk3',
+        'B3SUMS',
+        'test.blake3-512.b3',
+        'test.blake3-1024.b3',
+        'test.blake3-2048.b3',
+    )
+    for fixture in fixtures:
+        test_generic('%s -T -f %s' % (cfvcmd, fixture), cfv_test)
+
+
+def b3_b3sums_create_test():
+    """Test that -C -f B3SUMS auto-detects as b3 type."""
+    tmpd = tempfile.mkdtemp()
+    try:
+        input_name = 'input.txt'
+        input_path = os.path.join(tmpd, input_name)
+        with open(input_path, 'wt') as f:
+            f.write('hello\n')
+        test_generic('%s -C -p %s -f B3SUMS %s' % (cfvcmd, tmpd, input_name), cfv_test)
+        test_generic('%s -T -p %s -f B3SUMS' % (cfvcmd, tmpd), cfv_test)
+    finally:
+        shutil.rmtree(tmpd)
+
+
+def b3_malformed_hex_test():
+    """Test that odd-length hex in .b3 file is rejected gracefully, not a traceback."""
+    tmpd = tempfile.mkdtemp()
+    try:
+        bad_b3 = os.path.join(tmpd, 'bad.b3')
+        with open(bad_b3, 'wt') as f:
+            f.write('abc  data1\n')
+
+        def malformed_test(s, o):
+            if s != 64:
+                return 'expected exit code 64 (cferror), got %d' % s
+            return 0
+
+        test_generic('%s -T -f %s' % (cfvcmd, bad_b3), malformed_test)
+    finally:
+        shutil.rmtree(tmpd)
+
+
+def b3_length_test():
+    """Test --length option for variable digest size (in bits)."""
+    tmpd = tempfile.mkdtemp()
+    try:
+        input_name = 'input.txt'
+        input_path = os.path.join(tmpd, input_name)
+        with open(input_path, 'wt') as f:
+            f.write('hello\n')
+        cfpath = os.path.join(tmpd, 'out.b3')
+
+        def create_test(s, o):
+            if s != 0:
+                return 1
+            lines = [line for line in readfile(cfpath, textmode=True).splitlines()
+                     if line and not line.lstrip().startswith(';')]
+            if len(lines) != 1:
+                return 'expected 1 data line, got %d' % len(lines)
+            # 512 bits = 64 bytes = 128 hex chars
+            pattern = r'^[0-9a-f]{128}  %s$' % re.escape(input_name)
+            if not re.match(pattern, lines[0]):
+                return 'bad b3 --length=512 line: %r' % lines[0]
+            return 0
+
+        test_generic('%s -C -t b3 --length=512 -p %s -f out.b3 %s' % (cfvcmd, tmpd, input_name), create_test)
+        test_generic('%s -T -p %s -f out.b3' % (cfvcmd, tmpd), cfv_test)
+    finally:
+        shutil.rmtree(tmpd)
+
+
+def b3sum_compat_test():
+    """Test interoperability with b3sum tool (requires b3sum to be installed)."""
+    if not pathfind('b3sum'):
+        print('skipping b3sum compatibility tests, b3sum not installed.')
+        return
+
+    tmpd = tempfile.mkdtemp()
+    try:
+        test_files = ['data1', 'data2', 'data3', 'data4']
+        for fname in test_files:
+            shutil.copy(fname, os.path.join(tmpd, fname))
+
+        # Test 1: b3sum -> cfv
+        cmd = 'cd %s && b3sum %s > b3sum_out.b3' % (tmpd, ' '.join(test_files))
+        test_external(cmd, lambda s, _: 0 if s == 0 else 'b3sum create failed')
+        test_generic('%s -T -p %s -f b3sum_out.b3' % (cfvcmd, tmpd), cfv_test)
+
+        # Test 2: cfv -> b3sum
+        test_generic('%s -C -t b3 -p %s -f cfv_out.b3 %s' % (
+            cfvcmd, tmpd, ' '.join(test_files)), cfv_test)
+
+        cmd = 'cd %s && b3sum -c cfv_out.b3' % tmpd
+
+        def b3sum_verify(s, o):
+            if s != 0:
+                return 'b3sum verify failed: %s' % o
+            return 0
+        test_external(cmd, b3sum_verify)
+
+    finally:
+        shutil.rmtree(tmpd)
 
 
 def T_test(f, extra=None):
@@ -1615,6 +1820,18 @@ def all_tests():
 
     symlink_test()
     deep_unverified_test()
+    hash_length_non_byte_aligned_test()
+
+    blake3_missing_dep_test()
+    if blake3_available:
+        b3_roundtrip_test()
+        b3_length_test()
+        b3_fixture_test()
+        b3_b3sums_create_test()
+        b3_malformed_hex_test()
+        b3sum_compat_test()
+    else:
+        print('skipping b3 tests, blake3 not installed.')
 
     for fmt in coreutilsfmts():
         ren_test(fmt)
@@ -1627,6 +1844,8 @@ def all_tests():
     ren_test('csv4')
     ren_test('crc')
     ren_test('torrent')
+    if blake3_available:
+        ren_test('b3')
 
     for t in allavailablefmts():
         if t != 'torrent':
@@ -1658,6 +1877,8 @@ def all_tests():
     T_test('nosize.crc')
     T_test('nodims.crc')
     T_test('nosizenodimsnodesc.crc')
+    if blake3_available:
+        T_test('.b3')
     for fmt in coreutilsfmts():
         T_test('crlf.' + fmt)
     T_test('crlf.bsdmd5')
@@ -1667,6 +1888,8 @@ def all_tests():
     T_test('crlf.sfv')
     T_test('noheadercrlf.sfv')
     T_test('crlf.crc')
+    if blake3_available:
+        T_test('crlf.b3')
     for fmt in coreutilsfmts():
         T_test('crcrlf.' + fmt)
     T_test('crcrlf.bsdmd5')
@@ -1676,6 +1899,8 @@ def all_tests():
     T_test('crcrlf.sfv')
     T_test('noheadercrcrlf.sfv')
     T_test('crcrlf.crc')
+    if blake3_available:
+        T_test('crcrlf.b3')
     for strip in (0, 1):
         T_test('.torrent', extra='--strip=%s' % strip)
         T_test('smallpiece.torrent', extra='--strip=%s' % strip)
@@ -1755,6 +1980,14 @@ def all_tests():
     C_test('csv2', '-t csv2')
     C_test('csv4', '-t csv4')
     C_test('crc')
+    if blake3_available:
+        if pathfind('b3sum'):  # don't report pointless errors on systems that don't have b3sum
+            def b3sum_verify(f):
+                test_external('b3sum -c ' + f, status_test)
+        else:
+            print('skipping b3 verify using external tool b3sum, as it is not installed.')
+            b3sum_verify = None
+        C_test('b3', '-t b3', verify=b3sum_verify)
     private_torrent_test()
     # test_generic('../cfv -V -T -f test.md5', cfv_test)
     # test_generic('../cfv -V -tcsv -T -f test.md5', cfv_test)
@@ -1800,6 +2033,7 @@ def all_tests():
     test_generic(cfvcmd + ' -m -v -T -t csv', lambda s, o: cfv_typerestrict_test(s, o, 'csv'))
     test_generic(cfvcmd + ' -m -v -T -t par', lambda s, o: cfv_typerestrict_test(s, o, 'par'))
     test_generic(cfvcmd + ' -m -v -T -t par2', lambda s, o: cfv_typerestrict_test(s, o, 'par2'))
+    test_generic(cfvcmd + ' -m -v -T -t b3', lambda s, o: cfv_typerestrict_test(s, o, 'b3'))
 
     test_generic(cfvcmd + ' -u -t md5 -f test.md5 data* unchecked.dat test.md5', cfv_unv_test)
     test_generic(cfvcmd + ' -u -f test.md5 data* unchecked.dat', cfv_unv_test)

@@ -15,7 +15,41 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
+  lint:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-24.04
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.15'
+          allow-prereleases: true
+          check-latest: true
+
+      - name: Install lint dependencies
+        run: |
+          pip install --group ci
+          pip list
+
+      - name: Run flake
+        run: flake8 --exclude=build,venv --ignore= --max-line-length=200 --max-complexity=75 --show-source --statistics .
+
+      - name: Check package quality
+        run: pyroma -n 10 .
+
+      - name: Check the completeness of MANIFEST.in
+        run: check-manifest .
+
+      - name: Check distribution
+        run: |
+          python -m build
+          twine check dist/*
+
   test:
     # The type of runner that the job will run on
     runs-on: ${{ matrix.os }}
@@ -45,14 +79,7 @@ jobs:
 
       - name: Install test dependencies
         run: |
-          sudo apt install coreutils cksfv
-          pip install pyroma
-          pip install check-manifest
-          pip install twine
-          pip install wheel
-          pip install flake8
-          pip install build
-          pip list
+          sudo apt install coreutils cksfv b3sum
 
       - name: Check syntax by compiling code
         run: python -W error -bb -m compileall -f .
@@ -72,17 +99,35 @@ jobs:
           ulimit -n 4096
           test/test.py -e --exit-early
 
-      - name: Check package quality
-        continue-on-error: ${{ contains(fromJson('["3.7", "3.8"]'), matrix.python-version) }}
-        run: pyroma -n 10 .
+      - name: Install optional dependencies
+        continue-on-error: ${{ contains(fromJson('["3.15"]'), matrix.python-version) }}
+        run: |
+          # pillow dependencies
+          sudo apt install libjpeg8-dev zlib1g-dev libtiff5-dev libwebp-dev libopenjp2-7-dev libavif-dev
+          pip install .[full]
+          pip list
 
-      - name: Check the completeness of MANIFEST.in
-        run: check-manifest .
+      - name: Run unit tests (with optional dependencies)
+        run: python -W error -bb test/test.py --unit --exit-early
 
-      - name: Run flake
-        run: flake8 --exclude=build,venv --ignore= --max-line-length=200 --max-complexity=75 --show-source --statistics .
+      - name: Run integration tests (internal, with optional dependencies)
+        run: |
+          ulimit -n
+          ulimit -n 4096
+          python -W error -bb test/test.py -i --exit-early
 
-      - name: Check distribution
+      - name: Run integration tests (external process, with optional dependencies)
+        run: |
+          ulimit -n
+          ulimit -n 4096
+          test/test.py -e --exit-early
+
+      - name: Install build dependencies
+        run: |
+          # Fallback hack required for pip < 25.1 (since newer pip is not available for Python < 3.9)
+          pip install --group build || pip install build
+          pip list
+
+      - name: Build
         run: |
           python -m build
-          twine check dist/*

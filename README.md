@@ -1,8 +1,8 @@
 # cfv – Command-line File Verify
 
 cfv is a utility to test and create a wide range of checksum verification files.
-It currently supports testing and creating sfv, sfvmd5, csv, csv2, csv4, md5, bsdmd5, sha1, sha224,
-sha256, sha384, sha512, torrent and crc files.
+It currently supports testing and creating sfv, sfvmd5, csv, csv2, csv4, crc, md5, bsdmd5,
+sha1, sha224, sha256, sha384, sha512, b3 (BLAKE3) and torrent files.
 Test-only support is available for par, par2.
 
 cfv was originally written by Matthew Mueller ([original project home](http://cfv.sourceforge.net/)).
@@ -25,6 +25,9 @@ For Python 2 support, see the [python2 branch](https://github.com/cfv-project/cf
 * [Python Imaging Library (PIL)](https://www.pythonware.com/products/pil/) or
   [Pillow](https://python-pillow.org/) – only needed if you want to create the
   dimensions column of .crc files.
+* [blake3](https://pypi.org/project/blake3/) – needed for BLAKE3 b3sum files (B3SUMS, .b3, .bk3).
+  Default output is 256 bits (32 bytes).
+  Install via `pip install blake3` or `apt install python3-blake3`.
 
 ## Install
 
