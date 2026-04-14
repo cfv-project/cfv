@@ -1,3 +1,14 @@
+cfv (3.2.1~dev0+git20260414.adae045-1~ppa3) resolute; urgency=medium
+
+  * Track upstream with BLAKE3 b3sum support merged (PR #88).
+  * Acknowledge in-flight upstream support for BLAKE2 b2sum (PR #92,
+    uses hashlib, no new runtime dep) and xxhash (future PR).
+  * Suggests already lists python3-blake3 and python3-xxhash; no
+    change required for blake2.
+  * Target Ubuntu 26.04 LTS (resolute).
+
+ -- Artur Ladka (sarsolot) <arturladka@gmail.com>  Tue, 14 Apr 2026 17:38:18 +0000
+
 cfv (3.2.1~dev0+git20251102.8533a22-1~ppa2) questing; urgency=medium
 
   * Initial packaging for the Python 3 upstream snapshot.
