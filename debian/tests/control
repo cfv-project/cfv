@@ -1,0 +1,5 @@
+Tests: cfv
+Depends: @
+
+Tests: cfv-upstream
+Depends: @, python3, coreutils, cksfv, python3-blake3, python3-xxhash
