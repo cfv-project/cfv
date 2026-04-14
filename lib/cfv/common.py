@@ -785,47 +785,35 @@ except (ImportError, ValueError):
     pass
 
 
-# ---------- b3 (BLAKE3) ----------
+# ---------- HashSum base (shared by b2/b3) ----------
 
-class BLAKE3_MixIn(object):
-    digest_size = 32
-    hash_name = 'blake3'
+# Match any even-length hex string (supports variable digest lengths when checking)
+_hashsum_rem = re.compile(r'((?:[0-9a-fA-F]{2})+) [ *]([^\r\n]+)[\r\n]*$')
+
+
+class HashSumBase(TextChksumType):
+    """Shared base for coreutils-style hash checksum formats (b2sum, b3sum)."""
+    auto_chksumfile_order = 1
+    digest_size = None      # default digest size in bytes, set by subclass
+    max_digest_size = None  # max allowed digest size in bytes (None = unlimited)
+    hash_name = None        # e.g. 'blake2b', 'blake3'
+    _hash_func = None       # e.g. hash.getfileblake2b, hash.getfileblake3
+    _std_ext = None         # e.g. '.b2', '.b3'
 
     def do_test_file(self, filename, filecrc):
         # Derive digest size from the checksum in the file (supports variable lengths)
         digest_size = len(filecrc)
-
-        c = getfilehash(filename, '%s-%d' % (self.hash_name, digest_size), hash.getfileblake3, digest_size)[0]
+        c = getfilehash(filename, '%s-%d' % (self.hash_name, digest_size), self._hash_func, digest_size)[0]
         if c != filecrc:
             return c
-
-
-class BLAKE3(TextChksumType, BLAKE3_MixIn):
-    name = 'b3'
-    description = 'BLAKE3 b3sum'
-    descinfo = 'BLAKE3,name'
-    auto_chksumfile_order = 1
-    auto_filename_match = r'b3sum|\.(b3|bk3)$'
-
-    # Match any even-length hex string (supports variable digest lengths when checking)
-    _b3rem = re.compile(r'((?:[0-9a-fA-F]{2})+) [ *]([^\r\n]+)[\r\n]*$')
 
     def do_test_chksumfile_print_testingline(self, file):
         comment = parse_commentline(file.peekline(512).lstrip(), ';')
         TextChksumType.do_test_chksumfile_print_testingline(self, file, comment)
 
-    @staticmethod
-    def _is_b3_filename(filename):
-        if not filename:
-            return False
-        lname = filename.lower()
-        if lname.endswith('.gz'):
-            lname = lname[:-3]
-        return lname.endswith('.b3') or lname.endswith('.bk3') or 'b3sum' in os.path.basename(lname)
-
     @classmethod
     def auto_chksumfile_match(cls, file):
-        if not cls._is_b3_filename(file.name):
+        if not cls._is_valid_filename(file.name):
             return False
         line = file.peekline(4096)
         while line:
@@ -833,28 +821,81 @@ class BLAKE3(TextChksumType, BLAKE3_MixIn):
             if not stripped or stripped.startswith(';'):
                 line = file.peeknextline(4096)
                 continue
-            return cls._b3rem.match(stripped) is not None
+            return _hashsum_rem.match(stripped) is not None
         return False
 
     def do_test_chksumline(self, line):
         stripped = line.lstrip()
         if not stripped or stripped.startswith(';'):
             return
-        x = self._b3rem.match(stripped)
+        x = _hashsum_rem.match(stripped)
         if not x:
+            return -1
+        digest_size = len(x.group(1)) // 2
+        if self.max_digest_size and digest_size > self.max_digest_size:
             return -1
         self.test_file(x.group(2), strutil.unhexlify(x.group(1)))
 
-    @staticmethod
-    def make_std_filename(filename):
-        return filename + '.b3'
+    @classmethod
+    def make_std_filename(cls, filename):
+        return filename + cls._std_ext
 
     def make_addfile(self, filename):
         digest_size = config.hash_length // 8 if config.hash_length else self.digest_size
+        if self.max_digest_size and digest_size > self.max_digest_size:
+            raise CFVValueError('--length for %s must be between 8 and %d' % (self.name, self.max_digest_size * 8))
         cache_key = '%s-%d' % (self.hash_name, digest_size)
-        digest = getfilehash(filename, cache_key, hash.getfileblake3, digest_size)[0]
+        digest = getfilehash(filename, cache_key, self._hash_func, digest_size)[0]
         hexdigest = strutil.hexlify(digest)
         return (hexdigest, -1), '%s  %s' % (hexdigest, filename) + os.linesep
+
+
+# ---------- b2 (BLAKE2) ----------
+
+class BLAKE2(HashSumBase):
+    name = 'b2'
+    description = 'BLAKE2b b2sum'
+    descinfo = 'BLAKE2b,name'
+    digest_size = 64
+    max_digest_size = 64
+    hash_name = 'blake2b'
+    _hash_func = staticmethod(hash.getfileblake2b)
+    _std_ext = '.b2'
+    auto_filename_match = r'b2sum|\.(b2|blk)$'
+
+    @staticmethod
+    def _is_valid_filename(filename):
+        if not filename:
+            return False
+        lname = filename.lower()
+        if lname.endswith('.gz'):
+            lname = lname[:-3]
+        return lname.endswith('.b2') or lname.endswith('.blk') or 'b2sum' in os.path.basename(lname)
+
+
+cftypes.register_cftype(BLAKE2)
+
+
+# ---------- b3 (BLAKE3) ----------
+
+class BLAKE3(HashSumBase):
+    name = 'b3'
+    description = 'BLAKE3 b3sum'
+    descinfo = 'BLAKE3,name'
+    digest_size = 32
+    hash_name = 'blake3'
+    _hash_func = staticmethod(hash.getfileblake3)
+    _std_ext = '.b3'
+    auto_filename_match = r'b3sum|\.(b3|bk3)$'
+
+    @staticmethod
+    def _is_valid_filename(filename):
+        if not filename:
+            return False
+        lname = filename.lower()
+        if lname.endswith('.gz'):
+            lname = lname[:-3]
+        return lname.endswith('.b3') or lname.endswith('.bk3') or 'b3sum' in os.path.basename(lname)
 
 
 cftypes.register_cftype(BLAKE3)
@@ -1797,6 +1838,10 @@ def make(cftype, ifilename, testfiles):
         view.ev_make_cf_typenotsupported(filename, cftype)
         stats.cferror += 1
         return
+    max_digest_size = getattr(cftype, 'max_digest_size', None)
+    if max_digest_size and config.hash_length and config.hash_length // 8 > max_digest_size:
+        view.perror('cfv: --length for %s must be between 8 and %d' % (cftype.name, max_digest_size * 8))
+        sys.exit(1)
     if os.path.exists(filename):
         view.ev_make_cf_alreadyexists(filename)
         stats.cferror += 1
@@ -2005,7 +2050,7 @@ def show_unverified_files(filelist):
 # md5sum/sha1sum files have no standard extension, so just search for
 # files with md5/sha1 in the name anywhere, and let the test func see
 # if it really is one.
-atrem = re.compile(r'md5|sha1|sha224|sha256|sha384|sha512|b3sum|\.(b3|bk3|csv|sfv|par|p[0-9][0-9]|par2|torrent|crc)(\.gz)?$', re.IGNORECASE)
+atrem = re.compile(r'md5|sha1|sha224|sha256|sha384|sha512|b2sum|b3sum|\.(b2|blk|b3|bk3|csv|sfv|par|p[0-9][0-9]|par2|torrent|crc)(\.gz)?$', re.IGNORECASE)
 
 
 def autotest(typename):
@@ -2071,8 +2116,8 @@ def printusage(err=0):
     phelp(' --progress=VAL  show progress meter (yes, no, or auto(default))')
     phelp(' --help/-h show help')
     phelp(' --version show cfv and module versions')
-    phelp('creation options (b3):')
-    phelp(' --length=BITS        digest length in bits (default: 256 for b3)')
+    phelp('creation options (b2, b3):')
+    phelp(' --length=BITS        digest length in bits (default: 512 for b2, 256 for b3)')
     phelp('creation options (torrent):')
     phelp(' --announceurl=URL    tracker announce url')
     phelp(' --piece_size_pow2=N  power of two to set the piece size to (default 18)')

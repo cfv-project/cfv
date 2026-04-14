@@ -2,7 +2,7 @@
 
 cfv is a utility to test and create a wide range of checksum verification files.
 It currently supports testing and creating sfv, sfvmd5, csv, csv2, csv4, crc, md5, bsdmd5,
-sha1, sha224, sha256, sha384, sha512, b3 (BLAKE3) and torrent files.
+sha1, sha224, sha256, sha384, sha512, b2 (BLAKE2b), b3 (BLAKE3) and torrent files.
 Test-only support is available for par, par2.
 
 cfv was originally written by Matthew Mueller ([original project home](http://cfv.sourceforge.net/)).

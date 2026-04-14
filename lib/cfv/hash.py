@@ -126,3 +126,9 @@ def getfileblake3(filename, callback, digest_size):
         callback,
         finalize=lambda h: h.digest(digest_size),
     )
+
+
+def getfileblake2b(filename, callback, digest_size):
+    def hasher(data=b''):
+        return hashlib.blake2b(data, digest_size=digest_size)
+    return _getfilechecksum(filename, hasher, callback)

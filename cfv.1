@@ -1,6 +1,6 @@
 .TH cfv 1 "05 Feb 2005"
 .SH NAME
-cfv \- Verify file consistency with .sfv, .csv, .crc, .md5, md5sum, sha1sum, sha224sum, sha256sum, sha384sum, sha512sum, b3sum, .torrent, .par, or .par2 files
+cfv \- Verify file consistency with .sfv, .csv, .crc, .md5, md5sum, sha1sum, sha224sum, sha256sum, sha384sum, sha512sum, b2sum, b3sum, .torrent, .par, or .par2 files
 .SH SYNOPSIS
 .B cfv [\-p dir] [\-v|\-V|\-VV|\-q|\-Q] [\-\-progress VAL] [\-r|\-rr|\-R] [\-l|\-L] [\-n|\-N] [\-\-renameformat <s>] [\-s|\-S] [\-zz|\-z|\-Z|\-ZZ] [\-T|\-C] [\-m|\-M] [\-i|\-I] [\-u|\-uu|\-U] [\-\-encoding <e>] [\-\-unquote <b>] [\-\-fixpaths <s>] [\-\-strippaths <p>] [\-\-showpaths <i>] [\-\-list/\-\-list0 <l>] [\-\-announceurl <u>] [\-\-piece_size_pow2 <n>] [\-\-private_torrent] [\-\-length <n>] [\-t type] [\-f file] [files...]
 .SH DESCRIPTION
@@ -120,7 +120,7 @@ Specify the name of the checksum file to test or create.
 If file is \-, stdin (for \-T) or stdout (for \-C) will be used.
 .IP "\-t type"
 Specify the type of the file.
-Can be sfv, sfvmd5, csv, csv2, csv4, crc, md5, bsdmd5, sha1, sha224, sha256, sha384, sha512, b3, torrent, par, par2, auto, or help.
+Can be sfv, sfvmd5, csv, csv2, csv4, crc, md5, bsdmd5, sha1, sha224, sha256, sha384, sha512, b2, b3, torrent, par, par2, auto, or help.
 For details see supported checksum formats section.
 If the type is help, or an unknown type is given, a list of the types and their descriptions will be printed.
 The default is auto, which will detect the file type for you.
@@ -130,8 +130,9 @@ Prints a raw listing of files in the given set (ok, bad, unverified, notfound). 
 .IP "\-\-list0 listset"
 Like \-\-list but files are separated by a null char.  Useful in combination with xargs \-0.
 .IP "\-\-length BITS"
-Set digest length in bits for hash types that support variable output (b3).
-The default for b3 is 256 bits. Must be a multiple of 8.
+Set digest length in bits for hash types that support variable output (b2, b3).
+The default is 512 bits for b2 and 256 bits for b3. Must be a multiple of 8.
+For b2 the maximum is 512 bits.
 .IP "\-\-announceurl URL"
 Tracker announce URL for .torrent file creation.
 .IP "\-\-piece_size_pow2 N"
@@ -184,6 +185,9 @@ is a GNU sha384sum format file
 .br
 .B sha512
 is a GNU sha512sum format file
+.br
+.B b2
+is a BLAKE2b b2sum format file (B2SUMS, .b2, .blk). Default digest size is 512 bits.
 .br
 .B b3
 is a BLAKE3 b3sum format file (B3SUMS, .b3, .bk3). Requires the Python blake3 module.
