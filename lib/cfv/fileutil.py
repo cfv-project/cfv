@@ -179,4 +179,6 @@ def open_write(filename, config, force_raw=False):
     if force_raw:
         return binary_file
     else:
-        return TextIOWrapper(binary_file, config.getencoding(), errors=config.getencodeerrors())
+        # newline='' is to prevent the handlers' explicit os.linesep from re-translating it to '\r\r\n' on Windows
+        # (This has no effect on Linux)
+        return TextIOWrapper(binary_file, config.getencoding(), errors=config.getencodeerrors(), newline='')
