@@ -20,7 +20,9 @@
 import errno
 import os
 import shutil
+import sys
 import tempfile
+from unittest import skipIf
 
 from cfv.caching import FileInfoCache
 from cfvtest import TestCase
@@ -130,6 +132,7 @@ class AbsPathKeyTest(AbsTestCase):
 
 
 class RelPathKeyTest(RelTestCase):
+    @skipIf(sys.platform == 'darwin', 'case-insensitive filesystem behavior differs on Darwin')
     def test_nocase_findfile(self):
         cache = FileInfoCache()
         a1 = self.mkfile('aAaA/AaA1', '1')
@@ -149,6 +152,7 @@ class RelPathKeyTest(RelTestCase):
             cache.nocase_findfile(self.mkpath('aaAA/aaa2'))
         self.assertEqual(errno.EEXIST, cm.exception.errno)
 
+    @skipIf(sys.platform == 'darwin', 'case-insensitive filesystem behavior differs on Darwin')
     def test_nocase_findfile_parent(self):
         cache = FileInfoCache()
         self.mkfile('aaaA/aaA1', '1')
