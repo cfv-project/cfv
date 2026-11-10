@@ -66,6 +66,11 @@ def lchoplen(line, max):
     >>> lchoplen('hello world',6)
     '...rld'
     """
+    if max < 3:
+        # too narrow for the '...' marker: return as much of it as fits
+        if isinstance(line, bytes):
+            return b'...'[:max] if max > 0 else b''
+        return '...'[:max] if max > 0 else ''
     if isinstance(line, bytes):
         if len(line) > max:
             return b'...' + line[-(max - 3):]
@@ -95,6 +100,11 @@ def rchoplen(line, max):
     >>> rchoplen('hello world',6)
     'hel...'
     """
+    if max < 3:
+        # too narrow for the '...' marker: return as much of it as fits
+        if isinstance(line, bytes):
+            return b'...'[:max] if max > 0 else b''
+        return '...'[:max] if max > 0 else ''
     if isinstance(line, bytes):
         if len(line) > max:
             return line[:max - 3] + b'...'

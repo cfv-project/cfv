@@ -58,6 +58,17 @@ class chopTestCase(TestCase):
         self.assertEqual(rchoplen('hello world', 10), 'hello w...')
         self.assertEqual(rchoplen('hello world', 3), '...')
 
+    def test_choplen_tiny_max(self):
+        # tiny widths (e.g. a very narrow terminal) must not crash
+        self.assertEqual(lchoplen('hello world', 2), '..')
+        self.assertEqual(lchoplen('hello world', 1), '.')
+        self.assertEqual(lchoplen('hello world', 0), '')
+        self.assertEqual(rchoplen('hello world', 2), '..')
+        self.assertEqual(rchoplen('hello world', 1), '.')
+        self.assertEqual(rchoplen('hello world', 0), '')
+        self.assertEqual(lchoplen(b'hello world', 2), b'..')
+        self.assertEqual(rchoplen(b'hello world', 2), b'..')
+
     def test_lchoplen_wide(self):
         self.assertEqual(lchoplen('\u3053\u3093\u306b\u3061\u306f', 11), '\u3053\u3093\u306b\u3061\u306f')
         self.assertEqual(lchoplen('\u3053\u3093\u306b\u3061\u306f', 10), '\u3053\u3093\u306b\u3061\u306f')
